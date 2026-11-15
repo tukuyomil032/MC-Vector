@@ -121,7 +121,7 @@ struct FilesView: View {
             .labelStyle(.iconOnly)
             .help(L10n.t("native.files.openInFinder"))
         }
-        .controlSize(.small)
+        .controlSize(.regular)
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
         .animation(Motion.snappy, value: selection.isEmpty)

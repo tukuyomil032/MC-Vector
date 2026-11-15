@@ -48,59 +48,59 @@ struct ConsoleView: View {
         .animation(Motion.standard, value: pinnedIDs)
         .animation(Motion.standard, value: levelFilter)
         #if DEBUG
-        .onAppear { applyCapturePreset() }
-        .onReceive(NotificationCenter.default.publisher(for: .consoleCaptureAction)) { _ in applyCaptureAction() }
+            .onAppear { applyCapturePreset() }
+            .onReceive(NotificationCenter.default.publisher(for: .consoleCaptureAction)) { _ in applyCaptureAction() }
         #endif
     }
 
     #if DEBUG
-    /// Capture tooling: opens the Console with a search, filter or pin set.
-    struct CapturePreset {
-        var query = ""
-        var level: LogLevel?
-        var pinFirstWarning = false
-    }
-
-    static var capturePreset: CapturePreset?
-
-    /// Capture tooling: drives an open Console during MOTION-* recordings.
-    enum CaptureAction: Equatable {
-        case openSearch(String)
-        case closeSearch
-        case pinFirstWarning
-    }
-
-    static var captureAction: CaptureAction? {
-        didSet { NotificationCenter.default.post(name: .consoleCaptureAction, object: nil) }
-    }
-
-    private func applyCaptureAction() {
-        guard let action = Self.captureAction else { return }
-        Self.captureAction = nil
-        switch action {
-        case let .openSearch(text):
-            isSearching = true
-            query = text
-        case .closeSearch:
-            isSearching = false
-            query = ""
-        case .pinFirstWarning:
-            if let warning = entries.first(where: { $0.level != .info }) { pinnedIDs = [warning.id] }
+        /// Capture tooling: opens the Console with a search, filter or pin set.
+        struct CapturePreset {
+            var query = ""
+            var level: LogLevel?
+            var pinFirstWarning = false
         }
-    }
 
-    private func applyCapturePreset() {
-        guard let preset = Self.capturePreset else { return }
-        Self.capturePreset = nil
-        levelFilter = preset.level
-        if !preset.query.isEmpty {
-            isSearching = true
-            query = preset.query
+        static var capturePreset: CapturePreset?
+
+        /// Capture tooling: drives an open Console during MOTION-* recordings.
+        enum CaptureAction: Equatable {
+            case openSearch(String)
+            case closeSearch
+            case pinFirstWarning
         }
-        if preset.pinFirstWarning, let warning = entries.first(where: { $0.level != .info }) {
-            pinnedIDs = [warning.id]
+
+        static var captureAction: CaptureAction? {
+            didSet { NotificationCenter.default.post(name: .consoleCaptureAction, object: nil) }
         }
-    }
+
+        private func applyCaptureAction() {
+            guard let action = Self.captureAction else { return }
+            Self.captureAction = nil
+            switch action {
+            case .openSearch(let text):
+                isSearching = true
+                query = text
+            case .closeSearch:
+                isSearching = false
+                query = ""
+            case .pinFirstWarning:
+                if let warning = entries.first(where: { $0.level != .info }) { pinnedIDs = [warning.id] }
+            }
+        }
+
+        private func applyCapturePreset() {
+            guard let preset = Self.capturePreset else { return }
+            Self.capturePreset = nil
+            levelFilter = preset.level
+            if !preset.query.isEmpty {
+                isSearching = true
+                query = preset.query
+            }
+            if preset.pinFirstWarning, let warning = entries.first(where: { $0.level != .info }) {
+                pinnedIDs = [warning.id]
+            }
+        }
     #endif
 
     // MARK: Toolbar
@@ -159,7 +159,7 @@ struct ConsoleView: View {
             .help(L10n.t("console.actions.saveLogs"))
         }
         .labelStyle(.titleAndIcon)
-        .controlSize(.small)
+        .controlSize(.regular)
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
     }
@@ -222,7 +222,7 @@ struct ConsoleView: View {
     }
 
     private var matchIDs: [Int] {
-        guard case let .success(matches)? = matcher else { return [] }
+        guard case .success(let matches)? = matcher else { return [] }
         return visibleEntries.filter { matches($0.text) }.map(\.id)
     }
 
@@ -245,10 +245,18 @@ struct ConsoleView: View {
             Toggle(L10n.t("console.search.regex"), isOn: $useRegex)
                 .toggleStyle(.button)
             ControlGroup {
-                Button { step(-1, in: matches) } label: { Image(systemName: "chevron.up") }
-                    .help(L10n.t("console.search.prev"))
-                Button { step(1, in: matches) } label: { Image(systemName: "chevron.down") }
-                    .help(L10n.t("console.search.next"))
+                Button {
+                    step(-1, in: matches)
+                } label: {
+                    Image(systemName: "chevron.up")
+                }
+                .help(L10n.t("console.search.prev"))
+                Button {
+                    step(1, in: matches)
+                } label: {
+                    Image(systemName: "chevron.down")
+                }
+                .help(L10n.t("console.search.next"))
             }
             .disabled(matches.isEmpty)
             .fixedSize()
@@ -262,7 +270,7 @@ struct ConsoleView: View {
             .keyboardShortcut(.cancelAction)
             .help(L10n.t("common.close"))
         }
-        .controlSize(.small)
+        .controlSize(.regular)
         .padding(.horizontal, 12)
         .padding(.bottom, 8)
     }
@@ -347,9 +355,11 @@ struct ConsoleView: View {
             }
             .overlay {
                 if visible.isEmpty {
-                    Text(levelFilter.map { L10n.t("console.emptyLog.notFound", ["level": $0.name]) }
-                        ?? L10n.t("console.emptyLog.waiting"))
-                        .foregroundStyle(.secondary)
+                    Text(
+                        levelFilter.map { L10n.t("console.emptyLog.notFound", ["level": $0.name]) }
+                            ?? L10n.t("console.emptyLog.waiting")
+                    )
+                    .foregroundStyle(.secondary)
                 }
             }
             .overlay(alignment: .bottomTrailing) {
@@ -359,7 +369,7 @@ struct ConsoleView: View {
                     } label: {
                         Label(L10n.t("console.actions.jumpLatest"), systemImage: "arrow.down.to.line")
                     }
-                    .controlSize(.small)
+                    .controlSize(.regular)
                     .buttonStyle(.borderedProminent)
                     .padding(12)
                     .transition(.motionPop)
@@ -430,8 +440,14 @@ private struct CommandLine: View {
                 .textFieldStyle(.plain)
                 .font(.system(.body, design: .monospaced))
                 .onSubmit { Task { await send() } }
-                .onKeyPress(.upArrow) { recall(-1); return .handled }
-                .onKeyPress(.downArrow) { recall(1); return .handled }
+                .onKeyPress(.upArrow) {
+                    recall(-1)
+                    return .handled
+                }
+                .onKeyPress(.downArrow) {
+                    recall(1)
+                    return .handled
+                }
             Button(L10n.t("console.actions.send")) { Task { await send() } }
                 .disabled(text.trimmingCharacters(in: .whitespaces).isEmpty || isSending)
         }
@@ -504,7 +520,7 @@ extension LogLevel {
 }
 
 #if DEBUG
-extension Notification.Name {
-    static let consoleCaptureAction = Notification.Name("mcvector.console.captureAction")
-}
+    extension Notification.Name {
+        static let consoleCaptureAction = Notification.Name("mcvector.console.captureAction")
+    }
 #endif

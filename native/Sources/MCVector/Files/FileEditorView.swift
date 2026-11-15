@@ -126,7 +126,7 @@ struct FileEditorView: View {
             .help(L10n.t("files.editor.saveShortcut", ["shortcut": "⌘S"]))
             .disabled(!document.isEditable || !document.isDirty || document.isSaving)
         }
-        .controlSize(.small)
+        .controlSize(.regular)
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
         .animation(Motion.snappy, value: document.isDirty)

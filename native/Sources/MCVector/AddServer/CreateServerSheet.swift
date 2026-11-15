@@ -17,7 +17,7 @@ struct CreateServerSheet: View {
 
     var body: some View {
         Group {
-            if case let .creating(stage) = model.phase {
+            if case .creating(let stage) = model.phase {
                 CreationProgressView(
                     title: L10n.t("addServer.title"),
                     downloadingLabel: L10n.t(
@@ -99,8 +99,11 @@ private struct CreateServerForm: View {
             }
 
             Section {
-                TextField(L10n.t("addServer.name.label"), text: $model.name, prompt: Text(L10n.t("addServer.name.placeholder")))
-                    .onChange(of: model.name) { model.showsErrors = true }
+                TextField(
+                    L10n.t("addServer.name.label"), text: $model.name,
+                    prompt: Text(L10n.t("addServer.name.placeholder"))
+                )
+                .onChange(of: model.name) { model.showsErrors = true }
                 TextField(
                     L10n.t("addServer.profileName.label"),
                     text: $model.profileName,
@@ -122,16 +125,14 @@ private struct CreateServerForm: View {
 
             Section {
                 SoftwarePicker(options: model.softwareOptions, selection: $model.software)
-                Picker(L10n.t("addServer.version.label"), selection: $model.version) {
-                    ForEach(model.versions, id: \.self) { version in
-                        Text(version).tag(version)
-                    }
-                }
+                VersionMenu(
+                    title: L10n.t("addServer.version.label"), versions: model.versions, selection: $model.version)
             } footer: {
-                Text(L10n.t(
-                    model.selectedSoftware?.automaticJar == true
-                        ? "native.addServer.automaticJar" : "native.addServer.manualJar"
-                ))
+                Text(
+                    L10n.t(
+                        model.selectedSoftware?.automaticJar == true
+                            ? "native.addServer.automaticJar" : "native.addServer.manualJar"
+                    ))
             }
 
             PortMemorySection(portText: $model.portText, memoryText: $model.memoryText)

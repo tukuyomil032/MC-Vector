@@ -33,26 +33,14 @@ struct PortMemorySection: View {
 
     var body: some View {
         Section {
-            TextField(L10n.t("addServer.port.label"), text: $portText)
-                .multilineTextAlignment(.trailing)
+            LabeledContent(L10n.t("addServer.port.label")) {
+                RollingNumberField(title: L10n.t("addServer.port.label"), text: $portText, range: 1...65_535)
+            }
             LabeledContent(L10n.t("addServer.memory.label")) {
-                HStack(spacing: 6) {
-                    TextField(L10n.t("addServer.memory.label"), text: $memoryText)
-                        .labelsHidden()
-                        .multilineTextAlignment(.trailing)
-                        .frame(width: 64)
-                    Text(L10n.t("native.addServer.memoryUnit"))
-                        .foregroundStyle(.secondary)
-                    Stepper(
-                        L10n.t("addServer.memory.label"),
-                        value: Binding(
-                            get: { Int(memoryText) ?? 1 },
-                            set: { memoryText = String(min(max($0, 1), 1_024)) }
-                        ),
-                        in: 1...1_024
-                    )
-                    .labelsHidden()
-                }
+                RollingNumberField(
+                    title: L10n.t("addServer.memory.label"), text: $memoryText, range: 1...1_024,
+                    unit: L10n.t("native.addServer.memoryUnit")
+                )
             }
         } footer: {
             VStack(alignment: .leading, spacing: 2) {
@@ -129,7 +117,7 @@ struct CreationProgressView: View {
             switch stage {
             case .resolving:
                 ProgressView { Text(workingLabel) }
-            case let .downloading(percent):
+            case .downloading(let percent):
                 if let percent {
                     ProgressView(value: Double(percent), total: 100) {
                         Text(downloadingLabel)
@@ -157,6 +145,95 @@ extension SoftwareGroup {
         case .standard: "addServer.software.groups.standard"
         case .modded: "addServer.software.groups.modded"
         case .proxy: "addServer.software.groups.proxy"
+        }
+    }
+}
+
+/// A number that rolls to its new value like the dashboard's figures, with a
+/// stepper beside it. Clicking the number turns it into a text field for typing;
+/// Return or leaving the field shows the rolling number again.
+struct RollingNumberField: View {
+    let title: String
+    @Binding var text: String
+    let range: ClosedRange<Int>
+    var unit: String?
+
+    @State private var isEditing = false
+    @FocusState private var focused: Bool
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Group {
+                if isEditing {
+                    TextField(title, text: $text)
+                        .labelsHidden()
+                        .multilineTextAlignment(.trailing)
+                        .focused($focused)
+                        .onSubmit { isEditing = false }
+                        .onChange(of: focused) { _, isFocused in if !isFocused { isEditing = false } }
+                } else {
+                    Button {
+                        isEditing = true
+                        focused = true
+                    } label: {
+                        Text(text.isEmpty ? "–" : text)
+                            .monospacedDigit()
+                            .contentTransition(.numericText(value: Double(Int(text) ?? 0)))
+                            .frame(maxWidth: .infinity, alignment: .trailing)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .help(L10n.t("native.addServer.clickToType"))
+                    .accessibilityLabel(Text(title))
+                    .accessibilityValue(Text(text))
+                }
+            }
+            .frame(width: 72)
+            if let unit {
+                Text(unit).foregroundStyle(.secondary)
+            }
+            Stepper(
+                title,
+                value: Binding(
+                    get: { Int(text) ?? range.lowerBound },
+                    set: { value in
+                        withAnimation(Motion.value) {
+                            text = String(min(max(value, range.lowerBound), range.upperBound))
+                        }
+                    }
+                ),
+                in: range
+            )
+            .labelsHidden()
+        }
+        .animation(Motion.value, value: text)
+    }
+}
+
+/// The version picker as a menu button whose number rolls when it changes.
+struct VersionMenu: View {
+    let title: String
+    let versions: [String]
+    @Binding var selection: String
+
+    var body: some View {
+        LabeledContent(title) {
+            Menu {
+                Picker(title, selection: $selection) {
+                    ForEach(versions, id: \.self) { version in
+                        Text(version).tag(version)
+                    }
+                }
+                .pickerStyle(.inline)
+                .labelsHidden()
+            } label: {
+                Text(selection.isEmpty ? "–" : selection)
+                    .monospacedDigit()
+                    .contentTransition(.numericText())
+            }
+            .menuStyle(.button)
+            .fixedSize()
+            .animation(Motion.value, value: selection)
         }
     }
 }
