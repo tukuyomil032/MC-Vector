@@ -72,7 +72,7 @@ struct CreateServerSheet: View {
         guard let created = await model.create() else { return }
         app.activeSheet = nil
         await app.reloadServers()
-        app.selectedServerID = created.server.id
+        app.selectServer(created.server.id)
         if created.jarInstalled {
             feedback.toast(.success, L10n.t("server.toast.created", ["name": created.server.name]))
         } else {

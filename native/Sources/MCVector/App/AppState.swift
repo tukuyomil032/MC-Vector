@@ -32,14 +32,21 @@ final class AppState {
 
     /// Same rule as React `setCurrentView`: remember the previous view on change.
     func navigate(to newRoute: AppRoute) {
-        guard newRoute != route else { return }
+        guard newRoute != route, !holdForUnsavedEditor(.route(newRoute)) else { return }
         previousRoute = route
         route = newRoute
+    }
+
+    /// Makes another server active, asking first when the editor has unsaved changes.
+    func selectServer(_ id: String) {
+        guard id != selectedServerID, !holdForUnsavedEditor(.server(id)) else { return }
+        selectedServerID = id
     }
 
     /// React `returnToPreviousView`: back to the previous view, or the dashboard
     /// when there is none or it would be the settings screen itself.
     func returnToPreviousView() {
+        guard !holdForUnsavedEditor(.previousView) else { return }
         let target = previousRoute ?? .dashboard
         previousRoute = route
         route = target
@@ -51,6 +58,43 @@ final class AppState {
         let index = views.firstIndex(of: route) ?? 0
         let next = (index + (forward ? 1 : views.count - 1)) % views.count
         navigate(to: views[next])
+    }
+
+    // MARK: Unsaved editor (FILE-005)
+
+    /// A navigation held back until the user saves or discards the editor's changes.
+    enum PendingLeave: Equatable {
+        case route(AppRoute)
+        case server(String)
+        case previousView
+        /// The editor's own Close button.
+        case closeEditor
+    }
+
+    /// The file editor has unsaved changes; switching views or servers asks first.
+    var hasUnsavedEditor = false
+    /// The editor is saving; navigation waits until it finishes.
+    var isEditorSaving = false
+    /// Shown by the editor as the Save / Discard / Cancel alert.
+    var pendingLeave: PendingLeave?
+
+    /// True when the navigation must wait for the editor.
+    private func holdForUnsavedEditor(_ leave: PendingLeave) -> Bool {
+        guard hasUnsavedEditor || isEditorSaving else { return false }
+        if !isEditorSaving { pendingLeave = leave }
+        return true
+    }
+
+    /// Carries out a navigation after the editor saved or discarded its changes.
+    func performLeave(_ leave: PendingLeave) {
+        hasUnsavedEditor = false
+        pendingLeave = nil
+        switch leave {
+        case let .route(route): navigate(to: route)
+        case let .server(id): selectServer(id)
+        case .previousView: returnToPreviousView()
+        case .closeEditor: break
+        }
     }
 
     // MARK: Chrome

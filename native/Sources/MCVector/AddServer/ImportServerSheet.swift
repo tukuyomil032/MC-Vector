@@ -85,7 +85,7 @@ struct ImportServerSheet: View {
         guard let created = await model.importServer() else { return }
         app.activeSheet = nil
         await app.reloadServers()
-        app.selectedServerID = created.server.id
+        app.selectServer(created.server.id)
         feedback.toast(.success, L10n.t("importServer.toast.success"))
     }
 }

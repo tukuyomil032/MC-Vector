@@ -10,6 +10,7 @@ import SwiftUI
 struct FileEditorView: View {
     let close: () -> Void
 
+    @Environment(AppState.self) private var app
     @Environment(FeedbackCenter.self) private var feedback
     @State private var document: EditorDocument
 
@@ -36,6 +37,31 @@ struct FileEditorView: View {
             #if DEBUG
             await runCaptureScript()
             #endif
+        }
+        .onChange(of: document.isDirty) { _, dirty in app.hasUnsavedEditor = dirty }
+        .onChange(of: document.isSaving) { _, saving in app.isEditorSaving = saving }
+        .onDisappear {
+            app.hasUnsavedEditor = false
+            app.isEditorSaving = false
+        }
+        .alert(
+            L10n.t("files.confirm.discardChangesTitle"),
+            isPresented: Binding(
+                get: { app.pendingLeave != nil },
+                set: { if !$0 { app.pendingLeave = nil } }
+            ),
+            presenting: app.pendingLeave
+        ) { leave in
+            Button(L10n.t("common.save")) {
+                Task {
+                    if await document.save(feedback: feedback) { finish(leave) }
+                }
+            }
+            .keyboardShortcut(.defaultAction)
+            Button(L10n.t("files.confirm.discardButton"), role: .destructive) { finish(leave) }
+            Button(L10n.t("common.cancel"), role: .cancel) { app.pendingLeave = nil }
+        } message: { leave in
+            Text(L10n.t(leave == .closeEditor ? "files.confirm.discardChanges" : "unsavedChanges.description"))
         }
     }
 
@@ -186,7 +212,11 @@ struct FileEditorView: View {
 
     private func requestClose() {
         guard !document.isSaving else { return }
-        close()
+        if document.isDirty {
+            app.pendingLeave = .closeEditor
+        } else {
+            close()
+        }
     }
 
     #if DEBUG
@@ -209,6 +239,16 @@ struct FileEditorView: View {
         if script.confirmClose { requestClose() }
     }
     #endif
+
+    private func finish(_ leave: AppState.PendingLeave) {
+        app.hasUnsavedEditor = false
+        app.pendingLeave = nil
+        if leave == .closeEditor {
+            close()
+        } else {
+            app.performLeave(leave)
+        }
+    }
 }
 
 /// The file the editor shows, with the size from the listing (FILE-001 checks

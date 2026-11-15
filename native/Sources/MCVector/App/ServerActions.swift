@@ -46,7 +46,7 @@ struct ServerActions {
                 name: L10n.t("server.create.cloneDefaultName", ["name": server.name])
             )
             await app.reloadServers()
-            app.selectedServerID = copy.id
+            app.selectServer(copy.id)
             feedback.toast(.success, L10n.t("server.toast.cloned"))
         } catch {
             feedback.toast(.error, L10n.t("server.toast.cloneFailed"))

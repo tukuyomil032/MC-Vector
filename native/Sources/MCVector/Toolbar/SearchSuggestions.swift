@@ -53,7 +53,7 @@ struct SearchSuggestions: View {
                 }
                 ForEach(servers, id: \.id) { server in
                     Button {
-                        app.selectedServerID = server.id
+                        app.selectServer(server.id)
                         app.searchText = ""
                     } label: {
                         Label {

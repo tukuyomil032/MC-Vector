@@ -80,7 +80,7 @@ private struct ServerRow: View {
 
     var body: some View {
         Button {
-            app.selectedServerID = server.id
+            app.selectServer(server.id)
         } label: {
             HStack(spacing: 8) {
                 Image(systemName: "circle.fill")

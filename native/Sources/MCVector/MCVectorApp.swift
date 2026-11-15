@@ -105,12 +105,14 @@ struct ShellCommands: Commands {
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private var hotKeys: GlobalHotKeys?
     private weak var runtime: ServerRuntime?
+    private weak var app: AppState?
     private var isQuitting = false
 
     /// Starts listening to running servers and registers the system-wide
     /// ⌘⇧S (start/stop) and ⌘⇧R (restart) for the selected server.
     func attach(app: AppState, feedback: FeedbackCenter, runtime: ServerRuntime) {
         guard hotKeys == nil else { return }
+        self.app = app
         self.runtime = runtime
         runtime.subscribe()
         hotKeys = GlobalHotKeys { action in
@@ -133,6 +135,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// first (React `use-exit-confirmation`), then stop them all before quitting.
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
         if isQuitting { return .terminateLater }
+        if let app, app.hasUnsavedEditor || app.isEditorSaving {
+            guard QuitConfirmation.discardUnsavedEdits() else { return .terminateCancel }
+            app.hasUnsavedEditor = false
+        }
         guard let runtime, !runtime.activeServerIDs.isEmpty else { return .terminateNow }
         guard QuitConfirmation.run() else { return .terminateCancel }
         isQuitting = true
