@@ -749,16 +749,23 @@ mod tests {
         let target = target_dir.path().to_path_buf();
         std::fs::create_dir(target.join("server")).unwrap();
         let junction = parent.join("linked-parent");
-        let command = format!(
-            "mklink /J \"{}\" \"{}\"",
-            junction.display(),
-            target.display()
+        // Separate arguments: Rust escapes embedded quotes as \" for the C
+        // runtime, which cmd.exe does not understand.
+        let output = Command::new("cmd")
+            .arg("/C")
+            .arg("mklink")
+            .arg("/J")
+            .arg(&junction)
+            .arg(&target)
+            .output()
+            .expect("cmd should run mklink");
+        assert!(
+            output.status.success(),
+            "junction creation failed: {} stdout={} stderr={}",
+            output.status,
+            String::from_utf8_lossy(&output.stdout),
+            String::from_utf8_lossy(&output.stderr)
         );
-        let status = Command::new("cmd")
-            .args(["/C", &command])
-            .status()
-            .expect("cmd should create a directory junction");
-        assert!(status.success(), "junction creation failed: {status}");
 
         let error = resolve_picker_entry(&junction.join("server"))
             .err()
