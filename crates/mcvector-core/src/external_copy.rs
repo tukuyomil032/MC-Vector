@@ -741,10 +741,12 @@ mod tests {
     fn rejects_a_junction_in_the_selected_source_parent() {
         use std::process::Command;
 
-        let parent = tempfile::tempdir().unwrap();
-        let target = tempfile::tempdir().unwrap();
-        let parent = parent.path().canonicalize().unwrap();
-        let target = target.path().canonicalize().unwrap();
+        let parent_dir = tempfile::tempdir().unwrap();
+        let target_dir = tempfile::tempdir().unwrap();
+        // cmd's mklink does not accept the \\?\ form that canonicalize returns,
+        // so the junction is made from the plain temp paths.
+        let parent = parent_dir.path().to_path_buf();
+        let target = target_dir.path().to_path_buf();
         std::fs::create_dir(target.join("server")).unwrap();
         let junction = parent.join("linked-parent");
         let command = format!(
