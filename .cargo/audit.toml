@@ -1,0 +1,15 @@
+[advisories]
+ignore = [
+  # RUSTSEC-2026-0367: the updater unpacks archives from our own release feed only after verifying their signatures.
+  # Remove this ignore when a stable tauri-plugin-updater depends on zip >= 9.
+  "RUSTSEC-2026-0367",
+  # RUSTSEC-2026-0368: the updater unpacks archives from our own release feed only after verifying their signatures.
+  # Remove this ignore when a stable tauri-plugin-updater depends on zip >= 9.
+  "RUSTSEC-2026-0368",
+  # RUSTSEC-2026-0369: the updater unpacks archives from our own release feed only after verifying their signatures.
+  # Remove this ignore when a stable tauri-plugin-updater depends on zip >= 9.
+  "RUSTSEC-2026-0369",
+  # RUSTSEC-2026-0429: the updater unpacks archives from our own release feed only after verifying their signatures.
+  # Remove this ignore when a stable tauri-plugin-updater depends on zip >= 9.
+  "RUSTSEC-2026-0429",
+]
