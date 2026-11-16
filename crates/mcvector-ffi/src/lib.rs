@@ -1960,7 +1960,8 @@ mod tests {
             data_dir.join("servers.json"),
             format!(
                 r#"[{{"id":"server-1","name":"E2E Server","version":"1.21.10","software":"Paper","port":25565,"memory":2048,"path":"{}","status":"offline"}}]"#,
-                server_dir.display()
+                // Windows paths contain backslashes, which JSON must escape.
+                server_dir.display().to_string().replace('\\', "\\\\")
             ),
         )
         .unwrap();
