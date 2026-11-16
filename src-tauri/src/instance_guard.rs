@@ -60,9 +60,9 @@ fn handle_held_by_other(
     _dir: &std::path::Path,
     _owner: Option<&LockOwner>,
 ) -> Option<InstanceLock> {
-    // Windows locks are mandatory, so the owner can never be read there, and
-    // the Native edition only exists on macOS: the holder is another Tauri
-    // instance. Let the single-instance plugin focus it.
+    // The Native edition only exists on macOS, so the holder on other
+    // platforms is another Tauri instance. Let the single-instance plugin
+    // focus it.
     None
 }
 
