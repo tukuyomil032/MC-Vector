@@ -422,6 +422,8 @@ mod tests {
 
     #[cfg(windows)]
     use super::canonical_path_starts_with;
+    #[cfg(windows)]
+    use std::path::Path;
 
     #[cfg(windows)]
     #[test]
