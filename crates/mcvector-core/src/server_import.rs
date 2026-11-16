@@ -260,7 +260,7 @@ pub fn analyze_import_folder(source: &Path) -> Result<ImportAnalysis, ImportErro
     })? {
         let entry = entry
             .map_err(|error| ImportError::io(format!("Failed to read selected entry: {error}")))?;
-        let metadata = entry.metadata().map_err(|error| {
+        let metadata = std::fs::symlink_metadata(entry.path()).map_err(|error| {
             ImportError::io(format!("Failed to inspect selected entry: {error}"))
         })?;
         if is_link_or_reparse_point(&metadata) {

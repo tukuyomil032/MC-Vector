@@ -407,7 +407,7 @@ pub fn directory_size_within(root: &Path, budget: Duration) -> Result<DirectoryS
                 complete = false;
                 continue;
             };
-            let Ok(metadata) = entry.metadata() else {
+            let Ok(metadata) = std::fs::symlink_metadata(entry.path()) else {
                 complete = false;
                 continue;
             };

@@ -13,7 +13,9 @@ use std::path::{Component, Path, PathBuf};
 use std::time::{Duration, Instant};
 
 use crate::download::CancelFlag;
-use crate::managed_path::{canonical_path_matches, is_link_or_reparse_point};
+use crate::managed_path::{
+    canonical_path_starts_with, has_link_or_reparse_point_component, is_link_or_reparse_point,
+};
 
 pub const MAX_IMPORT_TEXT_BYTES: u64 = 1024 * 1024;
 pub const MAX_IMPORT_FILES: u64 = 100_000;
@@ -229,13 +231,19 @@ pub fn resolve_picker_entry(source: &Path) -> Result<ResolvedPickerEntry, Import
     let source_parent = source
         .parent()
         .ok_or_else(|| ImportError::invalid("Selected source has no parent"))?;
+    if has_link_or_reparse_point_component(source_parent).map_err(|error| {
+        ImportError::io(format!("Failed to inspect selected source parent: {error}"))
+    })? {
+        return Err(ImportError::invalid(
+            "Selected source parent must not be a symbolic link or reparse point",
+        ));
+    }
     let canonical_parent = std::fs::canonicalize(source_parent).map_err(|error| {
         ImportError::io(format!("Failed to resolve selected source parent: {error}"))
     })?;
-    if !canonical_path_matches(&canonical_parent, source_parent) || !canonical_parent.is_absolute()
-    {
+    if !canonical_parent.is_absolute() {
         return Err(ImportError::invalid(
-            "Selected source parent must not be a symbolic link",
+            "Selected source parent must resolve to an absolute path",
         ));
     }
 
@@ -248,13 +256,9 @@ pub fn resolve_picker_entry(source: &Path) -> Result<ResolvedPickerEntry, Import
             (entry.file_name() == source_name).then_some(entry)
         })
         .ok_or_else(|| ImportError::invalid("Selected source no longer exists"))?;
-    let file_type = entry.file_type().map_err(|error| {
-        ImportError::io(format!("Failed to inspect selected source type: {error}"))
-    })?;
-    let metadata = entry
-        .metadata()
+    let metadata = std::fs::symlink_metadata(entry.path())
         .map_err(|error| ImportError::io(format!("Failed to inspect selected source: {error}")))?;
-    if file_type.is_symlink() || is_link_or_reparse_point(&metadata) {
+    if is_link_or_reparse_point(&metadata) {
         return Err(ImportError::invalid(
             "Selected source must not be a symbolic link or reparse point",
         ));
@@ -304,15 +308,7 @@ fn preflight_import_entry(
                 ImportError::io(format!("Failed to read selected entry: {error}"))
             })?;
             let child_path = entry.path();
-            let file_type = entry.file_type().map_err(|error| {
-                ImportError::io(format!("Failed to inspect selected entry type: {error}"))
-            })?;
-            if file_type.is_symlink() {
-                return Err(ImportError::invalid(
-                    "Selected source must not contain a symbolic link or reparse point",
-                ));
-            }
-            let child_metadata = entry.metadata().map_err(|error| {
+            let child_metadata = std::fs::symlink_metadata(entry.path()).map_err(|error| {
                 ImportError::io(format!("Failed to inspect selected entry: {error}"))
             })?;
             preflight_import_entry(&child_path, source_root, child_metadata, depth + 1, budget)?;
@@ -337,28 +333,62 @@ pub fn preflight_import_tree(source: &Path, budget: &mut ImportBudget) -> Result
     preflight_import_entry(&resolved.path, &source_root, resolved.metadata, 0, budget)
 }
 
-/// Checks a new destination: inside `managed_root`, a safe name, a canonical
-/// parent, and nothing there yet.
+/// Checks a new destination: inside `managed_root`, a safe name, a real parent,
+/// and nothing there yet.
 pub fn resolve_managed_destination(
     destination: &Path,
     managed_root: &Path,
 ) -> Result<PathBuf, ImportError> {
-    if !destination.is_absolute() || !destination.starts_with(managed_root) {
+    if !destination.is_absolute()
+        || !managed_root.is_absolute()
+        || destination
+            .components()
+            .any(|component| matches!(component, Component::CurDir | Component::ParentDir))
+        || managed_root
+            .components()
+            .any(|component| matches!(component, Component::CurDir | Component::ParentDir))
+    {
         return Err(ImportError::invalid(
             "Import destination is outside the managed root",
         ));
     }
+    let managed_root_metadata = std::fs::symlink_metadata(managed_root).map_err(|error| {
+        ImportError::io(format!("Failed to inspect managed import root: {error}"))
+    })?;
+    if is_link_or_reparse_point(&managed_root_metadata) || !managed_root_metadata.is_dir() {
+        return Err(ImportError::invalid(
+            "Import destination root must be a real directory",
+        ));
+    }
+    if has_link_or_reparse_point_component(managed_root).map_err(|error| {
+        ImportError::io(format!("Failed to inspect managed import root: {error}"))
+    })? {
+        return Err(ImportError::invalid(
+            "Import destination root must not contain a symbolic link or reparse point",
+        ));
+    }
+    let canonical_root = std::fs::canonicalize(managed_root).map_err(|error| {
+        ImportError::io(format!("Failed to resolve managed import root: {error}"))
+    })?;
     let destination_parent = destination
         .parent()
         .ok_or_else(|| ImportError::invalid("Import destination has no parent"))?;
+    if has_link_or_reparse_point_component(destination_parent).map_err(|error| {
+        ImportError::io(format!(
+            "Failed to inspect import destination parent: {error}"
+        ))
+    })? {
+        return Err(ImportError::invalid(
+            "Import destination parent must not contain a symbolic link or reparse point",
+        ));
+    }
     let canonical_parent = std::fs::canonicalize(destination_parent).map_err(|error| {
         ImportError::io(format!(
             "Failed to resolve import destination parent: {error}"
         ))
     })?;
-    if canonical_parent != destination_parent
-        || !canonical_parent.is_absolute()
-        || !canonical_parent.starts_with(managed_root)
+    if !canonical_parent.is_absolute()
+        || !canonical_path_starts_with(&canonical_parent, &canonical_root)
     {
         return Err(ImportError::invalid(
             "Import destination parent is outside the managed root",
@@ -397,7 +427,7 @@ pub fn resolve_managed_destination(
         )));
     }
     let resolved = canonical_parent.join(destination_name);
-    if !resolved.starts_with(managed_root) {
+    if !canonical_path_starts_with(&resolved, &canonical_root) {
         return Err(ImportError::invalid(
             "Import destination is outside the managed root",
         ));
@@ -482,13 +512,10 @@ fn copy_resolved_entry(
             let entry = entry.map_err(|error| {
                 ImportError::io(format!("Failed to read selected entry: {error}"))
             })?;
-            let file_type = entry.file_type().map_err(|error| {
-                ImportError::io(format!("Failed to inspect selected entry type: {error}"))
-            })?;
-            let child_metadata = entry.metadata().map_err(|error| {
+            let child_metadata = std::fs::symlink_metadata(entry.path()).map_err(|error| {
                 ImportError::io(format!("Failed to inspect selected entry: {error}"))
             })?;
-            if file_type.is_symlink() || is_link_or_reparse_point(&child_metadata) {
+            if is_link_or_reparse_point(&child_metadata) {
                 return Err(ImportError::invalid(
                     "Selected source must not contain a symbolic link or reparse point",
                 ));
@@ -582,6 +609,56 @@ fn copy_file_contents(
 mod tests {
     use super::*;
 
+    #[cfg(windows)]
+    fn ordinary_windows_spelling(path: &Path) -> PathBuf {
+        let path = path.to_str().expect("temporary path should be Unicode");
+        let path = if let Some(rest) = path.strip_prefix(r"\\?\UNC\") {
+            format!(r"\\{rest}")
+        } else if let Some(rest) = path.strip_prefix(r"\\?\") {
+            rest.to_owned()
+        } else {
+            path.to_owned()
+        };
+        let mut path = path.replace('\\', "/");
+        if path.as_bytes().get(1) == Some(&b':') {
+            let lower_drive_letter = path[..1].to_ascii_lowercase();
+            path.replace_range(..1, &lower_drive_letter);
+        }
+        PathBuf::from(path)
+    }
+
+    #[test]
+    fn picker_accepts_an_ordinary_spelling_of_a_real_directory() {
+        let directory = tempfile::tempdir().unwrap();
+        let source = directory.path().join("server");
+        std::fs::create_dir(&source).unwrap();
+
+        #[cfg(windows)]
+        let source = ordinary_windows_spelling(&source.canonicalize().unwrap());
+        #[cfg(not(windows))]
+        let source = source.canonicalize().unwrap();
+
+        let resolved = resolve_picker_entry(&source).unwrap();
+        assert!(resolved.metadata.is_dir());
+    }
+
+    #[test]
+    fn managed_destination_accepts_an_ordinary_spelling_of_its_root() {
+        let directory = tempfile::tempdir().unwrap();
+        let canonical_root = directory.path().canonicalize().unwrap();
+
+        #[cfg(windows)]
+        let destination_parent = ordinary_windows_spelling(&canonical_root);
+        #[cfg(not(windows))]
+        let destination_parent = canonical_root.clone();
+
+        let destination = destination_parent.join("new-entry");
+        let resolved = resolve_managed_destination(&destination, &canonical_root).unwrap();
+
+        assert_eq!(resolved.file_name(), destination.file_name());
+        assert!(canonical_path_starts_with(&resolved, &canonical_root));
+    }
+
     #[test]
     fn import_budget_enforces_file_count_and_size_limits() {
         let mut budget = ImportBudget::new();
@@ -640,6 +717,51 @@ mod tests {
         assert!(
             copy_external_entry(&source, &destination, &managed, &mut ImportBudget::new()).is_err()
         );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn rejects_a_symlink_in_the_selected_source_parent() {
+        let parent = tempfile::tempdir().unwrap();
+        let target = tempfile::tempdir().unwrap();
+        let parent = parent.path().canonicalize().unwrap();
+        let target = target.path().canonicalize().unwrap();
+        std::fs::create_dir(target.join("server")).unwrap();
+        let linked_parent = parent.join("linked-parent");
+        std::os::unix::fs::symlink(&target, &linked_parent).unwrap();
+
+        let error = resolve_picker_entry(&linked_parent.join("server"))
+            .err()
+            .expect("a symlink parent must be refused");
+        assert_eq!(error.kind, ImportErrorKind::InvalidSource);
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn rejects_a_junction_in_the_selected_source_parent() {
+        use std::process::Command;
+
+        let parent = tempfile::tempdir().unwrap();
+        let target = tempfile::tempdir().unwrap();
+        let parent = parent.path().canonicalize().unwrap();
+        let target = target.path().canonicalize().unwrap();
+        std::fs::create_dir(target.join("server")).unwrap();
+        let junction = parent.join("linked-parent");
+        let command = format!(
+            "mklink /J \"{}\" \"{}\"",
+            junction.display(),
+            target.display()
+        );
+        let status = Command::new("cmd")
+            .args(["/C", &command])
+            .status()
+            .expect("cmd should create a directory junction");
+        assert!(status.success(), "junction creation failed: {status}");
+
+        let error = resolve_picker_entry(&junction.join("server"))
+            .err()
+            .expect("a junction parent must be refused");
+        assert_eq!(error.kind, ImportErrorKind::InvalidSource);
     }
 
     #[cfg(unix)]

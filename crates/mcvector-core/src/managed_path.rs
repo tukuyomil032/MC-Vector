@@ -1,4 +1,4 @@
-use std::path::{Path, PathBuf};
+use std::path::{Component, Path, PathBuf};
 
 /// The only storage roots this command module may access.
 ///
@@ -41,37 +41,90 @@ pub fn is_link_or_reparse_point(metadata: &std::fs::Metadata) -> bool {
     false
 }
 
-/// Removes the verbatim prefix that `canonicalize` adds on Windows, so the result
-/// can be compared with a path spelled the usual way (`\\?\UNC\host` → `\\host`).
-#[cfg_attr(not(windows), allow(dead_code))]
-fn strip_verbatim_prefix(path: &str) -> std::borrow::Cow<'_, str> {
-    if let Some(rest) = path.strip_prefix(r"\\?\UNC\") {
-        std::borrow::Cow::Owned(format!(r"\\{rest}"))
-    } else if let Some(rest) = path.strip_prefix(r"\\?\") {
-        std::borrow::Cow::Borrowed(rest)
-    } else {
-        std::borrow::Cow::Borrowed(path)
-    }
-}
-
-/// Reports whether `canonicalize(original)` produced the same path as `original`,
-/// meaning no component was a link. Windows paths are compared without the
-/// verbatim prefix and case-insensitively; non-Unicode paths never match.
-pub fn canonical_path_matches(canonical: &Path, original: &Path) -> bool {
+/// Tests canonical path containment without assuming Windows emits the same
+/// verbatim prefix or drive-letter case for both paths.
+pub(crate) fn canonical_path_starts_with(path: &Path, root: &Path) -> bool {
     #[cfg(windows)]
     {
-        match (canonical.to_str(), original.to_str()) {
-            (Some(canonical), Some(original)) => {
-                strip_verbatim_prefix(canonical).eq_ignore_ascii_case(original)
+        fn strip_verbatim_prefix(path: &str) -> std::borrow::Cow<'_, str> {
+            if let Some(rest) = path.strip_prefix(r"\\?\UNC\") {
+                std::borrow::Cow::Owned(format!(r"\\{rest}"))
+            } else if let Some(rest) = path.strip_prefix(r"\\?\") {
+                std::borrow::Cow::Borrowed(rest)
+            } else {
+                std::borrow::Cow::Borrowed(path)
             }
-            _ => false,
         }
+
+        let (Some(path), Some(root)) = (path.to_str(), root.to_str()) else {
+            return false;
+        };
+        let path = strip_verbatim_prefix(path);
+        let root = strip_verbatim_prefix(root);
+        let mut path_components = Path::new(path.as_ref()).components();
+
+        for root_component in Path::new(root.as_ref()).components() {
+            let Some(path_component) = path_components.next() else {
+                return false;
+            };
+            let matches = match (root_component, path_component) {
+                (Component::Prefix(root), Component::Prefix(path)) => root
+                    .as_os_str()
+                    .to_string_lossy()
+                    .eq_ignore_ascii_case(&path.as_os_str().to_string_lossy()),
+                (Component::RootDir, Component::RootDir) => true,
+                (Component::Normal(root), Component::Normal(path)) => root == path,
+                _ => false,
+            };
+            if !matches {
+                return false;
+            }
+        }
+
+        true
     }
 
     #[cfg(not(windows))]
     {
-        canonical == original
+        path.starts_with(root)
     }
+}
+
+/// Checks each existing path component without following links.
+///
+/// Callers use this for absolute paths that are expected to exist. Checking
+/// components separately avoids treating platform spelling differences in
+/// `canonicalize` output as links, while still detecting symlinks, junctions,
+/// and other reparse points at every parent level.
+pub(crate) fn has_link_or_reparse_point_component(path: &Path) -> std::io::Result<bool> {
+    if !path.is_absolute() {
+        return Err(std::io::Error::new(
+            std::io::ErrorKind::InvalidInput,
+            "Path must be absolute",
+        ));
+    }
+
+    let mut current = PathBuf::new();
+    for component in path.components() {
+        match component {
+            Component::Prefix(prefix) => current.push(prefix.as_os_str()),
+            Component::RootDir => current.push(component.as_os_str()),
+            Component::CurDir | Component::ParentDir => {
+                return Err(std::io::Error::new(
+                    std::io::ErrorKind::InvalidInput,
+                    "Path must not contain current or parent components",
+                ));
+            }
+            Component::Normal(name) => {
+                current.push(name);
+                let metadata = std::fs::symlink_metadata(&current)?;
+                if is_link_or_reparse_point(&metadata) {
+                    return Ok(true);
+                }
+            }
+        }
+    }
+    Ok(false)
 }
 
 pub fn validate_server_id(server_id: &str) -> Result<String, String> {
@@ -222,8 +275,7 @@ pub fn resolve_managed_request(
             });
 
         if let Some(entry) = entry {
-            let metadata = entry
-                .metadata()
+            let metadata = std::fs::symlink_metadata(entry.path())
                 .map_err(|error| format!("Failed to inspect managed path component: {error}"))?;
             if is_link_or_reparse_point(&metadata) {
                 return Err("Managed path contains a symbolic link or reparse point".to_string());
@@ -288,8 +340,7 @@ fn resolve_managed_copy_path(
             });
 
         if let Some(entry) = entry {
-            let metadata = entry
-                .metadata()
+            let metadata = std::fs::symlink_metadata(entry.path())
                 .map_err(|error| format!("Failed to inspect managed copy entry: {error}"))?;
             if is_link_or_reparse_point(&metadata) {
                 return Err(
@@ -365,34 +416,32 @@ fn copy_managed_tree_resolved(
 #[cfg(test)]
 mod tests {
     use super::{
-        canonical_path_matches, resolve_managed_request, strip_verbatim_prefix,
-        validated_relative_path, ManagedPathRequest, ManagedRoot,
+        has_link_or_reparse_point_component, resolve_managed_request, validated_relative_path,
+        ManagedPathRequest, ManagedRoot,
     };
 
     #[cfg(windows)]
-    use std::path::PathBuf;
+    use super::canonical_path_starts_with;
 
+    #[cfg(windows)]
     #[test]
-    fn strip_verbatim_prefix_handles_disk_unc_and_plain_paths() {
-        assert_eq!(strip_verbatim_prefix(r"\\?\C:\Users\me"), r"C:\Users\me");
-        assert_eq!(
-            strip_verbatim_prefix(r"\\?\UNC\host\share\dir"),
-            r"\\host\share\dir"
-        );
-        assert_eq!(strip_verbatim_prefix(r"C:\Users\me"), r"C:\Users\me");
-        assert_eq!(strip_verbatim_prefix("/tmp/me"), "/tmp/me");
+    fn canonical_containment_accepts_verbatim_prefix_and_drive_case_differences() {
+        assert!(canonical_path_starts_with(
+            Path::new(r"\\?\c:\Users\me\servers\server"),
+            Path::new(r"C:\Users\me\servers")
+        ));
+        assert!(!canonical_path_starts_with(
+            Path::new(r"\\?\c:\Users\me\servers-backup\server"),
+            Path::new(r"C:\Users\me\servers")
+        ));
     }
 
     #[test]
-    fn canonical_path_matches_accepts_the_canonical_form_of_a_real_directory() {
+    fn component_link_check_accepts_a_real_directory() {
         let directory = tempfile::tempdir().expect("test directory should be created");
-        let absolute = std::fs::canonicalize(directory.path()).expect("directory should resolve");
-        #[cfg(windows)]
-        let original = PathBuf::from(strip_verbatim_prefix(absolute.to_str().unwrap()).as_ref());
-        #[cfg(not(windows))]
-        let original = absolute.clone();
-        assert!(canonical_path_matches(&absolute, &original));
-        assert!(!canonical_path_matches(&absolute, &original.join("child")));
+        let directory = directory.path().canonicalize().unwrap();
+        assert!(!has_link_or_reparse_point_component(&directory).unwrap());
+        assert!(has_link_or_reparse_point_component(&directory.join("missing")).is_err());
     }
 
     fn server_request(server_id: &str, relative_path: &str) -> ManagedPathRequest {
@@ -587,5 +636,20 @@ mod tests {
             error,
             "Managed path contains a symbolic link or reparse point"
         );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn component_link_check_detects_a_link_in_a_parent() {
+        use std::os::unix::fs::symlink;
+
+        let parent = tempfile::tempdir().expect("test directory should be created");
+        let target = tempfile::tempdir().expect("test directory should be created");
+        let parent = parent.path().canonicalize().unwrap();
+        let target = target.path().canonicalize().unwrap();
+        let link = parent.join("linked-parent");
+        symlink(&target, &link).expect("test symlink should be created");
+
+        assert!(has_link_or_reparse_point_component(&link.join("child")).unwrap());
     }
 }
