@@ -1,5 +1,7 @@
 use super::{
-    basename, file_sha256, io, is_link, regular_entry, regular_file, trusted_child, Artifact,
+    basename, file_sha256,
+    installed::{publish_origins, VerifiedOrigin},
+    io, is_link, regular_entry, regular_file, trusted_child, Artifact, ArtifactOrigin,
     LINKED_ENTRY,
 };
 use serde::{Deserialize, Serialize};
@@ -19,6 +21,8 @@ struct Entry {
     original: Option<String>,
     #[serde(default)]
     original_sha256: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    origin: Option<VerifiedOrigin>,
 }
 #[derive(Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
@@ -104,6 +108,14 @@ impl Transaction {
                 target,
                 original: artifact.original_name.clone(),
                 original_sha256: artifact.original_sha256.clone(),
+                origin: Some(VerifiedOrigin {
+                    origin: ArtifactOrigin {
+                        project: artifact.preview.project.clone(),
+                        version: artifact.preview.version.clone(),
+                    },
+                    version_key: artifact.preview.id.clone(),
+                    sha256: String::new(),
+                }),
             });
         }
         // A dependency must never overwrite another entry's source during commit.
@@ -190,8 +202,12 @@ impl Transaction {
 
     pub(super) fn commit(mut self) -> Result<Vec<String>, String> {
         for index in 0..self.journal.entries.len() {
-            if !regular_file(&self.stage(index))? {
+            let stage = self.stage(index);
+            if !regular_file(&stage)? {
                 return Err("Missing staged artifact".into());
+            }
+            if let Some(origin) = &mut self.journal.entries[index].origin {
+                origin.sha256 = file_sha256(&stage)?;
             }
         }
         self.journal.phase = Phase::Committing;
@@ -248,10 +264,21 @@ impl Transaction {
             .collect();
         // Installation is already durable; leave a committed journal on cleanup
         // failure for the next startup instead of claiming installation failed.
-        if let Err(error) = self.cleanup() {
-            log::warn!("Plugin transaction cleanup deferred: {error}");
+        if let Err(error) = self.finalize_commit() {
+            log::warn!("Plugin transaction finalization deferred: {error}");
         }
         Ok(names)
+    }
+
+    fn finalize_commit(&self) -> Result<(), String> {
+        publish_origins(
+            &self.root,
+            self.journal.entries.iter().filter_map(|entry| {
+                let origin = entry.origin.as_ref()?;
+                Some((entry.target.as_str(), entry.original.as_deref(), origin))
+            }),
+        )?;
+        self.cleanup()
     }
 
     fn rollback_and_mark(&mut self) -> Result<(), String> {
@@ -374,7 +401,11 @@ pub(super) fn recover_directory(root: &Path) -> Result<(), String> {
         if transaction.journal.phase == Phase::Committing {
             transaction.rollback_and_mark()?;
         }
-        transaction.cleanup()?;
+        if transaction.journal.phase == Phase::Committed {
+            transaction.finalize_commit()?;
+        } else {
+            transaction.cleanup()?;
+        }
     }
     Ok(())
 }

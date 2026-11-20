@@ -138,6 +138,24 @@ pub enum CoreErrorCode {
     BackupInvalidSource,
     /// A backup filesystem operation failed.
     BackupIo,
+    /// Catalog or project metadata could not be loaded.
+    PluginCatalogFailed,
+    /// The plugin operation has invalid input.
+    PluginInvalidRequest,
+    /// The installer could not complete the requested transaction.
+    PluginInstallFailed,
+    /// The caller needs to prepare a fresh install plan.
+    PluginSessionExpired,
+    /// Installed files or origin metadata could not be read or written.
+    PluginIo,
+    /// The plugin is incompatible with the server profile.
+    PluginIncompatible,
+    /// A checksum is missing and unverified downloads are disabled.
+    PluginUnverifiedBlocked,
+    /// The provider or download source failed validation.
+    PluginSourceRejected,
+    /// The installation destination failed validation.
+    PluginDestinationRejected,
 }
 
 impl CoreErrorCode {
@@ -202,6 +220,15 @@ impl CoreErrorCode {
         CoreErrorCode::BackupRestoreFailed,
         CoreErrorCode::BackupInvalidSource,
         CoreErrorCode::BackupIo,
+        CoreErrorCode::PluginCatalogFailed,
+        CoreErrorCode::PluginInvalidRequest,
+        CoreErrorCode::PluginInstallFailed,
+        CoreErrorCode::PluginSessionExpired,
+        CoreErrorCode::PluginIo,
+        CoreErrorCode::PluginIncompatible,
+        CoreErrorCode::PluginUnverifiedBlocked,
+        CoreErrorCode::PluginSourceRejected,
+        CoreErrorCode::PluginDestinationRejected,
     ];
 
     /// The stable `<domain>.<reason>` string for this code.
@@ -266,6 +293,15 @@ impl CoreErrorCode {
             Self::BackupRestoreFailed => "backup.restore_failed",
             Self::BackupInvalidSource => "backup.invalid_source",
             Self::BackupIo => "backup.io",
+            Self::PluginCatalogFailed => "plugin.catalog_failed",
+            Self::PluginInvalidRequest => "plugin.invalid_request",
+            Self::PluginInstallFailed => "plugin.install_failed",
+            Self::PluginSessionExpired => "plugin.session_expired",
+            Self::PluginIo => "plugin.io",
+            Self::PluginIncompatible => "plugin.incompatible",
+            Self::PluginUnverifiedBlocked => "plugin.unverified_blocked",
+            Self::PluginSourceRejected => "plugin.source_rejected",
+            Self::PluginDestinationRejected => "plugin.destination_rejected",
         }
     }
 
@@ -332,13 +368,22 @@ impl CoreErrorCode {
             | Self::BackupNotFound
             | Self::BackupCorruptArchive
             | Self::BackupRestoreFailed
-            | Self::BackupInvalidSource => false,
+            | Self::BackupInvalidSource
+            | Self::PluginInvalidRequest
+            | Self::PluginIncompatible
+            | Self::PluginUnverifiedBlocked
+            | Self::PluginSourceRejected
+            | Self::PluginDestinationRejected => false,
             Self::PropertiesIo
             | Self::PlayerIo
             | Self::ServerSettingsIo
             | Self::ServerSettingsRegistry
             | Self::BackupCatalogFailed
-            | Self::BackupIo => true,
+            | Self::BackupIo
+            | Self::PluginCatalogFailed
+            | Self::PluginInstallFailed
+            | Self::PluginSessionExpired
+            | Self::PluginIo => true,
         }
     }
 
@@ -464,10 +509,19 @@ mod tests {
             CoreErrorCode::BackupRestoreFailed => 56,
             CoreErrorCode::BackupInvalidSource => 57,
             CoreErrorCode::BackupIo => 58,
+            CoreErrorCode::PluginCatalogFailed => 59,
+            CoreErrorCode::PluginInvalidRequest => 60,
+            CoreErrorCode::PluginInstallFailed => 61,
+            CoreErrorCode::PluginSessionExpired => 62,
+            CoreErrorCode::PluginIo => 63,
+            CoreErrorCode::PluginIncompatible => 64,
+            CoreErrorCode::PluginUnverifiedBlocked => 65,
+            CoreErrorCode::PluginSourceRejected => 66,
+            CoreErrorCode::PluginDestinationRejected => 67,
         }
     }
 
-    const VARIANT_COUNT: usize = 59;
+    const VARIANT_COUNT: usize = 68;
 
     /// Checks `^[a-z]+(_[a-z]+)*\.[a-z]+(_[a-z]+)*$` without a regex crate.
     fn is_valid_code_string(s: &str) -> bool {

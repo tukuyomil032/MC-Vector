@@ -1,6 +1,8 @@
 use super::{body, checksum, http, optional_string, string, strings};
 use serde_json::{json, Value};
 
+use crate::plugins::model::{SearchRequest, SortMode};
+
 const API: &str = "https://api.modrinth.com/v2";
 
 pub async fn search(
@@ -13,17 +15,69 @@ pub async fn search(
     let selected_version = minecraft_version
         .map(str::trim)
         .filter(|value| !value.is_empty());
-    let facets = search_facets(&facets, selected_version)?;
+    let url = search_url(&query, &facets, offset, limit, selected_version, false)?;
+    let payload = http::get(url).await?;
+    Ok(parse_search(&payload, selected_version))
+}
+
+pub(crate) async fn search_browser(
+    input: &SearchRequest,
+    project_type: &str,
+    loader: &str,
+) -> Result<Value, String> {
+    let version = Some(input.game_version.trim()).filter(|value| !value.is_empty());
+    let url = browser_url(input, project_type, loader, version)?;
+    Ok(parse_search(&http::get(url).await?, version))
+}
+
+fn browser_url(
+    input: &SearchRequest,
+    project_type: &str,
+    loader: &str,
+    version: Option<&str>,
+) -> Result<reqwest::Url, String> {
+    let mut facets = vec![vec![format!("project_type:{project_type}")]];
+    if !loader.is_empty() {
+        facets.push(vec![format!("categories:{loader}")]);
+    }
+    if let Some(category) = input.category.as_deref() {
+        facets.push(vec![format!("categories:{category}")]);
+    }
+    search_url(
+        &input.query,
+        &json!(facets).to_string(),
+        input.offset,
+        input.limit,
+        version,
+        input.sort == SortMode::Downloads,
+    )
+}
+
+pub(crate) async fn categories() -> Result<Value, String> {
+    http::get(http::endpoint(API, &["tag", "category"])?).await
+}
+
+fn search_url(
+    query: &str,
+    facets: &str,
+    offset: u32,
+    limit: u32,
+    selected_version: Option<&str>,
+    sort_downloads: bool,
+) -> Result<reqwest::Url, String> {
+    let facets = search_facets(facets, selected_version)?;
     let mut url = http::endpoint(API, &["search"])?;
     url.query_pairs_mut()
-        .append_pair("query", &query)
+        .append_pair("query", query)
         .append_pair("offset", &offset.to_string())
         .append_pair("limit", &http::page_limit(limit, 100)?.to_string());
     if !facets.is_empty() {
         url.query_pairs_mut().append_pair("facets", &facets);
     }
-    let payload = http::get(url).await?;
-    Ok(parse_search(&payload, selected_version))
+    if sort_downloads {
+        url.query_pairs_mut().append_pair("index", "downloads");
+    }
+    Ok(url)
 }
 
 fn search_facets(facets: &str, selected_version: Option<&str>) -> Result<String, String> {
@@ -219,6 +273,36 @@ fn selected_install_file<'a>(files: &'a [Value], preferred: Option<&str>) -> Opt
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn native_search_has_separate_loader_category_and_version_facets() {
+        use crate::plugins::model::PluginSource;
+        let request = SearchRequest {
+            source: PluginSource::Modrinth,
+            query: "data tools".into(),
+            software: "Fabric".into(),
+            game_version: "1.21".into(),
+            offset: 25,
+            limit: 25,
+            sort: SortMode::Downloads,
+            category: Some("technology".into()),
+        };
+        let url = browser_url(&request, "mod", "fabric", Some("1.21")).unwrap();
+        let query: std::collections::HashMap<_, _> = url.query_pairs().into_owned().collect();
+        let facets: Value = serde_json::from_str(&query["facets"]).unwrap();
+        assert_eq!(
+            facets,
+            json!([
+                ["project_type:mod"],
+                ["categories:fabric"],
+                ["categories:technology"],
+                ["versions:1.21"]
+            ])
+        );
+        assert_eq!(query["index"], "downloads");
+        assert_eq!(query["offset"], "25");
+        assert_eq!(query["limit"], "25");
+    }
 
     #[test]
     fn version_endpoint_preserves_provider_filters_and_rejects_url_ids() {

@@ -1,5 +1,9 @@
 use super::*;
-use crate::test_support::test_temp_dir;
+fn test_temp_dir(name: &str) -> PathBuf {
+    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("../../native/.build/tests")
+        .join(name)
+}
 use std::time::Duration;
 
 struct Temp {
@@ -206,7 +210,20 @@ fn successful_commit_publishes_all_files_and_preserves_disabled_state() {
         fs::read(temp.path.join("new.jar.disabled")).unwrap(),
         b"verified primary"
     );
-    assert_eq!(fs::read_dir(&temp.path).unwrap().count(), 2);
+    // The two artifacts plus the origin record the installed list reads.
+    let mut names: Vec<_> = fs::read_dir(&temp.path)
+        .unwrap()
+        .map(|entry| entry.unwrap().file_name().into_string().unwrap())
+        .collect();
+    names.sort();
+    assert_eq!(
+        names,
+        vec![
+            ".mcvector-plugin-origins.json",
+            "dependency.jar",
+            "new.jar.disabled"
+        ]
+    );
 }
 
 #[test]
@@ -851,4 +868,46 @@ async fn blocking_filesystem_batches_leave_the_async_worker_responsive() {
         "blocking filesystem batch occupied the async worker"
     );
     operation.await.unwrap();
+}
+
+use crate::download::validate_download_redirect;
+use reqwest::Url;
+#[test]
+fn provider_allowlists_are_exact() {
+    assert_eq!(provider_hosts("modrinth").unwrap(), ["cdn.modrinth.com"]);
+    assert!(provider_hosts("hangar")
+        .unwrap()
+        .contains(&"hangarcdn.papermc.io"));
+    assert!(provider_hosts("modrinth.evil.example").is_err());
+}
+
+#[test]
+fn spiget_download_redirects_allow_only_its_api_and_official_cdn() {
+    let hosts = provider_hosts("spiget").unwrap();
+    for url in [
+        "https://api.spiget.org/v2/resources/123/download",
+        "https://cdn.spiget.org/file/123.jar",
+    ] {
+        assert!(
+            validate_download_redirect(&Url::parse(url).unwrap(), Some(hosts), 1).is_ok(),
+            "{url}"
+        );
+    }
+    for url in [
+        "https://external.example/plugin.jar",
+        "https://cdn.spiget.org.evil.test/plugin.jar",
+        "https://sub.cdn.spiget.org/plugin.jar",
+        "http://cdn.spiget.org/plugin.jar",
+    ] {
+        assert!(
+            validate_download_redirect(&Url::parse(url).unwrap(), Some(hosts), 1).is_err(),
+            "{url}"
+        );
+    }
+    assert!(validate_download_redirect(
+        &Url::parse("https://cdn.spiget.org/plugin.jar").unwrap(),
+        Some(provider_hosts("modrinth").unwrap()),
+        1
+    )
+    .is_err());
 }

@@ -1,22 +1,84 @@
 use super::{body, checksum, http, optional_string, string, strings};
 use serde_json::{json, Map, Value};
 
+use crate::plugins::model::{SearchRequest, SortMode};
+
 const API: &str = "https://hangar.papermc.io/api/v1";
 
+/// Stable project-category IDs from the Hangar public OpenAPI Category enum.
+/// The remaining enum value, `undefined`, is reserved for uncategorized data.
+pub(crate) fn categories() -> &'static [(&'static str, &'static str)] {
+    &[
+        ("admin_tools", "Admin Tools"),
+        ("chat", "Chat"),
+        ("dev_tools", "Dev Tools"),
+        ("economy", "Economy"),
+        ("gameplay", "Gameplay"),
+        ("games", "Games"),
+        ("protection", "Protection"),
+        ("role_playing", "Role Playing"),
+        ("world_management", "World Management"),
+        ("misc", "Miscellaneous"),
+    ]
+}
+
 pub async fn search(query: String, offset: u32, limit: u32) -> Result<Value, String> {
+    let url = search_url(&query, offset, limit, None, None)?;
+    search_projects(url).await
+}
+
+pub(crate) async fn search_browser(input: &SearchRequest) -> Result<Value, String> {
+    let sort = match input.sort {
+        SortMode::Downloads => Some("-downloads"),
+        SortMode::Name => Some("slug"),
+        _ => None,
+    };
+    let url = search_url(
+        &input.query,
+        input.offset,
+        http::page_limit(input.limit, 25)?,
+        input.category.as_deref(),
+        sort,
+    )?;
+    search_projects(url).await
+}
+
+fn search_url(
+    query: &str,
+    offset: u32,
+    limit: u32,
+    category: Option<&str>,
+    sort: Option<&str>,
+) -> Result<reqwest::Url, String> {
     let mut url = http::endpoint(API, &["projects"])?;
-    url.query_pairs_mut()
-        .append_pair("query", &query)
+    let mut params = url.query_pairs_mut();
+    params
+        .append_pair("query", query)
         .append_pair("offset", &offset.to_string())
         .append_pair("limit", &http::page_limit(limit, 100)?.to_string());
+    if let Some(category) = category {
+        params.append_pair("category", category);
+    }
+    if let Some(sort) = sort {
+        params.append_pair("sort", sort);
+    }
+    drop(params);
+    Ok(url)
+}
+
+async fn search_projects(url: reqwest::Url) -> Result<Value, String> {
     let payload = http::get(url).await?;
+    Ok(parse_search(&payload))
+}
+
+fn parse_search(payload: &Value) -> Value {
     let projects: Vec<Value> = payload["result"]
         .as_array()
         .into_iter()
         .flatten()
         .filter_map(parse_project)
         .collect();
-    Ok(json!({"result": projects, "pagination": payload["pagination"]}))
+    json!({"result": projects, "pagination": payload["pagination"]})
 }
 
 fn parse_project(project: &Value) -> Option<Value> {
@@ -316,6 +378,21 @@ mod tests {
             {"name":"1.0", "downloads":{"PAPER":{"externalUrl":"https://example.org"}},
             "platformDependencies":{"PAPER":["1.20"]}}]}),
         )
+    }
+
+    #[test]
+    fn native_search_uses_public_category_ids() {
+        let id = categories()
+            .iter()
+            .find(|(_, name)| *name == "Admin Tools")
+            .unwrap()
+            .0;
+        let url = search_url("audit", 25, 25, Some(id), Some("-downloads")).unwrap();
+        let query: std::collections::HashMap<_, _> = url.query_pairs().into_owned().collect();
+        assert_eq!(query["category"], "admin_tools");
+        assert_eq!(query["sort"], "-downloads");
+        assert_eq!(query["query"], "audit");
+        assert_eq!(query["offset"], "25");
     }
 
     #[test]

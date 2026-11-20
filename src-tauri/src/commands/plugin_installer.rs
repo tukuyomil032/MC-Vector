@@ -5,7 +5,7 @@ use crate::plugin_installer::{
     PrepareRequest,
 };
 use crate::state::operation_manager::{OperationKind, ServerOperationManager};
-use tauri::{AppHandle, Manager, State};
+use tauri::{AppHandle, Emitter, Manager, State};
 
 #[tauri::command]
 pub async fn prepare_plugin_install(
@@ -43,7 +43,22 @@ pub async fn execute_plugin_install(
         .path()
         .app_data_dir()
         .map_err(|error| error.to_string())?;
-    installer.execute(&app, &app_data, &registry, request).await
+    let event = format!("download-progress-{}", request.token);
+    let allow_unverified = crate::commands::download::allows_unverified_plugin_downloads(&app);
+    installer
+        .execute(
+            &app_data,
+            &registry,
+            request,
+            allow_unverified,
+            |progress| {
+                if let Err(error) = app.emit(&event, progress) {
+                    log::debug!("Download progress was not delivered: {error}");
+                }
+            },
+            None,
+        )
+        .await
 }
 
 #[tauri::command]

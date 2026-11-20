@@ -9,6 +9,8 @@ use base64::{
 use serde_json::{json, Value};
 use std::sync::OnceLock;
 
+use crate::plugins::model::{SearchRequest, SortMode};
+
 const API: &str = "https://api.spiget.org/v2";
 
 pub async fn search(
@@ -26,24 +28,91 @@ pub async fn search(
         .collect())
 }
 
-fn search_url(query: &str, page: u32, size: u32) -> Result<reqwest::Url, String> {
-    let trimmed = query.trim();
-    let mut url = if trimmed.is_empty() {
-        http::endpoint(API, &["resources", "free"])?
+pub(crate) async fn search_browser(input: &SearchRequest) -> Result<Vec<Value>, String> {
+    let size = http::page_limit(input.limit, 100)?;
+    let page = (input.offset / size).saturating_add(1);
+    let skip = (input.offset % size) as usize;
+    let query = input.query.trim();
+    let category = input
+        .category
+        .as_deref()
+        .map(str::parse::<u64>)
+        .transpose()
+        .map_err(|_| "Invalid Spiget category ID")?;
+    let sort = if input.sort == SortMode::Name {
+        "name"
     } else {
-        // Search text is not an identifier. Encode the whole term as one path
-        // segment so punctuation and slashes retain their former search meaning.
-        let mut url = http::endpoint(API, &["search", "resources"])?;
-        url.path_segments_mut()
-            .map_err(|_| "Invalid provider path")?
-            .push(trimmed);
-        url
+        "-downloads"
     };
-    url.query_pairs_mut()
-        .append_pair("size", &http::page_limit(size, 100)?.to_string())
-        .append_pair("page", &page.max(1).to_string())
-        .append_pair("sort", "-downloads");
+    let mut resources = browser_page(query, category, page, size, sort).await?;
+    if skip != 0 && resources.len() == size as usize && page < u32::MAX {
+        resources.extend(browser_page(query, category, page + 1, size, sort).await?);
+    }
+    let query_folded = query.to_lowercase();
+    Ok(resources
+        .into_iter()
+        .skip(skip)
+        .take(size as usize)
+        // Spiget exposes category pages and text search as separate endpoints.
+        .filter(|item| {
+            category.is_none()
+                || query.is_empty()
+                || string(&item["name"]).to_lowercase().contains(&query_folded)
+        })
+        .filter_map(|item| parse_resource(&item, Some(&input.game_version)))
+        .collect())
+}
+
+async fn browser_page(
+    query: &str,
+    category: Option<u64>,
+    page: u32,
+    size: u32,
+    sort: &str,
+) -> Result<Vec<Value>, String> {
+    let mut url = match category {
+        Some(id) => http::endpoint(API, &["categories", &id.to_string(), "resources"])?,
+        None => search_endpoint(query)?,
+    };
+    set_paging(&mut url, page, size, sort);
+    let payload = http::get(url).await?;
+    payload
+        .as_array()
+        .cloned()
+        .ok_or_else(|| "Invalid Spiget resource list".into())
+}
+
+pub(crate) async fn categories() -> Result<Value, String> {
+    let mut url = http::endpoint(API, &["categories"])?;
+    url.query_pairs_mut().append_pair("size", "100");
+    http::get(url).await
+}
+
+fn search_url(query: &str, page: u32, size: u32) -> Result<reqwest::Url, String> {
+    let mut url = search_endpoint(query)?;
+    set_paging(&mut url, page, http::page_limit(size, 100)?, "-downloads");
     Ok(url)
+}
+
+fn search_endpoint(query: &str) -> Result<reqwest::Url, String> {
+    let trimmed = query.trim();
+    if trimmed.is_empty() {
+        return http::endpoint(API, &["resources", "free"]);
+    }
+    // Search text is not an identifier. Encode the whole term as one path
+    // segment so punctuation and slashes retain their former search meaning.
+    let mut url = http::endpoint(API, &["search", "resources"])?;
+    url.path_segments_mut()
+        .map_err(|_| "Invalid provider path")?
+        .push(trimmed);
+    Ok(url)
+}
+
+fn set_paging(url: &mut reqwest::Url, page: u32, size: u32, sort: &str) {
+    url.query_pairs_mut()
+        .append_pair("size", &size.to_string())
+        .append_pair("page", &page.max(1).to_string())
+        .append_pair("sort", sort);
 }
 
 fn parse_resource(resource: &Value, minecraft_version: Option<&str>) -> Option<Value> {
@@ -163,7 +232,10 @@ pub async fn resource_body(resource_id: u64) -> Result<Option<String>, String> {
 }
 
 fn parse_body(payload: &Value) -> Option<String> {
-    let raw = string(&payload["description"]);
+    body(&json!(decode_body(string(&payload["description"]))))
+}
+
+pub(crate) fn decode_body(raw: &str) -> String {
     // Match browser atob: providers may omit padding or include ASCII spacing.
     let normalized: String = raw
         .chars()
@@ -175,11 +247,10 @@ fn parse_body(payload: &Value) -> Option<String> {
             .with_decode_padding_mode(DecodePaddingMode::Indifferent)
             .with_decode_allow_trailing_bits(true),
     );
-    let decoded = decoder
+    decoder
         .decode(normalized)
         .map(|bytes| String::from_utf8_lossy(&bytes).into_owned())
-        .unwrap_or_else(|_| raw.to_owned());
-    body(&json!(decoded))
+        .unwrap_or_else(|_| raw.to_owned())
 }
 
 #[cfg(test)]

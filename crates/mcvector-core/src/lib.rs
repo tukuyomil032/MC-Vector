@@ -20,6 +20,7 @@ pub mod metric_history;
 pub mod operations;
 pub mod paths;
 pub mod players;
+pub mod plugins;
 pub mod properties;
 pub mod recovery_record;
 pub mod registry;

@@ -50,7 +50,7 @@ fn client() -> Result<&'static Client, String> {
 
 /// A renderer-provided URL is never accepted. Every endpoint is assembled from
 /// a fixed provider base and separately encoded, validated identifiers.
-pub(super) fn endpoint(base: &str, segments: &[&str]) -> Result<Url, String> {
+pub(in crate::plugins) fn endpoint(base: &str, segments: &[&str]) -> Result<Url, String> {
     let mut url = Url::parse(base).map_err(|error| error.to_string())?;
     if !approved(&url) {
         return Err("Invalid provider endpoint".into());
@@ -75,11 +75,15 @@ pub(super) fn endpoint(base: &str, segments: &[&str]) -> Result<Url, String> {
     Ok(url)
 }
 
-pub(super) async fn get(url: Url) -> Result<Value, String> {
+pub(in crate::plugins) async fn get(url: Url) -> Result<Value, String> {
     if !approved(&url) {
         return Err("Invalid provider endpoint".into());
     }
-    let response = client()?
+    fetch_json(client()?, url).await
+}
+
+async fn fetch_json(client: &Client, url: Url) -> Result<Value, String> {
+    let response = client
         .get(url)
         .header("Accept", "application/json")
         .send()
@@ -103,7 +107,7 @@ pub(super) async fn get(url: Url) -> Result<Value, String> {
     serde_json::from_slice(&bytes).map_err(|error| format!("Invalid plugin API JSON: {error}"))
 }
 
-pub(super) fn page_limit(value: u32, maximum: u32) -> Result<u32, String> {
+pub(in crate::plugins) fn page_limit(value: u32, maximum: u32) -> Result<u32, String> {
     if value == 0 || value > maximum {
         Err("Invalid provider page size".into())
     } else {
@@ -114,6 +118,36 @@ pub(super) fn page_limit(value: u32, maximum: u32) -> Result<u32, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[tokio::test]
+    async fn catalog_http_decodes_chunked_json_from_loopback() {
+        use tokio::io::{AsyncReadExt, AsyncWriteExt};
+        use tokio::net::TcpListener;
+
+        let listener = TcpListener::bind(("127.0.0.1", 0)).await.unwrap();
+        let address = listener.local_addr().unwrap();
+        let mock = tokio::spawn(async move {
+            let (mut stream, _) = listener.accept().await.unwrap();
+            let mut request = Vec::new();
+            while !request.ends_with(b"\r\n\r\n") {
+                request.push(stream.read_u8().await.unwrap());
+            }
+            assert!(request.starts_with(b"GET /tag/category HTTP/1.1"));
+            assert!(String::from_utf8_lossy(&request)
+                .to_lowercase()
+                .contains("accept: application/json"));
+            stream.write_all(b"HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\nConnection: close\r\n\r\n1\r\n[\r\n10\r\n{\"name\":\"tools\"}\r\n1\r\n]\r\n0\r\n\r\n").await.unwrap();
+        });
+        let client = Client::builder()
+            .no_proxy()
+            .timeout(Duration::from_secs(5))
+            .build()
+            .unwrap();
+        let url = Url::parse(&format!("http://{address}/tag/category")).unwrap();
+        let result = fetch_json(&client, url).await.unwrap();
+        mock.await.unwrap();
+        assert_eq!(result, serde_json::json!([{"name": "tools"}]));
+    }
 
     #[test]
     fn body_limit_covers_chunked_and_overflowing_sizes() {
