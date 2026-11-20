@@ -305,6 +305,18 @@
                 }
             case "DASH-offline":
                 app.navigate(to: .dashboard)
+            case "PLUGINS-live", "PLUGINS-live-detail", "PLUGINS-live-installed", "PLUGINS-live-readme",
+                "PLUGINS-live-versions", "PLUGINS-live-install":
+                PluginInspector.captureTab =
+                    id == "PLUGINS-live-readme" ? .readme : id == "PLUGINS-live-versions" ? .versions : nil
+                // Real provider search (needs the network), for checking the
+                // browser against live data rather than fixtures.
+                PluginsView.capturePreset = .init(
+                    tab: id == "PLUGINS-live-installed" ? .installed : .browse,
+                    selectFirst: ["PLUGINS-live-detail", "PLUGINS-live-readme", "PLUGINS-live-versions"].contains(id),
+                    installFirst: id == "PLUGINS-live-install")
+                app.navigate(to: .plugins)
+                try? await Task.sleep(for: .seconds(id == "PLUGINS-live-install" ? 15 : 6))
             case "DASH-running", "DASH-narrow", "VERIFY-high-cpu":
                 if id == "VERIFY-high-cpu" {
                     // Threshold 0: every sample is "high"; the cooldown must allow one notice.
