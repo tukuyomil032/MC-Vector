@@ -9,7 +9,8 @@ import SwiftUI
 /// Holds the same settings as React's SettingsWindow (language, update channel,
 /// unverified plugin downloads) plus an About pane.
 struct SettingsView: View {
-    @State private var selection: SettingsPane? = Self.initialPane
+    @State private var selection: SettingsPane? = SettingsNavigation.shared.take() ?? Self.initialPane
+    @State private var navigation = SettingsNavigation.shared
     @State private var search = ""
 
     private static var initialPane: SettingsPane {
@@ -48,6 +49,7 @@ struct SettingsView: View {
             Group {
                 switch selection ?? .general {
                 case .general: GeneralPane()
+                case .java: JavaPane()
                 case .editor: EditorSettingsPane()
                 case .updates: UpdatesPane()
                 case .security: SecurityPane()
@@ -60,23 +62,45 @@ struct SettingsView: View {
             .navigationTitle((selection ?? .general).title)
         }
         .frame(minWidth: 680, idealWidth: 720, minHeight: 460, idealHeight: 480)
+        // Another window asked for a pane while Settings was already open.
+        .onChange(of: navigation.requested) {
+            if let pane = navigation.take() { selection = pane }
+        }
         #if DEBUG
             .onAppear { selection = Self.initialPane }
         #endif
     }
 }
 
+/// Lets other windows open Settings on a given pane (General Settings'
+/// "Manage Java…" opens the Java pane).
+@MainActor
+@Observable
+final class SettingsNavigation {
+    static let shared = SettingsNavigation()
+    private(set) var requested: SettingsPane?
+
+    /// Call before `openSettings()`.
+    func open(_ pane: SettingsPane) { requested = pane }
+
+    func take() -> SettingsPane? {
+        defer { requested = nil }
+        return requested
+    }
+}
+
 enum SettingsPane: String, Identifiable, Hashable {
-    case general, editor, updates, security, about
+    case general, java, editor, updates, security, about
 
     var id: String { rawValue }
 
     /// Sidebar groups, separated like System Settings.
-    static let groups: [[SettingsPane]] = [[.general, .editor, .updates, .security], [.about]]
+    static let groups: [[SettingsPane]] = [[.general, .java, .editor, .updates, .security], [.about]]
 
     var title: String {
         switch self {
         case .general: L10n.t("native.settings.general")
+        case .java: L10n.t("native.settings.java")
         case .editor: L10n.t("native.settings.editor")
         case .updates: L10n.t("settings.update.title")
         case .security: L10n.t("settings.security.title")
@@ -87,6 +111,7 @@ enum SettingsPane: String, Identifiable, Hashable {
     var symbol: String {
         switch self {
         case .general: "gearshape.fill"
+        case .java: "cup.and.saucer.fill"
         case .editor: "chevron.left.forwardslash.chevron.right"
         case .updates: "arrow.down.circle.fill"
         case .security: "lock.shield.fill"
@@ -97,6 +122,7 @@ enum SettingsPane: String, Identifiable, Hashable {
     var tint: Color {
         switch self {
         case .general: .gray
+        case .java: .orange
         case .editor: .purple
         case .updates: .blue
         case .security: .red
@@ -111,6 +137,7 @@ enum SettingsPane: String, Identifiable, Hashable {
         let words: [String] =
             switch self {
             case .general: [L10n.t("settings.language.label"), "language"]
+            case .java: ["java", "jdk", "jre", "adoptium", L10n.t("javaManager.installedRuntimes")]
             case .editor: ["theme", "font", "editor", L10n.t("native.settings.editor.theme")]
             case .updates: [L10n.t("settings.update.channelLabel"), "update", "beta"]
             case .security: [L10n.t("settings.security.label"), "plugin", "security"]

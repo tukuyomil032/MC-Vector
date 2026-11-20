@@ -142,6 +142,7 @@ struct GeneralSettingsPage: View {
 private struct GeneralRows: View {
     let category: GeneralSettingsCategory
     let model: GeneralSettingsModel
+    @Environment(\.openSettings) private var openSettings
 
     var body: some View {
         if model.draft != nil {
@@ -257,9 +258,10 @@ private struct GeneralRows: View {
                 }
             }
             SettingsRow(title: L10n.t("serverSettings.manageJava")) {
-                Button(L10n.t("serverSettings.manageJava")) {}
-                    .disabled(true)
-                    .help(L10n.t("native.serverSettings.later"))
+                Button(L10n.t("serverSettings.manageJava")) {
+                    SettingsNavigation.shared.open(.java)
+                    openSettings()
+                }
             }
         }
         Section {

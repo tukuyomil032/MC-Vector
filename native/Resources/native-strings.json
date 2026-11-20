@@ -901,6 +901,21 @@
     "ja": "すべて更新が終わりました（更新 {updated} 件、失敗 {failed} 件）"
   },
   "native.plugins.bulkFailed": { "en": "Update All failed", "ja": "すべて更新に失敗しました" },
+  "native.settings.java": { "en": "Java", "ja": "Java" },
+  "native.java.lts": { "en": "Long-term support · Eclipse Temurin", "ja": "長期サポート版 · Eclipse Temurin" },
+  "native.java.offline": {
+    "en": "Adoptium could not be reached; showing the usual LTS versions.",
+    "ja": "Adoptium につながらないため、いつもの LTS を出しています。"
+  },
+  "native.java.managed": { "en": "Managed", "ja": "管理中" },
+  "native.java.custom": { "en": "Added manually", "ja": "手動で追加" },
+  "native.java.missing": { "en": "The executable is missing.", "ja": "実行ファイルが見つかりません。" },
+  "native.java.copyPath": { "en": "Copy Path", "ja": "パスをコピー" },
+  "native.java.added": { "en": "Added Java {version}", "ja": "Java {version} を追加しました" },
+  "native.java.addFailed": { "en": "Could not add Java", "ja": "Java を追加できませんでした" },
+  "native.java.phase.verify": { "en": "Verifying…", "ja": "確認中…" },
+  "native.java.phase.extract": { "en": "Extracting…", "ja": "展開中…" },
+  "native.java.phase.install": { "en": "Installing…", "ja": "入れています…" },
   "native.settings.pluginsPaging": {
     "en": "Plugin search results",
     "ja": "プラグインの検索結果"
