@@ -15,7 +15,7 @@ struct ContentRouter: View {
             Group {
                 if let staticView = staticRoute {
                     staticView
-                } else if case let .failed(error) = app.serversLoad {
+                } else if case .failed(let error) = app.serversLoad {
                     ContentStateView(title: error.uiText)
                 } else if app.serversLoad == .loading {
                     ProgressView(L10n.t("common.loadingView"))
@@ -38,11 +38,12 @@ struct ContentRouter: View {
     }
 
     private var contentKey: String {
-        let load: String = switch app.serversLoad {
-        case .loading: "loading"
-        case .loaded: "loaded"
-        case .failed: "failed"
-        }
+        let load: String =
+            switch app.serversLoad {
+            case .loading: "loading"
+            case .loaded: "loaded"
+            case .failed: "failed"
+            }
         return "\(load)-\(app.selectedServerID ?? "none")-\(app.route.rawValue)"
     }
 
@@ -124,7 +125,7 @@ struct NotPortedView: View {
     }
 }
 
-private extension AppRoute {
+extension AppRoute {
     /// Routes whose screen is a SwiftUI Table (NSTableView underneath).
-    var hostsTable: Bool { self == .files }
+    fileprivate var hostsTable: Bool { self == .files }
 }
