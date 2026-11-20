@@ -285,6 +285,20 @@ typedef void (*UniffiCallbackInterfaceServerEventObserverMethod3)(uint64_t, Rust
     );
 
 #endif
+#ifndef UNIFFI_FFIDEF_CALLBACK_INTERFACE_PLUGIN_BULK_OBSERVER_METHOD0
+#define UNIFFI_FFIDEF_CALLBACK_INTERFACE_PLUGIN_BULK_OBSERVER_METHOD0
+typedef void (*UniffiCallbackInterfacePluginBulkObserverMethod0)(uint64_t, RustBuffer, void* _Nonnull, 
+        RustCallStatus *_Nonnull uniffiCallStatus
+    );
+
+#endif
+#ifndef UNIFFI_FFIDEF_CALLBACK_INTERFACE_PLUGIN_INSTALL_OBSERVER_METHOD0
+#define UNIFFI_FFIDEF_CALLBACK_INTERFACE_PLUGIN_INSTALL_OBSERVER_METHOD0
+typedef void (*UniffiCallbackInterfacePluginInstallObserverMethod0)(uint64_t, RustBuffer, void* _Nonnull, 
+        RustCallStatus *_Nonnull uniffiCallStatus
+    );
+
+#endif
 #ifndef UNIFFI_FFIDEF_V_TABLE_CALLBACK_INTERFACE_BACKUP_PROGRESS_OBSERVER
 #define UNIFFI_FFIDEF_V_TABLE_CALLBACK_INTERFACE_BACKUP_PROGRESS_OBSERVER
 typedef struct UniffiVTableCallbackInterfaceBackupProgressObserver {
@@ -313,6 +327,24 @@ typedef struct UniffiVTableCallbackInterfaceServerEventObserver {
     UniffiCallbackInterfaceServerEventObserverMethod2 _Nonnull onStats;
     UniffiCallbackInterfaceServerEventObserverMethod3 _Nonnull onMetrics;
 } UniffiVTableCallbackInterfaceServerEventObserver;
+
+#endif
+#ifndef UNIFFI_FFIDEF_V_TABLE_CALLBACK_INTERFACE_PLUGIN_BULK_OBSERVER
+#define UNIFFI_FFIDEF_V_TABLE_CALLBACK_INTERFACE_PLUGIN_BULK_OBSERVER
+typedef struct UniffiVTableCallbackInterfacePluginBulkObserver {
+    UniffiCallbackInterfaceFree _Nonnull uniffiFree;
+    UniffiCallbackInterfaceClone _Nonnull uniffiClone;
+    UniffiCallbackInterfacePluginBulkObserverMethod0 _Nonnull onProgress;
+} UniffiVTableCallbackInterfacePluginBulkObserver;
+
+#endif
+#ifndef UNIFFI_FFIDEF_V_TABLE_CALLBACK_INTERFACE_PLUGIN_INSTALL_OBSERVER
+#define UNIFFI_FFIDEF_V_TABLE_CALLBACK_INTERFACE_PLUGIN_INSTALL_OBSERVER
+typedef struct UniffiVTableCallbackInterfacePluginInstallObserver {
+    UniffiCallbackInterfaceFree _Nonnull uniffiFree;
+    UniffiCallbackInterfaceClone _Nonnull uniffiClone;
+    UniffiCallbackInterfacePluginInstallObserverMethod0 _Nonnull onProgress;
+} UniffiVTableCallbackInterfacePluginInstallObserver;
 
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_CLONE_BACKUPPROGRESSOBSERVER
@@ -388,6 +420,46 @@ void uniffi_mcvector_ffi_fn_method_servereventobserver_on_stats(uint64_t ptr, Ru
 #ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_METHOD_SERVEREVENTOBSERVER_ON_METRICS
 #define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_METHOD_SERVEREVENTOBSERVER_ON_METRICS
 void uniffi_mcvector_ffi_fn_method_servereventobserver_on_metrics(uint64_t ptr, RustBuffer snapshot, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_CLONE_PLUGINBULKOBSERVER
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_CLONE_PLUGINBULKOBSERVER
+uint64_t uniffi_mcvector_ffi_fn_clone_pluginbulkobserver(uint64_t handle, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FREE_PLUGINBULKOBSERVER
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FREE_PLUGINBULKOBSERVER
+void uniffi_mcvector_ffi_fn_free_pluginbulkobserver(uint64_t handle, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_INIT_CALLBACK_VTABLE_PLUGINBULKOBSERVER
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_INIT_CALLBACK_VTABLE_PLUGINBULKOBSERVER
+void uniffi_mcvector_ffi_fn_init_callback_vtable_pluginbulkobserver(const UniffiVTableCallbackInterfacePluginBulkObserver* _Nonnull vtable
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_METHOD_PLUGINBULKOBSERVER_ON_PROGRESS
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_METHOD_PLUGINBULKOBSERVER_ON_PROGRESS
+void uniffi_mcvector_ffi_fn_method_pluginbulkobserver_on_progress(uint64_t ptr, RustBuffer event, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_CLONE_PLUGININSTALLOBSERVER
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_CLONE_PLUGININSTALLOBSERVER
+uint64_t uniffi_mcvector_ffi_fn_clone_plugininstallobserver(uint64_t handle, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FREE_PLUGININSTALLOBSERVER
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FREE_PLUGININSTALLOBSERVER
+void uniffi_mcvector_ffi_fn_free_plugininstallobserver(uint64_t handle, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_INIT_CALLBACK_VTABLE_PLUGININSTALLOBSERVER
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_INIT_CALLBACK_VTABLE_PLUGININSTALLOBSERVER
+void uniffi_mcvector_ffi_fn_init_callback_vtable_plugininstallobserver(const UniffiVTableCallbackInterfacePluginInstallObserver* _Nonnull vtable
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_METHOD_PLUGININSTALLOBSERVER_ON_PROGRESS
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_METHOD_PLUGININSTALLOBSERVER_ON_PROGRESS
+void uniffi_mcvector_ffi_fn_method_plugininstallobserver_on_progress(uint64_t ptr, RustBuffer event, RustCallStatus *_Nonnull out_status
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_ACCEPT_SERVER_EULA
@@ -670,6 +742,71 @@ uint64_t uniffi_mcvector_ffi_fn_func_update_server_settings(RustBuffer server_id
 #ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_WRITE_TEXT_DOCUMENT
 #define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_WRITE_TEXT_DOCUMENT
 uint64_t uniffi_mcvector_ffi_fn_func_write_text_document(RustBuffer server_id, RustBuffer relative, RustBuffer document
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_BULK_UPDATE_PLUGINS
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_BULK_UPDATE_PLUGINS
+uint64_t uniffi_mcvector_ffi_fn_func_bulk_update_plugins(RustBuffer operation_id, RustBuffer server_id, uint64_t observer
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_CANCEL_PLUGIN_OPERATION
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_CANCEL_PLUGIN_OPERATION
+uint64_t uniffi_mcvector_ffi_fn_func_cancel_plugin_operation(RustBuffer operation_id
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_EXECUTE_PLUGIN_INSTALL
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_EXECUTE_PLUGIN_INSTALL
+uint64_t uniffi_mcvector_ffi_fn_func_execute_plugin_install(RustBuffer operation_id, RustBuffer token, RustBuffer confirmed_dependency_ids, uint64_t observer
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_INSTALLED_PLUGINS
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_INSTALLED_PLUGINS
+uint64_t uniffi_mcvector_ffi_fn_func_installed_plugins(RustBuffer server_id, int8_t check_updates
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_PLUGIN_CATEGORIES
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_PLUGIN_CATEGORIES
+uint64_t uniffi_mcvector_ffi_fn_func_plugin_categories(RustBuffer source
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_PLUGIN_README
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_PLUGIN_README
+uint64_t uniffi_mcvector_ffi_fn_func_plugin_readme(RustBuffer project
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_PLUGIN_README_HTML
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_PLUGIN_README_HTML
+RustBuffer uniffi_mcvector_ffi_fn_func_plugin_readme_html(RustBuffer source, RustBuffer body, RustBuffer project_url, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_PLUGIN_SERVER_SUPPORT
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_PLUGIN_SERVER_SUPPORT
+RustBuffer uniffi_mcvector_ffi_fn_func_plugin_server_support(RustBuffer software, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_PLUGIN_VERSIONS
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_PLUGIN_VERSIONS
+uint64_t uniffi_mcvector_ffi_fn_func_plugin_versions(RustBuffer project, RustBuffer software
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_PREPARE_PLUGIN_INSTALL
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_PREPARE_PLUGIN_INSTALL
+uint64_t uniffi_mcvector_ffi_fn_func_prepare_plugin_install(RustBuffer server_id, RustBuffer project, RustBuffer replace_file_name
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_SEARCH_PLUGINS
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_SEARCH_PLUGINS
+uint64_t uniffi_mcvector_ffi_fn_func_search_plugins(RustBuffer input
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_TOGGLE_INSTALLED_PLUGIN
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_TOGGLE_INSTALLED_PLUGIN
+uint64_t uniffi_mcvector_ffi_fn_func_toggle_installed_plugin(RustBuffer server_id, RustBuffer file_name
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_UNINSTALL_PLUGIN
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_UNINSTALL_PLUGIN
+uint64_t uniffi_mcvector_ffi_fn_func_uninstall_plugin(RustBuffer server_id, RustBuffer file_name
 );
 #endif
 #ifndef UNIFFI_FFIDEF_FFI_MCVECTOR_FFI_RUSTBUFFER_ALLOC
@@ -1262,6 +1399,84 @@ uint16_t uniffi_mcvector_ffi_checksum_func_write_text_document(void
     
 );
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_BULK_UPDATE_PLUGINS
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_BULK_UPDATE_PLUGINS
+uint16_t uniffi_mcvector_ffi_checksum_func_bulk_update_plugins(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_CANCEL_PLUGIN_OPERATION
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_CANCEL_PLUGIN_OPERATION
+uint16_t uniffi_mcvector_ffi_checksum_func_cancel_plugin_operation(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_EXECUTE_PLUGIN_INSTALL
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_EXECUTE_PLUGIN_INSTALL
+uint16_t uniffi_mcvector_ffi_checksum_func_execute_plugin_install(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_INSTALLED_PLUGINS
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_INSTALLED_PLUGINS
+uint16_t uniffi_mcvector_ffi_checksum_func_installed_plugins(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_PLUGIN_CATEGORIES
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_PLUGIN_CATEGORIES
+uint16_t uniffi_mcvector_ffi_checksum_func_plugin_categories(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_PLUGIN_README
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_PLUGIN_README
+uint16_t uniffi_mcvector_ffi_checksum_func_plugin_readme(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_PLUGIN_README_HTML
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_PLUGIN_README_HTML
+uint16_t uniffi_mcvector_ffi_checksum_func_plugin_readme_html(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_PLUGIN_SERVER_SUPPORT
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_PLUGIN_SERVER_SUPPORT
+uint16_t uniffi_mcvector_ffi_checksum_func_plugin_server_support(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_PLUGIN_VERSIONS
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_PLUGIN_VERSIONS
+uint16_t uniffi_mcvector_ffi_checksum_func_plugin_versions(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_PREPARE_PLUGIN_INSTALL
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_PREPARE_PLUGIN_INSTALL
+uint16_t uniffi_mcvector_ffi_checksum_func_prepare_plugin_install(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_SEARCH_PLUGINS
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_SEARCH_PLUGINS
+uint16_t uniffi_mcvector_ffi_checksum_func_search_plugins(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_TOGGLE_INSTALLED_PLUGIN
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_TOGGLE_INSTALLED_PLUGIN
+uint16_t uniffi_mcvector_ffi_checksum_func_toggle_installed_plugin(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_UNINSTALL_PLUGIN
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_UNINSTALL_PLUGIN
+uint16_t uniffi_mcvector_ffi_checksum_func_uninstall_plugin(void
+    
+);
+#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_METHOD_BACKUPPROGRESSOBSERVER_ON_PROGRESS
 #define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_METHOD_BACKUPPROGRESSOBSERVER_ON_PROGRESS
 uint16_t uniffi_mcvector_ffi_checksum_method_backupprogressobserver_on_progress(void
@@ -1295,6 +1510,18 @@ uint16_t uniffi_mcvector_ffi_checksum_method_servereventobserver_on_stats(void
 #ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_METHOD_SERVEREVENTOBSERVER_ON_METRICS
 #define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_METHOD_SERVEREVENTOBSERVER_ON_METRICS
 uint16_t uniffi_mcvector_ffi_checksum_method_servereventobserver_on_metrics(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_METHOD_PLUGINBULKOBSERVER_ON_PROGRESS
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_METHOD_PLUGINBULKOBSERVER_ON_PROGRESS
+uint16_t uniffi_mcvector_ffi_checksum_method_pluginbulkobserver_on_progress(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_METHOD_PLUGININSTALLOBSERVER_ON_PROGRESS
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_METHOD_PLUGININSTALLOBSERVER_ON_PROGRESS
+uint16_t uniffi_mcvector_ffi_checksum_method_plugininstallobserver_on_progress(void
     
 );
 #endif

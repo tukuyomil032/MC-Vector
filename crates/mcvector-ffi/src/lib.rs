@@ -8,6 +8,9 @@
 //! instance lock (NAT-010): `start` stores the lock and the opened registry in
 //! process-wide state, and every other function reads that state.
 
+mod plugins;
+pub use plugins::*;
+
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
@@ -316,6 +319,15 @@ fn start_in(data_dir: PathBuf, bundle_path: String) -> Result<StartOutcome, FfiE
         )
     })?;
 
+    if let Some(failure) = mcvector_core::plugins::installer::recover_startup(&data_dir, &registry)
+        .into_iter()
+        .find(|failure| failure.server_id.is_none())
+    {
+        return Err(core_error(
+            CoreErrorCode::PluginIo,
+            redact(&failure.error, &data_dir),
+        ));
+    }
     *session = Some(Session {
         _lock: lock,
         data_dir: data_dir.clone(),
@@ -2873,6 +2885,34 @@ mod tests {
             .enable_all()
             .build()
             .unwrap();
+
+        let plugin_dir = server_dir.join("plugins");
+        std::fs::create_dir(&plugin_dir).unwrap();
+        std::fs::write(plugin_dir.join("Example.jar"), b"local artifact").unwrap();
+        let installed = runtime
+            .block_on(installed_plugins("server-1".into(), false))
+            .unwrap();
+        assert_eq!(installed.len(), 1);
+        assert_eq!(installed[0].file_name, "Example.jar");
+        assert!(installed[0].enabled);
+        assert!(installed[0].origin.is_none());
+        assert!(matches!(installed[0].update, PluginUpdateStatus::Local));
+        assert_eq!(
+            runtime
+                .block_on(toggle_installed_plugin(
+                    "server-1".into(),
+                    "Example.jar".into()
+                ))
+                .unwrap(),
+            "Example.jar.disabled"
+        );
+        runtime
+            .block_on(uninstall_plugin(
+                "server-1".into(),
+                "Example.jar.disabled".into(),
+            ))
+            .unwrap();
+        assert!(!plugin_dir.join("Example.jar.disabled").exists());
 
         let properties = runtime
             .block_on(get_server_properties("server-1".into()))

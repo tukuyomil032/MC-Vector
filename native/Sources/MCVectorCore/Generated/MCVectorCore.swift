@@ -1061,6 +1061,402 @@ public func FfiConverterTypeCreationObserver_lower(_ value: CreationObserver) ->
 
 
 
+public protocol PluginBulkObserver: AnyObject, Sendable {
+    
+    func onProgress(event: PluginBulkProgress) 
+    
+}
+open class PluginBulkObserverImpl: PluginBulkObserver, @unchecked Sendable {
+    fileprivate let handle: UInt64
+
+    /// Used to instantiate a [FFIObject] without an actual handle, for fakes in tests, mostly.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public struct NoHandle {
+        public init() {}
+    }
+
+    // TODO: We'd like this to be `private` but for Swifty reasons,
+    // we can't implement `FfiConverter` without making this `required` and we can't
+    // make it `required` without making it `public`.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    required public init(unsafeFromHandle handle: UInt64) {
+        self.handle = handle
+    }
+
+    // This constructor can be used to instantiate a fake object.
+    // - Parameter noHandle: Placeholder value so we can have a constructor separate from the default empty one that may be implemented for classes extending [FFIObject].
+    //
+    // - Warning:
+    //     Any object instantiated with this constructor cannot be passed to an actual Rust-backed object. Since there isn't a backing handle the FFI lower functions will crash.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public init(noHandle: NoHandle) {
+        self.handle = 0
+    }
+
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public func uniffiCloneHandle() -> UInt64 {
+        return try! rustCall { uniffi_mcvector_ffi_fn_clone_pluginbulkobserver(self.handle, $0) }
+    }
+    // No primary constructor declared for this class.
+
+    deinit {
+        if handle == 0 {
+            // Mock objects have handle=0 don't try to free them
+            return
+        }
+
+        try! rustCall { uniffi_mcvector_ffi_fn_free_pluginbulkobserver(handle, $0) }
+    }
+
+    
+
+    
+open func onProgress(event: PluginBulkProgress)  {try! rustCall() {
+        uniffiCallStatus in
+    uniffi_mcvector_ffi_fn_method_pluginbulkobserver_on_progress(
+            self.uniffiCloneHandle(),
+        FfiConverterTypePluginBulkProgress_lower(event),uniffiCallStatus
+    )
+}
+}
+    
+
+    
+}
+
+
+
+// Put the implementation in a struct so we don't pollute the top-level namespace
+fileprivate struct UniffiCallbackInterfacePluginBulkObserver {
+
+    // Create the VTable using a series of closures.
+    // Swift automatically converts these into C callback functions.
+    //
+    // Store the vtable directly.
+    static let vtable: UniffiVTableCallbackInterfacePluginBulkObserver = UniffiVTableCallbackInterfacePluginBulkObserver(
+        uniffiFree: { (uniffiHandle: UInt64) -> () in
+            do {
+                try FfiConverterTypePluginBulkObserver.handleMap.remove(handle: uniffiHandle)
+            } catch {
+                print("Uniffi callback interface PluginBulkObserver: handle missing in uniffiFree")
+            }
+        },
+        uniffiClone: { (uniffiHandle: UInt64) -> UInt64 in
+            do {
+                return try FfiConverterTypePluginBulkObserver.handleMap.clone(handle: uniffiHandle)
+            } catch {
+                fatalError("Uniffi callback interface PluginBulkObserver: handle missing in uniffiClone")
+            }
+        },
+        onProgress: { (
+            uniffiHandle: UInt64,
+            event: RustBuffer,
+            uniffiOutReturn: UnsafeMutableRawPointer,
+            uniffiCallStatus: UnsafeMutablePointer<RustCallStatus>
+        ) in
+            let makeCall = {
+                () throws -> () in
+                guard let uniffiObj = try? FfiConverterTypePluginBulkObserver.handleMap.get(handle: uniffiHandle) else {
+                    throw UniffiInternalError.unexpectedStaleHandle
+                }
+                return uniffiObj.onProgress(
+                     event: try FfiConverterTypePluginBulkProgress_lift(event)
+                )
+            }
+
+            
+            let writeReturn = { () }
+            uniffiTraitInterfaceCall(
+                callStatus: uniffiCallStatus,
+                makeCall: makeCall,
+                writeReturn: writeReturn
+            )
+        }
+    )
+
+    // Rust stores this pointer for future callback invocations, so it must live
+    // for the process lifetime (not just for the init function call).
+    //
+    // `nonisolated(unsafe)` is needed under Swift 6 strict concurrency.
+    // This is safe because the pointee is initialized once during static init
+    // and never mutated by either side of the FFI.  Its fields are C function pointers.
+    nonisolated(unsafe) static let vtablePtr: UnsafePointer<UniffiVTableCallbackInterfacePluginBulkObserver> = {
+        let ptr = UnsafeMutablePointer<UniffiVTableCallbackInterfacePluginBulkObserver>.allocate(capacity: 1)
+        ptr.initialize(to: vtable)
+        return UnsafePointer(ptr)
+    }()
+}
+
+private func uniffiCallbackInitPluginBulkObserver() {
+    uniffi_mcvector_ffi_fn_init_callback_vtable_pluginbulkobserver(UniffiCallbackInterfacePluginBulkObserver.vtablePtr)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypePluginBulkObserver: FfiConverter {
+    fileprivate static let handleMap = UniffiHandleMap<PluginBulkObserver>()
+
+    typealias FfiType = UInt64
+    typealias SwiftType = PluginBulkObserver
+
+    public static func lift(_ handle: UInt64) throws -> PluginBulkObserver {
+        if ((handle & 1) == 0) {
+            // Rust-generated handle, construct a new class that uses the handle to implement the
+            // interface
+            return PluginBulkObserverImpl(unsafeFromHandle: handle)
+        } else {
+            // Swift-generated handle, get the object from the handle map
+            return try handleMap.remove(handle: handle)
+        }
+    }
+
+    public static func lower(_ value: PluginBulkObserver) -> UInt64 {
+         if let rustImpl = value as? PluginBulkObserverImpl {
+             // Rust-implemented object.  Clone the handle and return it
+            return rustImpl.uniffiCloneHandle()
+         } else {
+            // Swift object, generate a new vtable handle and return that.
+            return handleMap.insert(obj: value)
+         }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> PluginBulkObserver {
+        let handle: UInt64 = try readInt(&buf)
+        return try lift(handle)
+    }
+
+    public static func write(_ value: PluginBulkObserver, into buf: inout [UInt8]) {
+        writeInt(&buf, lower(value))
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypePluginBulkObserver_lift(_ handle: UInt64) throws -> PluginBulkObserver {
+    return try FfiConverterTypePluginBulkObserver.lift(handle)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypePluginBulkObserver_lower(_ value: PluginBulkObserver) -> UInt64 {
+    return FfiConverterTypePluginBulkObserver.lower(value)
+}
+
+
+
+
+
+
+public protocol PluginInstallObserver: AnyObject, Sendable {
+    
+    func onProgress(event: PluginInstallProgress) 
+    
+}
+open class PluginInstallObserverImpl: PluginInstallObserver, @unchecked Sendable {
+    fileprivate let handle: UInt64
+
+    /// Used to instantiate a [FFIObject] without an actual handle, for fakes in tests, mostly.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public struct NoHandle {
+        public init() {}
+    }
+
+    // TODO: We'd like this to be `private` but for Swifty reasons,
+    // we can't implement `FfiConverter` without making this `required` and we can't
+    // make it `required` without making it `public`.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    required public init(unsafeFromHandle handle: UInt64) {
+        self.handle = handle
+    }
+
+    // This constructor can be used to instantiate a fake object.
+    // - Parameter noHandle: Placeholder value so we can have a constructor separate from the default empty one that may be implemented for classes extending [FFIObject].
+    //
+    // - Warning:
+    //     Any object instantiated with this constructor cannot be passed to an actual Rust-backed object. Since there isn't a backing handle the FFI lower functions will crash.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public init(noHandle: NoHandle) {
+        self.handle = 0
+    }
+
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public func uniffiCloneHandle() -> UInt64 {
+        return try! rustCall { uniffi_mcvector_ffi_fn_clone_plugininstallobserver(self.handle, $0) }
+    }
+    // No primary constructor declared for this class.
+
+    deinit {
+        if handle == 0 {
+            // Mock objects have handle=0 don't try to free them
+            return
+        }
+
+        try! rustCall { uniffi_mcvector_ffi_fn_free_plugininstallobserver(handle, $0) }
+    }
+
+    
+
+    
+open func onProgress(event: PluginInstallProgress)  {try! rustCall() {
+        uniffiCallStatus in
+    uniffi_mcvector_ffi_fn_method_plugininstallobserver_on_progress(
+            self.uniffiCloneHandle(),
+        FfiConverterTypePluginInstallProgress_lower(event),uniffiCallStatus
+    )
+}
+}
+    
+
+    
+}
+
+
+
+// Put the implementation in a struct so we don't pollute the top-level namespace
+fileprivate struct UniffiCallbackInterfacePluginInstallObserver {
+
+    // Create the VTable using a series of closures.
+    // Swift automatically converts these into C callback functions.
+    //
+    // Store the vtable directly.
+    static let vtable: UniffiVTableCallbackInterfacePluginInstallObserver = UniffiVTableCallbackInterfacePluginInstallObserver(
+        uniffiFree: { (uniffiHandle: UInt64) -> () in
+            do {
+                try FfiConverterTypePluginInstallObserver.handleMap.remove(handle: uniffiHandle)
+            } catch {
+                print("Uniffi callback interface PluginInstallObserver: handle missing in uniffiFree")
+            }
+        },
+        uniffiClone: { (uniffiHandle: UInt64) -> UInt64 in
+            do {
+                return try FfiConverterTypePluginInstallObserver.handleMap.clone(handle: uniffiHandle)
+            } catch {
+                fatalError("Uniffi callback interface PluginInstallObserver: handle missing in uniffiClone")
+            }
+        },
+        onProgress: { (
+            uniffiHandle: UInt64,
+            event: RustBuffer,
+            uniffiOutReturn: UnsafeMutableRawPointer,
+            uniffiCallStatus: UnsafeMutablePointer<RustCallStatus>
+        ) in
+            let makeCall = {
+                () throws -> () in
+                guard let uniffiObj = try? FfiConverterTypePluginInstallObserver.handleMap.get(handle: uniffiHandle) else {
+                    throw UniffiInternalError.unexpectedStaleHandle
+                }
+                return uniffiObj.onProgress(
+                     event: try FfiConverterTypePluginInstallProgress_lift(event)
+                )
+            }
+
+            
+            let writeReturn = { () }
+            uniffiTraitInterfaceCall(
+                callStatus: uniffiCallStatus,
+                makeCall: makeCall,
+                writeReturn: writeReturn
+            )
+        }
+    )
+
+    // Rust stores this pointer for future callback invocations, so it must live
+    // for the process lifetime (not just for the init function call).
+    //
+    // `nonisolated(unsafe)` is needed under Swift 6 strict concurrency.
+    // This is safe because the pointee is initialized once during static init
+    // and never mutated by either side of the FFI.  Its fields are C function pointers.
+    nonisolated(unsafe) static let vtablePtr: UnsafePointer<UniffiVTableCallbackInterfacePluginInstallObserver> = {
+        let ptr = UnsafeMutablePointer<UniffiVTableCallbackInterfacePluginInstallObserver>.allocate(capacity: 1)
+        ptr.initialize(to: vtable)
+        return UnsafePointer(ptr)
+    }()
+}
+
+private func uniffiCallbackInitPluginInstallObserver() {
+    uniffi_mcvector_ffi_fn_init_callback_vtable_plugininstallobserver(UniffiCallbackInterfacePluginInstallObserver.vtablePtr)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypePluginInstallObserver: FfiConverter {
+    fileprivate static let handleMap = UniffiHandleMap<PluginInstallObserver>()
+
+    typealias FfiType = UInt64
+    typealias SwiftType = PluginInstallObserver
+
+    public static func lift(_ handle: UInt64) throws -> PluginInstallObserver {
+        if ((handle & 1) == 0) {
+            // Rust-generated handle, construct a new class that uses the handle to implement the
+            // interface
+            return PluginInstallObserverImpl(unsafeFromHandle: handle)
+        } else {
+            // Swift-generated handle, get the object from the handle map
+            return try handleMap.remove(handle: handle)
+        }
+    }
+
+    public static func lower(_ value: PluginInstallObserver) -> UInt64 {
+         if let rustImpl = value as? PluginInstallObserverImpl {
+             // Rust-implemented object.  Clone the handle and return it
+            return rustImpl.uniffiCloneHandle()
+         } else {
+            // Swift object, generate a new vtable handle and return that.
+            return handleMap.insert(obj: value)
+         }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> PluginInstallObserver {
+        let handle: UInt64 = try readInt(&buf)
+        return try lift(handle)
+    }
+
+    public static func write(_ value: PluginInstallObserver, into buf: inout [UInt8]) {
+        writeInt(&buf, lower(value))
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypePluginInstallObserver_lift(_ handle: UInt64) throws -> PluginInstallObserver {
+    return try FfiConverterTypePluginInstallObserver.lift(handle)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypePluginInstallObserver_lower(_ value: PluginInstallObserver) -> UInt64 {
+    return FfiConverterTypePluginInstallObserver.lower(value)
+}
+
+
+
+
+
+
 /**
  * Receives running-server events. Called from background threads.
  */
@@ -2565,6 +2961,68 @@ public func FfiConverterTypeImportAnalysisInfo_lower(_ value: ImportAnalysisInfo
 }
 
 
+public struct InstalledPlugin: Equatable, Hashable {
+    public var fileName: String
+    public var enabled: Bool
+    public var origin: PluginOrigin?
+    public var update: PluginUpdateStatus
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(fileName: String, enabled: Bool, origin: PluginOrigin?, update: PluginUpdateStatus) {
+        self.fileName = fileName
+        self.enabled = enabled
+        self.origin = origin
+        self.update = update
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension InstalledPlugin: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeInstalledPlugin: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> InstalledPlugin {
+        return
+            try InstalledPlugin(
+                fileName: FfiConverterString.read(from: &buf), 
+                enabled: FfiConverterBool.read(from: &buf), 
+                origin: FfiConverterOptionTypePluginOrigin.read(from: &buf), 
+                update: FfiConverterTypePluginUpdateStatus.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: InstalledPlugin, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.fileName, into: &buf)
+        FfiConverterBool.write(value.enabled, into: &buf)
+        FfiConverterOptionTypePluginOrigin.write(value.origin, into: &buf)
+        FfiConverterTypePluginUpdateStatus.write(value.update, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeInstalledPlugin_lift(_ buf: RustBuffer) throws -> InstalledPlugin {
+    return try FfiConverterTypeInstalledPlugin.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeInstalledPlugin_lower(_ value: InstalledPlugin) -> RustBuffer {
+    return FfiConverterTypeInstalledPlugin.lower(value)
+}
+
+
 public struct LockOwnerInfo: Equatable, Hashable {
     public var edition: Edition
     public var pid: UInt32
@@ -3028,6 +3486,935 @@ public func FfiConverterTypePlayerListSnapshot_lift(_ buf: RustBuffer) throws ->
 #endif
 public func FfiConverterTypePlayerListSnapshot_lower(_ value: PlayerListSnapshot) -> RustBuffer {
     return FfiConverterTypePlayerListSnapshot.lower(value)
+}
+
+
+public struct PluginArtifactPreview: Equatable, Hashable {
+    public var id: String
+    public var project: PluginProject
+    public var title: String
+    public var version: String
+    public var fileName: String
+    public var installedFileName: String?
+    public var dependency: Bool
+    public var verified: Bool
+    public var compatibility: PluginCompatibility
+    public var supportedVersions: [String]
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(id: String, project: PluginProject, title: String, version: String, fileName: String, installedFileName: String?, dependency: Bool, verified: Bool, compatibility: PluginCompatibility, supportedVersions: [String]) {
+        self.id = id
+        self.project = project
+        self.title = title
+        self.version = version
+        self.fileName = fileName
+        self.installedFileName = installedFileName
+        self.dependency = dependency
+        self.verified = verified
+        self.compatibility = compatibility
+        self.supportedVersions = supportedVersions
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension PluginArtifactPreview: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypePluginArtifactPreview: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> PluginArtifactPreview {
+        return
+            try PluginArtifactPreview(
+                id: FfiConverterString.read(from: &buf), 
+                project: FfiConverterTypePluginProject.read(from: &buf), 
+                title: FfiConverterString.read(from: &buf), 
+                version: FfiConverterString.read(from: &buf), 
+                fileName: FfiConverterString.read(from: &buf), 
+                installedFileName: FfiConverterOptionString.read(from: &buf), 
+                dependency: FfiConverterBool.read(from: &buf), 
+                verified: FfiConverterBool.read(from: &buf), 
+                compatibility: FfiConverterTypePluginCompatibility.read(from: &buf), 
+                supportedVersions: FfiConverterSequenceString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: PluginArtifactPreview, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.id, into: &buf)
+        FfiConverterTypePluginProject.write(value.project, into: &buf)
+        FfiConverterString.write(value.title, into: &buf)
+        FfiConverterString.write(value.version, into: &buf)
+        FfiConverterString.write(value.fileName, into: &buf)
+        FfiConverterOptionString.write(value.installedFileName, into: &buf)
+        FfiConverterBool.write(value.dependency, into: &buf)
+        FfiConverterBool.write(value.verified, into: &buf)
+        FfiConverterTypePluginCompatibility.write(value.compatibility, into: &buf)
+        FfiConverterSequenceString.write(value.supportedVersions, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypePluginArtifactPreview_lift(_ buf: RustBuffer) throws -> PluginArtifactPreview {
+    return try FfiConverterTypePluginArtifactPreview.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypePluginArtifactPreview_lower(_ value: PluginArtifactPreview) -> RustBuffer {
+    return FfiConverterTypePluginArtifactPreview.lower(value)
+}
+
+
+public struct PluginBulkItemResult: Equatable, Hashable {
+    public var fileName: String
+    public var status: PluginBulkItemStatus
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(fileName: String, status: PluginBulkItemStatus) {
+        self.fileName = fileName
+        self.status = status
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension PluginBulkItemResult: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypePluginBulkItemResult: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> PluginBulkItemResult {
+        return
+            try PluginBulkItemResult(
+                fileName: FfiConverterString.read(from: &buf), 
+                status: FfiConverterTypePluginBulkItemStatus.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: PluginBulkItemResult, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.fileName, into: &buf)
+        FfiConverterTypePluginBulkItemStatus.write(value.status, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypePluginBulkItemResult_lift(_ buf: RustBuffer) throws -> PluginBulkItemResult {
+    return try FfiConverterTypePluginBulkItemResult.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypePluginBulkItemResult_lower(_ value: PluginBulkItemResult) -> RustBuffer {
+    return FfiConverterTypePluginBulkItemResult.lower(value)
+}
+
+
+public struct PluginBulkOutcome: Equatable, Hashable {
+    public var items: [PluginBulkItemResult]
+    public var cancelled: Bool
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(items: [PluginBulkItemResult], cancelled: Bool) {
+        self.items = items
+        self.cancelled = cancelled
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension PluginBulkOutcome: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypePluginBulkOutcome: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> PluginBulkOutcome {
+        return
+            try PluginBulkOutcome(
+                items: FfiConverterSequenceTypePluginBulkItemResult.read(from: &buf), 
+                cancelled: FfiConverterBool.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: PluginBulkOutcome, into buf: inout [UInt8]) {
+        FfiConverterSequenceTypePluginBulkItemResult.write(value.items, into: &buf)
+        FfiConverterBool.write(value.cancelled, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypePluginBulkOutcome_lift(_ buf: RustBuffer) throws -> PluginBulkOutcome {
+    return try FfiConverterTypePluginBulkOutcome.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypePluginBulkOutcome_lower(_ value: PluginBulkOutcome) -> RustBuffer {
+    return FfiConverterTypePluginBulkOutcome.lower(value)
+}
+
+
+public struct PluginBulkProgress: Equatable, Hashable {
+    public var operationId: String
+    public var completed: UInt32
+    public var total: UInt32
+    public var currentFile: String
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(operationId: String, completed: UInt32, total: UInt32, currentFile: String) {
+        self.operationId = operationId
+        self.completed = completed
+        self.total = total
+        self.currentFile = currentFile
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension PluginBulkProgress: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypePluginBulkProgress: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> PluginBulkProgress {
+        return
+            try PluginBulkProgress(
+                operationId: FfiConverterString.read(from: &buf), 
+                completed: FfiConverterUInt32.read(from: &buf), 
+                total: FfiConverterUInt32.read(from: &buf), 
+                currentFile: FfiConverterString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: PluginBulkProgress, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.operationId, into: &buf)
+        FfiConverterUInt32.write(value.completed, into: &buf)
+        FfiConverterUInt32.write(value.total, into: &buf)
+        FfiConverterString.write(value.currentFile, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypePluginBulkProgress_lift(_ buf: RustBuffer) throws -> PluginBulkProgress {
+    return try FfiConverterTypePluginBulkProgress.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypePluginBulkProgress_lower(_ value: PluginBulkProgress) -> RustBuffer {
+    return FfiConverterTypePluginBulkProgress.lower(value)
+}
+
+
+public struct PluginCategory: Equatable, Hashable {
+    public var id: String
+    public var name: String
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(id: String, name: String) {
+        self.id = id
+        self.name = name
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension PluginCategory: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypePluginCategory: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> PluginCategory {
+        return
+            try PluginCategory(
+                id: FfiConverterString.read(from: &buf), 
+                name: FfiConverterString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: PluginCategory, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.id, into: &buf)
+        FfiConverterString.write(value.name, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypePluginCategory_lift(_ buf: RustBuffer) throws -> PluginCategory {
+    return try FfiConverterTypePluginCategory.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypePluginCategory_lower(_ value: PluginCategory) -> RustBuffer {
+    return FfiConverterTypePluginCategory.lower(value)
+}
+
+
+public struct PluginInstallPreview: Equatable, Hashable {
+    public var token: String?
+    public var expiresInSeconds: UInt64
+    public var serverId: String
+    public var serverVersion: String
+    public var serverSoftware: String
+    public var targetDirectory: String
+    public var artifacts: [PluginArtifactPreview]
+    public var missingDependencyIds: [String]
+    public var externalUrl: String?
+    public var requiresUnverifiedDownloads: Bool
+    public var policy: PluginInstallPolicy
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(token: String?, expiresInSeconds: UInt64, serverId: String, serverVersion: String, serverSoftware: String, targetDirectory: String, artifacts: [PluginArtifactPreview], missingDependencyIds: [String], externalUrl: String?, requiresUnverifiedDownloads: Bool, policy: PluginInstallPolicy) {
+        self.token = token
+        self.expiresInSeconds = expiresInSeconds
+        self.serverId = serverId
+        self.serverVersion = serverVersion
+        self.serverSoftware = serverSoftware
+        self.targetDirectory = targetDirectory
+        self.artifacts = artifacts
+        self.missingDependencyIds = missingDependencyIds
+        self.externalUrl = externalUrl
+        self.requiresUnverifiedDownloads = requiresUnverifiedDownloads
+        self.policy = policy
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension PluginInstallPreview: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypePluginInstallPreview: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> PluginInstallPreview {
+        return
+            try PluginInstallPreview(
+                token: FfiConverterOptionString.read(from: &buf), 
+                expiresInSeconds: FfiConverterUInt64.read(from: &buf), 
+                serverId: FfiConverterString.read(from: &buf), 
+                serverVersion: FfiConverterString.read(from: &buf), 
+                serverSoftware: FfiConverterString.read(from: &buf), 
+                targetDirectory: FfiConverterString.read(from: &buf), 
+                artifacts: FfiConverterSequenceTypePluginArtifactPreview.read(from: &buf), 
+                missingDependencyIds: FfiConverterSequenceString.read(from: &buf), 
+                externalUrl: FfiConverterOptionString.read(from: &buf), 
+                requiresUnverifiedDownloads: FfiConverterBool.read(from: &buf), 
+                policy: FfiConverterTypePluginInstallPolicy.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: PluginInstallPreview, into buf: inout [UInt8]) {
+        FfiConverterOptionString.write(value.token, into: &buf)
+        FfiConverterUInt64.write(value.expiresInSeconds, into: &buf)
+        FfiConverterString.write(value.serverId, into: &buf)
+        FfiConverterString.write(value.serverVersion, into: &buf)
+        FfiConverterString.write(value.serverSoftware, into: &buf)
+        FfiConverterString.write(value.targetDirectory, into: &buf)
+        FfiConverterSequenceTypePluginArtifactPreview.write(value.artifacts, into: &buf)
+        FfiConverterSequenceString.write(value.missingDependencyIds, into: &buf)
+        FfiConverterOptionString.write(value.externalUrl, into: &buf)
+        FfiConverterBool.write(value.requiresUnverifiedDownloads, into: &buf)
+        FfiConverterTypePluginInstallPolicy.write(value.policy, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypePluginInstallPreview_lift(_ buf: RustBuffer) throws -> PluginInstallPreview {
+    return try FfiConverterTypePluginInstallPreview.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypePluginInstallPreview_lower(_ value: PluginInstallPreview) -> RustBuffer {
+    return FfiConverterTypePluginInstallPreview.lower(value)
+}
+
+
+public struct PluginInstallProgress: Equatable, Hashable {
+    public var operationId: String
+    public var downloaded: UInt64
+    public var total: UInt64
+    public var artifactId: String
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(operationId: String, downloaded: UInt64, total: UInt64, artifactId: String) {
+        self.operationId = operationId
+        self.downloaded = downloaded
+        self.total = total
+        self.artifactId = artifactId
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension PluginInstallProgress: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypePluginInstallProgress: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> PluginInstallProgress {
+        return
+            try PluginInstallProgress(
+                operationId: FfiConverterString.read(from: &buf), 
+                downloaded: FfiConverterUInt64.read(from: &buf), 
+                total: FfiConverterUInt64.read(from: &buf), 
+                artifactId: FfiConverterString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: PluginInstallProgress, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.operationId, into: &buf)
+        FfiConverterUInt64.write(value.downloaded, into: &buf)
+        FfiConverterUInt64.write(value.total, into: &buf)
+        FfiConverterString.write(value.artifactId, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypePluginInstallProgress_lift(_ buf: RustBuffer) throws -> PluginInstallProgress {
+    return try FfiConverterTypePluginInstallProgress.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypePluginInstallProgress_lower(_ value: PluginInstallProgress) -> RustBuffer {
+    return FfiConverterTypePluginInstallProgress.lower(value)
+}
+
+
+public struct PluginInstallResult: Equatable, Hashable {
+    public var serverId: String
+    public var installedFileNames: [String]
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(serverId: String, installedFileNames: [String]) {
+        self.serverId = serverId
+        self.installedFileNames = installedFileNames
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension PluginInstallResult: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypePluginInstallResult: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> PluginInstallResult {
+        return
+            try PluginInstallResult(
+                serverId: FfiConverterString.read(from: &buf), 
+                installedFileNames: FfiConverterSequenceString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: PluginInstallResult, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.serverId, into: &buf)
+        FfiConverterSequenceString.write(value.installedFileNames, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypePluginInstallResult_lift(_ buf: RustBuffer) throws -> PluginInstallResult {
+    return try FfiConverterTypePluginInstallResult.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypePluginInstallResult_lower(_ value: PluginInstallResult) -> RustBuffer {
+    return FfiConverterTypePluginInstallResult.lower(value)
+}
+
+
+public struct PluginOrigin: Equatable, Hashable {
+    public var project: PluginProject
+    public var version: String
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(project: PluginProject, version: String) {
+        self.project = project
+        self.version = version
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension PluginOrigin: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypePluginOrigin: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> PluginOrigin {
+        return
+            try PluginOrigin(
+                project: FfiConverterTypePluginProject.read(from: &buf), 
+                version: FfiConverterString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: PluginOrigin, into buf: inout [UInt8]) {
+        FfiConverterTypePluginProject.write(value.project, into: &buf)
+        FfiConverterString.write(value.version, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypePluginOrigin_lift(_ buf: RustBuffer) throws -> PluginOrigin {
+    return try FfiConverterTypePluginOrigin.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypePluginOrigin_lower(_ value: PluginOrigin) -> RustBuffer {
+    return FfiConverterTypePluginOrigin.lower(value)
+}
+
+
+public struct PluginProjectRecord: Equatable, Hashable {
+    public var id: String
+    public var slug: String
+    public var name: String
+    public var author: String
+    public var summary: String
+    public var iconUrl: String?
+    public var downloads: UInt64
+    public var compatibility: PluginCompatibility
+    public var projectUrl: String
+    public var source: PluginSource
+    /**
+     * Pass this to `prepare_plugin_install` and `plugin_readme`.
+     */
+    public var project: PluginProject
+    public var supportedVersions: [String]
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(id: String, slug: String, name: String, author: String, summary: String, iconUrl: String?, downloads: UInt64, compatibility: PluginCompatibility, projectUrl: String, source: PluginSource, 
+        /**
+         * Pass this to `prepare_plugin_install` and `plugin_readme`.
+         */project: PluginProject, supportedVersions: [String]) {
+        self.id = id
+        self.slug = slug
+        self.name = name
+        self.author = author
+        self.summary = summary
+        self.iconUrl = iconUrl
+        self.downloads = downloads
+        self.compatibility = compatibility
+        self.projectUrl = projectUrl
+        self.source = source
+        self.project = project
+        self.supportedVersions = supportedVersions
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension PluginProjectRecord: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypePluginProjectRecord: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> PluginProjectRecord {
+        return
+            try PluginProjectRecord(
+                id: FfiConverterString.read(from: &buf), 
+                slug: FfiConverterString.read(from: &buf), 
+                name: FfiConverterString.read(from: &buf), 
+                author: FfiConverterString.read(from: &buf), 
+                summary: FfiConverterString.read(from: &buf), 
+                iconUrl: FfiConverterOptionString.read(from: &buf), 
+                downloads: FfiConverterUInt64.read(from: &buf), 
+                compatibility: FfiConverterTypePluginCompatibility.read(from: &buf), 
+                projectUrl: FfiConverterString.read(from: &buf), 
+                source: FfiConverterTypePluginSource.read(from: &buf), 
+                project: FfiConverterTypePluginProject.read(from: &buf), 
+                supportedVersions: FfiConverterSequenceString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: PluginProjectRecord, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.id, into: &buf)
+        FfiConverterString.write(value.slug, into: &buf)
+        FfiConverterString.write(value.name, into: &buf)
+        FfiConverterString.write(value.author, into: &buf)
+        FfiConverterString.write(value.summary, into: &buf)
+        FfiConverterOptionString.write(value.iconUrl, into: &buf)
+        FfiConverterUInt64.write(value.downloads, into: &buf)
+        FfiConverterTypePluginCompatibility.write(value.compatibility, into: &buf)
+        FfiConverterString.write(value.projectUrl, into: &buf)
+        FfiConverterTypePluginSource.write(value.source, into: &buf)
+        FfiConverterTypePluginProject.write(value.project, into: &buf)
+        FfiConverterSequenceString.write(value.supportedVersions, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypePluginProjectRecord_lift(_ buf: RustBuffer) throws -> PluginProjectRecord {
+    return try FfiConverterTypePluginProjectRecord.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypePluginProjectRecord_lower(_ value: PluginProjectRecord) -> RustBuffer {
+    return FfiConverterTypePluginProjectRecord.lower(value)
+}
+
+
+public struct PluginSearchInput: Equatable, Hashable {
+    public var source: PluginSource
+    public var query: String
+    public var software: String
+    public var gameVersion: String
+    public var offset: UInt32
+    public var limit: UInt32
+    public var sort: PluginSort
+    public var category: String?
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(source: PluginSource, query: String, software: String, gameVersion: String, offset: UInt32, limit: UInt32, sort: PluginSort, category: String?) {
+        self.source = source
+        self.query = query
+        self.software = software
+        self.gameVersion = gameVersion
+        self.offset = offset
+        self.limit = limit
+        self.sort = sort
+        self.category = category
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension PluginSearchInput: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypePluginSearchInput: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> PluginSearchInput {
+        return
+            try PluginSearchInput(
+                source: FfiConverterTypePluginSource.read(from: &buf), 
+                query: FfiConverterString.read(from: &buf), 
+                software: FfiConverterString.read(from: &buf), 
+                gameVersion: FfiConverterString.read(from: &buf), 
+                offset: FfiConverterUInt32.read(from: &buf), 
+                limit: FfiConverterUInt32.read(from: &buf), 
+                sort: FfiConverterTypePluginSort.read(from: &buf), 
+                category: FfiConverterOptionString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: PluginSearchInput, into buf: inout [UInt8]) {
+        FfiConverterTypePluginSource.write(value.source, into: &buf)
+        FfiConverterString.write(value.query, into: &buf)
+        FfiConverterString.write(value.software, into: &buf)
+        FfiConverterString.write(value.gameVersion, into: &buf)
+        FfiConverterUInt32.write(value.offset, into: &buf)
+        FfiConverterUInt32.write(value.limit, into: &buf)
+        FfiConverterTypePluginSort.write(value.sort, into: &buf)
+        FfiConverterOptionString.write(value.category, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypePluginSearchInput_lift(_ buf: RustBuffer) throws -> PluginSearchInput {
+    return try FfiConverterTypePluginSearchInput.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypePluginSearchInput_lower(_ value: PluginSearchInput) -> RustBuffer {
+    return FfiConverterTypePluginSearchInput.lower(value)
+}
+
+
+/**
+ * One page of results and the provider's total, when it reports one.
+ */
+public struct PluginSearchPage: Equatable, Hashable {
+    public var items: [PluginProjectRecord]
+    public var total: UInt64?
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(items: [PluginProjectRecord], total: UInt64?) {
+        self.items = items
+        self.total = total
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension PluginSearchPage: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypePluginSearchPage: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> PluginSearchPage {
+        return
+            try PluginSearchPage(
+                items: FfiConverterSequenceTypePluginProjectRecord.read(from: &buf), 
+                total: FfiConverterOptionUInt64.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: PluginSearchPage, into buf: inout [UInt8]) {
+        FfiConverterSequenceTypePluginProjectRecord.write(value.items, into: &buf)
+        FfiConverterOptionUInt64.write(value.total, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypePluginSearchPage_lift(_ buf: RustBuffer) throws -> PluginSearchPage {
+    return try FfiConverterTypePluginSearchPage.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypePluginSearchPage_lower(_ value: PluginSearchPage) -> RustBuffer {
+    return FfiConverterTypePluginSearchPage.lower(value)
+}
+
+
+public struct PluginServerSupport: Equatable, Hashable {
+    public var sources: [PluginSource]
+    public var targetDirectory: String
+    public var loader: String
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(sources: [PluginSource], targetDirectory: String, loader: String) {
+        self.sources = sources
+        self.targetDirectory = targetDirectory
+        self.loader = loader
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension PluginServerSupport: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypePluginServerSupport: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> PluginServerSupport {
+        return
+            try PluginServerSupport(
+                sources: FfiConverterSequenceTypePluginSource.read(from: &buf), 
+                targetDirectory: FfiConverterString.read(from: &buf), 
+                loader: FfiConverterString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: PluginServerSupport, into buf: inout [UInt8]) {
+        FfiConverterSequenceTypePluginSource.write(value.sources, into: &buf)
+        FfiConverterString.write(value.targetDirectory, into: &buf)
+        FfiConverterString.write(value.loader, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypePluginServerSupport_lift(_ buf: RustBuffer) throws -> PluginServerSupport {
+    return try FfiConverterTypePluginServerSupport.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypePluginServerSupport_lower(_ value: PluginServerSupport) -> RustBuffer {
+    return FfiConverterTypePluginServerSupport.lower(value)
+}
+
+
+public struct PluginVersionRecord: Equatable, Hashable {
+    public var id: String
+    public var name: String
+    public var gameVersions: [String]
+    public var loaders: [String]
+    public var published: String?
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(id: String, name: String, gameVersions: [String], loaders: [String], published: String?) {
+        self.id = id
+        self.name = name
+        self.gameVersions = gameVersions
+        self.loaders = loaders
+        self.published = published
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension PluginVersionRecord: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypePluginVersionRecord: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> PluginVersionRecord {
+        return
+            try PluginVersionRecord(
+                id: FfiConverterString.read(from: &buf), 
+                name: FfiConverterString.read(from: &buf), 
+                gameVersions: FfiConverterSequenceString.read(from: &buf), 
+                loaders: FfiConverterSequenceString.read(from: &buf), 
+                published: FfiConverterOptionString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: PluginVersionRecord, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.id, into: &buf)
+        FfiConverterString.write(value.name, into: &buf)
+        FfiConverterSequenceString.write(value.gameVersions, into: &buf)
+        FfiConverterSequenceString.write(value.loaders, into: &buf)
+        FfiConverterOptionString.write(value.published, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypePluginVersionRecord_lift(_ buf: RustBuffer) throws -> PluginVersionRecord {
+    return try FfiConverterTypePluginVersionRecord.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypePluginVersionRecord_lower(_ value: PluginVersionRecord) -> RustBuffer {
+    return FfiConverterTypePluginVersionRecord.lower(value)
 }
 
 
@@ -5042,6 +6429,672 @@ public func FfiConverterTypePlayerListKind_lower(_ value: PlayerListKind) -> Rus
 
 
 
+public enum PluginBulkItemStatus: Equatable, Hashable {
+    
+    case updated(installedFileNames: [String]
+    )
+    case skipped(reason: PluginBulkSkipReason
+    )
+    case failed(error: String
+    )
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension PluginBulkItemStatus: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypePluginBulkItemStatus: FfiConverterRustBuffer {
+    typealias SwiftType = PluginBulkItemStatus
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> PluginBulkItemStatus {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .updated(installedFileNames: try FfiConverterSequenceString.read(from: &buf)
+        )
+        
+        case 2: return .skipped(reason: try FfiConverterTypePluginBulkSkipReason.read(from: &buf)
+        )
+        
+        case 3: return .failed(error: try FfiConverterString.read(from: &buf)
+        )
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: PluginBulkItemStatus, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case let .updated(installedFileNames):
+            writeInt(&buf, Int32(1))
+            FfiConverterSequenceString.write(installedFileNames, into: &buf)
+            
+        
+        case let .skipped(reason):
+            writeInt(&buf, Int32(2))
+            FfiConverterTypePluginBulkSkipReason.write(reason, into: &buf)
+            
+        
+        case let .failed(error):
+            writeInt(&buf, Int32(3))
+            FfiConverterString.write(error, into: &buf)
+            
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypePluginBulkItemStatus_lift(_ buf: RustBuffer) throws -> PluginBulkItemStatus {
+    return try FfiConverterTypePluginBulkItemStatus.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypePluginBulkItemStatus_lower(_ value: PluginBulkItemStatus) -> RustBuffer {
+    return FfiConverterTypePluginBulkItemStatus.lower(value)
+}
+
+
+
+
+public enum PluginBulkSkipReason: Equatable, Hashable {
+    
+    case local
+    case upToDate
+    case compatibilityUnknown
+    case confirmationRequired
+    case externalDownload
+    case unverifiedDownload
+    case alreadyUpdated
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension PluginBulkSkipReason: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypePluginBulkSkipReason: FfiConverterRustBuffer {
+    typealias SwiftType = PluginBulkSkipReason
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> PluginBulkSkipReason {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .local
+        
+        case 2: return .upToDate
+        
+        case 3: return .compatibilityUnknown
+        
+        case 4: return .confirmationRequired
+        
+        case 5: return .externalDownload
+        
+        case 6: return .unverifiedDownload
+        
+        case 7: return .alreadyUpdated
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: PluginBulkSkipReason, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case .local:
+            writeInt(&buf, Int32(1))
+        
+        
+        case .upToDate:
+            writeInt(&buf, Int32(2))
+        
+        
+        case .compatibilityUnknown:
+            writeInt(&buf, Int32(3))
+        
+        
+        case .confirmationRequired:
+            writeInt(&buf, Int32(4))
+        
+        
+        case .externalDownload:
+            writeInt(&buf, Int32(5))
+        
+        
+        case .unverifiedDownload:
+            writeInt(&buf, Int32(6))
+        
+        
+        case .alreadyUpdated:
+            writeInt(&buf, Int32(7))
+        
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypePluginBulkSkipReason_lift(_ buf: RustBuffer) throws -> PluginBulkSkipReason {
+    return try FfiConverterTypePluginBulkSkipReason.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypePluginBulkSkipReason_lower(_ value: PluginBulkSkipReason) -> RustBuffer {
+    return FfiConverterTypePluginBulkSkipReason.lower(value)
+}
+
+
+
+
+public enum PluginCompatibility: Equatable, Hashable {
+    
+    case compatible
+    case incompatible
+    case unknown
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension PluginCompatibility: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypePluginCompatibility: FfiConverterRustBuffer {
+    typealias SwiftType = PluginCompatibility
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> PluginCompatibility {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .compatible
+        
+        case 2: return .incompatible
+        
+        case 3: return .unknown
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: PluginCompatibility, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case .compatible:
+            writeInt(&buf, Int32(1))
+        
+        
+        case .incompatible:
+            writeInt(&buf, Int32(2))
+        
+        
+        case .unknown:
+            writeInt(&buf, Int32(3))
+        
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypePluginCompatibility_lift(_ buf: RustBuffer) throws -> PluginCompatibility {
+    return try FfiConverterTypePluginCompatibility.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypePluginCompatibility_lower(_ value: PluginCompatibility) -> RustBuffer {
+    return FfiConverterTypePluginCompatibility.lower(value)
+}
+
+
+
+
+public enum PluginInstallPolicy: Equatable, Hashable {
+    
+    case externalDownload
+    case incompletePreview
+    case incompatible
+    case unverifiedBlocked
+    case confirm(unknownCompatibility: Bool, unverifiedDownloads: Bool
+    )
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension PluginInstallPolicy: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypePluginInstallPolicy: FfiConverterRustBuffer {
+    typealias SwiftType = PluginInstallPolicy
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> PluginInstallPolicy {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .externalDownload
+        
+        case 2: return .incompletePreview
+        
+        case 3: return .incompatible
+        
+        case 4: return .unverifiedBlocked
+        
+        case 5: return .confirm(unknownCompatibility: try FfiConverterBool.read(from: &buf), unverifiedDownloads: try FfiConverterBool.read(from: &buf)
+        )
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: PluginInstallPolicy, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case .externalDownload:
+            writeInt(&buf, Int32(1))
+        
+        
+        case .incompletePreview:
+            writeInt(&buf, Int32(2))
+        
+        
+        case .incompatible:
+            writeInt(&buf, Int32(3))
+        
+        
+        case .unverifiedBlocked:
+            writeInt(&buf, Int32(4))
+        
+        
+        case let .confirm(unknownCompatibility,unverifiedDownloads):
+            writeInt(&buf, Int32(5))
+            FfiConverterBool.write(unknownCompatibility, into: &buf)
+            FfiConverterBool.write(unverifiedDownloads, into: &buf)
+            
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypePluginInstallPolicy_lift(_ buf: RustBuffer) throws -> PluginInstallPolicy {
+    return try FfiConverterTypePluginInstallPolicy.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypePluginInstallPolicy_lower(_ value: PluginInstallPolicy) -> RustBuffer {
+    return FfiConverterTypePluginInstallPolicy.lower(value)
+}
+
+
+
+
+public enum PluginProject: Equatable, Hashable {
+    
+    case modrinth(projectId: String
+    )
+    case hangar(owner: String, slug: String
+    )
+    case spiget(resourceId: UInt64
+    )
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension PluginProject: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypePluginProject: FfiConverterRustBuffer {
+    typealias SwiftType = PluginProject
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> PluginProject {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .modrinth(projectId: try FfiConverterString.read(from: &buf)
+        )
+        
+        case 2: return .hangar(owner: try FfiConverterString.read(from: &buf), slug: try FfiConverterString.read(from: &buf)
+        )
+        
+        case 3: return .spiget(resourceId: try FfiConverterUInt64.read(from: &buf)
+        )
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: PluginProject, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case let .modrinth(projectId):
+            writeInt(&buf, Int32(1))
+            FfiConverterString.write(projectId, into: &buf)
+            
+        
+        case let .hangar(owner,slug):
+            writeInt(&buf, Int32(2))
+            FfiConverterString.write(owner, into: &buf)
+            FfiConverterString.write(slug, into: &buf)
+            
+        
+        case let .spiget(resourceId):
+            writeInt(&buf, Int32(3))
+            FfiConverterUInt64.write(resourceId, into: &buf)
+            
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypePluginProject_lift(_ buf: RustBuffer) throws -> PluginProject {
+    return try FfiConverterTypePluginProject.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypePluginProject_lower(_ value: PluginProject) -> RustBuffer {
+    return FfiConverterTypePluginProject.lower(value)
+}
+
+
+
+
+public enum PluginSort: Equatable, Hashable {
+    
+    case relevance
+    case downloads
+    case name
+    case compatibility
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension PluginSort: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypePluginSort: FfiConverterRustBuffer {
+    typealias SwiftType = PluginSort
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> PluginSort {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .relevance
+        
+        case 2: return .downloads
+        
+        case 3: return .name
+        
+        case 4: return .compatibility
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: PluginSort, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case .relevance:
+            writeInt(&buf, Int32(1))
+        
+        
+        case .downloads:
+            writeInt(&buf, Int32(2))
+        
+        
+        case .name:
+            writeInt(&buf, Int32(3))
+        
+        
+        case .compatibility:
+            writeInt(&buf, Int32(4))
+        
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypePluginSort_lift(_ buf: RustBuffer) throws -> PluginSort {
+    return try FfiConverterTypePluginSort.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypePluginSort_lower(_ value: PluginSort) -> RustBuffer {
+    return FfiConverterTypePluginSort.lower(value)
+}
+
+
+
+
+public enum PluginSource: Equatable, Hashable {
+    
+    case modrinth
+    case hangar
+    case spiget
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension PluginSource: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypePluginSource: FfiConverterRustBuffer {
+    typealias SwiftType = PluginSource
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> PluginSource {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .modrinth
+        
+        case 2: return .hangar
+        
+        case 3: return .spiget
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: PluginSource, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case .modrinth:
+            writeInt(&buf, Int32(1))
+        
+        
+        case .hangar:
+            writeInt(&buf, Int32(2))
+        
+        
+        case .spiget:
+            writeInt(&buf, Int32(3))
+        
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypePluginSource_lift(_ buf: RustBuffer) throws -> PluginSource {
+    return try FfiConverterTypePluginSource.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypePluginSource_lower(_ value: PluginSource) -> RustBuffer {
+    return FfiConverterTypePluginSource.lower(value)
+}
+
+
+
+
+public enum PluginUpdateStatus: Equatable, Hashable {
+    
+    case local
+    case upToDate
+    case available(version: String
+    )
+    case unknown
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension PluginUpdateStatus: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypePluginUpdateStatus: FfiConverterRustBuffer {
+    typealias SwiftType = PluginUpdateStatus
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> PluginUpdateStatus {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .local
+        
+        case 2: return .upToDate
+        
+        case 3: return .available(version: try FfiConverterString.read(from: &buf)
+        )
+        
+        case 4: return .unknown
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: PluginUpdateStatus, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case .local:
+            writeInt(&buf, Int32(1))
+        
+        
+        case .upToDate:
+            writeInt(&buf, Int32(2))
+        
+        
+        case let .available(version):
+            writeInt(&buf, Int32(3))
+            FfiConverterString.write(version, into: &buf)
+            
+        
+        case .unknown:
+            writeInt(&buf, Int32(4))
+        
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypePluginUpdateStatus_lift(_ buf: RustBuffer) throws -> PluginUpdateStatus {
+    return try FfiConverterTypePluginUpdateStatus.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypePluginUpdateStatus_lower(_ value: PluginUpdateStatus) -> RustBuffer {
+    return FfiConverterTypePluginUpdateStatus.lower(value)
+}
+
+
+
+
 public enum PropertyLineEnding: Equatable, Hashable {
     
     case lf
@@ -5684,6 +7737,30 @@ fileprivate struct FfiConverterOptionTypeMetricSnapshot: FfiConverterRustBuffer 
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterOptionTypePluginOrigin: FfiConverterRustBuffer {
+    typealias SwiftType = PluginOrigin?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterTypePluginOrigin.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterTypePluginOrigin.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterSequenceString: FfiConverterRustBuffer {
     typealias SwiftType = [String]
 
@@ -5834,6 +7911,31 @@ fileprivate struct FfiConverterSequenceTypeFileItem: FfiConverterRustBuffer {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterSequenceTypeInstalledPlugin: FfiConverterRustBuffer {
+    typealias SwiftType = [InstalledPlugin]
+
+    public static func write(_ value: [InstalledPlugin], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeInstalledPlugin.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [InstalledPlugin] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [InstalledPlugin]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeInstalledPlugin.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterSequenceTypePlayerEntry: FfiConverterRustBuffer {
     typealias SwiftType = [PlayerEntry]
 
@@ -5851,6 +7953,131 @@ fileprivate struct FfiConverterSequenceTypePlayerEntry: FfiConverterRustBuffer {
         seq.reserveCapacity(Int(len))
         for _ in 0 ..< len {
             seq.append(try FfiConverterTypePlayerEntry.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypePluginArtifactPreview: FfiConverterRustBuffer {
+    typealias SwiftType = [PluginArtifactPreview]
+
+    public static func write(_ value: [PluginArtifactPreview], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypePluginArtifactPreview.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [PluginArtifactPreview] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [PluginArtifactPreview]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypePluginArtifactPreview.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypePluginBulkItemResult: FfiConverterRustBuffer {
+    typealias SwiftType = [PluginBulkItemResult]
+
+    public static func write(_ value: [PluginBulkItemResult], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypePluginBulkItemResult.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [PluginBulkItemResult] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [PluginBulkItemResult]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypePluginBulkItemResult.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypePluginCategory: FfiConverterRustBuffer {
+    typealias SwiftType = [PluginCategory]
+
+    public static func write(_ value: [PluginCategory], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypePluginCategory.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [PluginCategory] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [PluginCategory]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypePluginCategory.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypePluginProjectRecord: FfiConverterRustBuffer {
+    typealias SwiftType = [PluginProjectRecord]
+
+    public static func write(_ value: [PluginProjectRecord], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypePluginProjectRecord.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [PluginProjectRecord] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [PluginProjectRecord]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypePluginProjectRecord.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypePluginVersionRecord: FfiConverterRustBuffer {
+    typealias SwiftType = [PluginVersionRecord]
+
+    public static func write(_ value: [PluginVersionRecord], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypePluginVersionRecord.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [PluginVersionRecord] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [PluginVersionRecord]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypePluginVersionRecord.read(from: &buf))
         }
         return seq
     }
@@ -6026,6 +8253,31 @@ fileprivate struct FfiConverterSequenceTypeTpsPoint: FfiConverterRustBuffer {
         seq.reserveCapacity(Int(len))
         for _ in 0 ..< len {
             seq.append(try FfiConverterTypeTpsPoint.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypePluginSource: FfiConverterRustBuffer {
+    typealias SwiftType = [PluginSource]
+
+    public static func write(_ value: [PluginSource], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypePluginSource.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [PluginSource] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [PluginSource]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypePluginSource.read(from: &buf))
         }
         return seq
     }
@@ -6914,6 +9166,182 @@ public func writeTextDocument(serverId: String, relative: String, document: Text
             errorHandler: FfiConverterTypeFfiError_lift
         )
 }
+public func bulkUpdatePlugins(operationId: String, serverId: String, observer: PluginBulkObserver)async throws  -> PluginBulkOutcome  {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_mcvector_ffi_fn_func_bulk_update_plugins(FfiConverterString.lower(operationId),FfiConverterString.lower(serverId),FfiConverterTypePluginBulkObserver_lower(observer)
+                )
+            },
+            pollFunc: ffi_mcvector_ffi_rust_future_poll_rust_buffer,
+            completeFunc: ffi_mcvector_ffi_rust_future_complete_rust_buffer,
+            freeFunc: ffi_mcvector_ffi_rust_future_free_rust_buffer,
+            liftFunc: FfiConverterTypePluginBulkOutcome_lift,
+            errorHandler: FfiConverterTypeFfiError_lift
+        )
+}
+public func cancelPluginOperation(operationId: String)async  -> Bool  {
+    return
+        try!  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_mcvector_ffi_fn_func_cancel_plugin_operation(FfiConverterString.lower(operationId)
+                )
+            },
+            pollFunc: ffi_mcvector_ffi_rust_future_poll_i8,
+            completeFunc: ffi_mcvector_ffi_rust_future_complete_i8,
+            freeFunc: ffi_mcvector_ffi_rust_future_free_i8,
+            liftFunc: FfiConverterBool.lift,
+            errorHandler: nil
+            
+        )
+}
+public func executePluginInstall(operationId: String, token: String, confirmedDependencyIds: [String], observer: PluginInstallObserver)async throws  -> PluginInstallResult  {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_mcvector_ffi_fn_func_execute_plugin_install(FfiConverterString.lower(operationId),FfiConverterString.lower(token),FfiConverterSequenceString.lower(confirmedDependencyIds),FfiConverterTypePluginInstallObserver_lower(observer)
+                )
+            },
+            pollFunc: ffi_mcvector_ffi_rust_future_poll_rust_buffer,
+            completeFunc: ffi_mcvector_ffi_rust_future_complete_rust_buffer,
+            freeFunc: ffi_mcvector_ffi_rust_future_free_rust_buffer,
+            liftFunc: FfiConverterTypePluginInstallResult_lift,
+            errorHandler: FfiConverterTypeFfiError_lift
+        )
+}
+public func installedPlugins(serverId: String, checkUpdates: Bool)async throws  -> [InstalledPlugin]  {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_mcvector_ffi_fn_func_installed_plugins(FfiConverterString.lower(serverId),FfiConverterBool.lower(checkUpdates)
+                )
+            },
+            pollFunc: ffi_mcvector_ffi_rust_future_poll_rust_buffer,
+            completeFunc: ffi_mcvector_ffi_rust_future_complete_rust_buffer,
+            freeFunc: ffi_mcvector_ffi_rust_future_free_rust_buffer,
+            liftFunc: FfiConverterSequenceTypeInstalledPlugin.lift,
+            errorHandler: FfiConverterTypeFfiError_lift
+        )
+}
+public func pluginCategories(source: PluginSource)async throws  -> [PluginCategory]  {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_mcvector_ffi_fn_func_plugin_categories(FfiConverterTypePluginSource_lower(source)
+                )
+            },
+            pollFunc: ffi_mcvector_ffi_rust_future_poll_rust_buffer,
+            completeFunc: ffi_mcvector_ffi_rust_future_complete_rust_buffer,
+            freeFunc: ffi_mcvector_ffi_rust_future_free_rust_buffer,
+            liftFunc: FfiConverterSequenceTypePluginCategory.lift,
+            errorHandler: FfiConverterTypeFfiError_lift
+        )
+}
+public func pluginReadme(project: PluginProject)async throws  -> String?  {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_mcvector_ffi_fn_func_plugin_readme(FfiConverterTypePluginProject_lower(project)
+                )
+            },
+            pollFunc: ffi_mcvector_ffi_rust_future_poll_rust_buffer,
+            completeFunc: ffi_mcvector_ffi_rust_future_complete_rust_buffer,
+            freeFunc: ffi_mcvector_ffi_rust_future_free_rust_buffer,
+            liftFunc: FfiConverterOptionString.lift,
+            errorHandler: FfiConverterTypeFfiError_lift
+        )
+}
+public func pluginReadmeHtml(source: PluginSource, body: String, projectUrl: String)throws  -> String  {
+    return try  FfiConverterString.lift(try rustCallWithError(FfiConverterTypeFfiError_lift) {
+        uniffiCallStatus in
+    uniffi_mcvector_ffi_fn_func_plugin_readme_html(
+        FfiConverterTypePluginSource_lower(source),
+        FfiConverterString.lower(body),
+        FfiConverterString.lower(projectUrl),uniffiCallStatus
+    )
+})
+}
+public func pluginServerSupport(software: String) -> PluginServerSupport  {
+    return try!  FfiConverterTypePluginServerSupport_lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_mcvector_ffi_fn_func_plugin_server_support(
+        FfiConverterString.lower(software),uniffiCallStatus
+    )
+})
+}
+/**
+ * Published versions of a project for the detail view (Spiget: none).
+ */
+public func pluginVersions(project: PluginProject, software: String)async throws  -> [PluginVersionRecord]  {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_mcvector_ffi_fn_func_plugin_versions(FfiConverterTypePluginProject_lower(project),FfiConverterString.lower(software)
+                )
+            },
+            pollFunc: ffi_mcvector_ffi_rust_future_poll_rust_buffer,
+            completeFunc: ffi_mcvector_ffi_rust_future_complete_rust_buffer,
+            freeFunc: ffi_mcvector_ffi_rust_future_free_rust_buffer,
+            liftFunc: FfiConverterSequenceTypePluginVersionRecord.lift,
+            errorHandler: FfiConverterTypeFfiError_lift
+        )
+}
+public func preparePluginInstall(serverId: String, project: PluginProject, replaceFileName: String?)async throws  -> PluginInstallPreview  {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_mcvector_ffi_fn_func_prepare_plugin_install(FfiConverterString.lower(serverId),FfiConverterTypePluginProject_lower(project),FfiConverterOptionString.lower(replaceFileName)
+                )
+            },
+            pollFunc: ffi_mcvector_ffi_rust_future_poll_rust_buffer,
+            completeFunc: ffi_mcvector_ffi_rust_future_complete_rust_buffer,
+            freeFunc: ffi_mcvector_ffi_rust_future_free_rust_buffer,
+            liftFunc: FfiConverterTypePluginInstallPreview_lift,
+            errorHandler: FfiConverterTypeFfiError_lift
+        )
+}
+public func searchPlugins(input: PluginSearchInput)async throws  -> PluginSearchPage  {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_mcvector_ffi_fn_func_search_plugins(FfiConverterTypePluginSearchInput_lower(input)
+                )
+            },
+            pollFunc: ffi_mcvector_ffi_rust_future_poll_rust_buffer,
+            completeFunc: ffi_mcvector_ffi_rust_future_complete_rust_buffer,
+            freeFunc: ffi_mcvector_ffi_rust_future_free_rust_buffer,
+            liftFunc: FfiConverterTypePluginSearchPage_lift,
+            errorHandler: FfiConverterTypeFfiError_lift
+        )
+}
+public func toggleInstalledPlugin(serverId: String, fileName: String)async throws  -> String  {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_mcvector_ffi_fn_func_toggle_installed_plugin(FfiConverterString.lower(serverId),FfiConverterString.lower(fileName)
+                )
+            },
+            pollFunc: ffi_mcvector_ffi_rust_future_poll_rust_buffer,
+            completeFunc: ffi_mcvector_ffi_rust_future_complete_rust_buffer,
+            freeFunc: ffi_mcvector_ffi_rust_future_free_rust_buffer,
+            liftFunc: FfiConverterString.lift,
+            errorHandler: FfiConverterTypeFfiError_lift
+        )
+}
+public func uninstallPlugin(serverId: String, fileName: String)async throws   {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_mcvector_ffi_fn_func_uninstall_plugin(FfiConverterString.lower(serverId),FfiConverterString.lower(fileName)
+                )
+            },
+            pollFunc: ffi_mcvector_ffi_rust_future_poll_void,
+            completeFunc: ffi_mcvector_ffi_rust_future_complete_void,
+            freeFunc: ffi_mcvector_ffi_rust_future_free_void,
+            liftFunc: { $0 },
+            errorHandler: FfiConverterTypeFfiError_lift
+        )
+}
 
 private enum InitializationResult {
     case ok
@@ -7095,6 +9523,45 @@ private let initializationResult: InitializationResult = {
     if (uniffi_mcvector_ffi_checksum_func_write_text_document() != 40172) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_mcvector_ffi_checksum_func_bulk_update_plugins() != 10162) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mcvector_ffi_checksum_func_cancel_plugin_operation() != 25151) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mcvector_ffi_checksum_func_execute_plugin_install() != 46905) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mcvector_ffi_checksum_func_installed_plugins() != 667) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mcvector_ffi_checksum_func_plugin_categories() != 27236) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mcvector_ffi_checksum_func_plugin_readme() != 16578) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mcvector_ffi_checksum_func_plugin_readme_html() != 16505) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mcvector_ffi_checksum_func_plugin_server_support() != 39625) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mcvector_ffi_checksum_func_plugin_versions() != 26683) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mcvector_ffi_checksum_func_prepare_plugin_install() != 35743) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mcvector_ffi_checksum_func_search_plugins() != 46078) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mcvector_ffi_checksum_func_toggle_installed_plugin() != 44304) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mcvector_ffi_checksum_func_uninstall_plugin() != 19849) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_mcvector_ffi_checksum_method_backupprogressobserver_on_progress() != 4035) {
         return InitializationResult.apiChecksumMismatch
     }
@@ -7113,9 +9580,17 @@ private let initializationResult: InitializationResult = {
     if (uniffi_mcvector_ffi_checksum_method_servereventobserver_on_metrics() != 47854) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_mcvector_ffi_checksum_method_pluginbulkobserver_on_progress() != 58331) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mcvector_ffi_checksum_method_plugininstallobserver_on_progress() != 17147) {
+        return InitializationResult.apiChecksumMismatch
+    }
 
     uniffiCallbackInitBackupProgressObserver()
     uniffiCallbackInitCreationObserver()
+    uniffiCallbackInitPluginBulkObserver()
+    uniffiCallbackInitPluginInstallObserver()
     uniffiCallbackInitServerEventObserver()
     return InitializationResult.ok
 }()
