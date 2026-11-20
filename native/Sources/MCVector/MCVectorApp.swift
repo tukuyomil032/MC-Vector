@@ -93,6 +93,10 @@ struct MCVectorApp: App {
             SettingsView()
                 .environment(feedback)
         }
+        // Without these the window opened at a few hundred points, ignoring the
+        // view's minimum size.
+        .defaultSize(width: 760, height: 520)
+        .windowResizability(.contentMinSize)
     }
 }
 
