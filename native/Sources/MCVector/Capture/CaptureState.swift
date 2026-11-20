@@ -420,6 +420,23 @@
                 FilesView.capturePreset = .init(openFile: "server.properties")
                 FileEditorView.captureScript = .init(hover: "server-port")
                 app.navigate(to: .files)
+            case let id where id.hasPrefix("BACKUPS-"):
+                UserDefaults.standard.set(
+                    id == "BACKUPS-table" ? BackupsLayout.table.rawValue : BackupsLayout.cards.rawValue,
+                    forKey: BackupsLayout.storageKey)
+                switch id {
+                case "BACKUPS-empty", "BACKUPS-loading", "BACKUPS-auto":
+                    break
+                case "BACKUPS-catalog-error":
+                    corruptBackupCatalog(serverID: "server-1")
+                default:
+                    await makeSampleBackups(serverID: "server-1")
+                }
+                if id == "BACKUPS-create-stop-confirm" {
+                    await startStandIn(runtime: runtime, serverID: "server-1")
+                }
+                BackupsView.captureScript = .init(id: id)
+                app.navigate(to: .backups)
             case "USERS-01":
                 writePlayerLists(serverID: "server-1")
                 UsersView.captureScript = .init(id: id, action: .none)
@@ -643,7 +660,7 @@
                     signal("[capture] unknown capture state: \(id)")
                 }
             }
-            if id.hasPrefix("USERS-") || id.hasPrefix("PROPS-") {
+            if id.hasPrefix("USERS-") || id.hasPrefix("PROPS-") || id.hasPrefix("BACKUPS-") {
                 guard await waitForViewReady(id) else {
                     signal("[capture] state did not become ready: \(id)")
                     return
@@ -666,7 +683,7 @@
         }
 
         /// Starts a fixture server with the stand-in Java and waits for its log.
-        private static func startStandIn(runtime: ServerRuntime, serverID: String) async {
+        static func startStandIn(runtime: ServerRuntime, serverID: String) async {
             await runtime.start(serverID)
             for _ in 0..<30 where (runtime.logs[serverID]?.count ?? 0) < 5 {
                 try? await Task.sleep(for: .milliseconds(100))
@@ -708,6 +725,105 @@
                 signal("[capture] Server Settings window did not open")
             }
             try? await Task.sleep(for: .milliseconds(1000))
+        }
+
+        /// Two real backups of the fixture server, one tagged with a note.
+        private static func makeSampleBackups(serverID: String) async {
+            for name in ["before-update.zip", "nightly.zip"] {
+                do {
+                    let outcome = try await CoreClient.createBackup(
+                        serverID: serverID, backupName: name, compressionLevel: 5
+                    ).value()
+                    signal("[capture] backup \(name): \(outcome)")
+                } catch {
+                    signal("[capture] backup \(name) failed: \(error.code) \(error.message)")
+                }
+            }
+            _ = try? await CoreClient.setBackupMetadata(
+                serverID: serverID, backupName: "before-update.zip", tags: ["before-update", "stable"],
+                note: "Taken before the 1.21.10 upgrade")
+        }
+
+        /// Replaces the generated archive catalog with a directory so the
+        /// normal atomic catalog write fails during the first list operation.
+        private static func corruptBackupCatalog(serverID: String) {
+            guard let dataDir = ProcessInfo.processInfo.environment["MCVECTOR_DATA_DIR"] else {
+                signal("[capture] data directory is unavailable for catalog failure")
+                return
+            }
+            let backupDirectory = URL(fileURLWithPath: dataDir, isDirectory: true)
+                .appendingPathComponent("backups/\(serverID)", isDirectory: true)
+            let catalogDirectory = backupDirectory.appendingPathComponent(
+                ".mc-vector-backup-catalog.json", isDirectory: true)
+            do {
+                try FileManager.default.createDirectory(at: catalogDirectory, withIntermediateDirectories: true)
+            } catch {
+                signal("[capture] could not corrupt backup catalog: \(error.localizedDescription)")
+            }
+        }
+
+        static func runAutomaticBackupCapture(serverID: String, runtime: ServerRuntime) async {
+            await startStandIn(runtime: runtime, serverID: serverID)
+            guard let scheduler = AutoBackupScheduler.captureInstance else {
+                signal("[capture] automatic backup scheduler is unavailable")
+                return
+            }
+            do {
+                let created = try await scheduler.captureTickNow(serverID: serverID)
+                signal("[capture] automatic scheduler tick created backup: \(created)")
+            } catch {
+                signal("[capture] automatic scheduler tick failed: \(error)")
+            }
+        }
+
+        /// Right-clicks the first backup row (BACKUPS-context-menu). Posting mouse
+        /// events needs the Accessibility grant; without it, report that at once
+        /// so capture.sh stops waiting, and open the settings pane.
+        static func rightClickFirstBackup(id: String) async {
+            // The prompt option also lists the app in the Accessibility pane, so
+            // it only needs switching on.
+            let options = ["AXTrustedCheckOptionPrompt": true] as CFDictionary
+            guard AXIsProcessTrustedWithOptions(options) else {
+                signal("[capture] accessibility required: \(id)")
+                if let url = URL(
+                    string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")
+                {
+                    NSWorkspace.shared.open(url)
+                }
+                return
+            }
+            guard let window = NSApp.keyWindow ?? NSApp.windows.first(where: { $0.isVisible }) else {
+                signal("[capture] no window for backup context menu")
+                return
+            }
+            // The click goes to whatever window is on top at that point, so bring
+            // the app forward first.
+            NSApp.activate()
+            window.makeKeyAndOrderFront(nil)
+            try? await Task.sleep(for: .milliseconds(500))
+            // Menu items' onAppear does not run for context menus; the menu
+            // reports that it opened through this notification instead.
+            var token: NSObjectProtocol?
+            token = NotificationCenter.default.addObserver(
+                forName: NSMenu.didBeginTrackingNotification, object: nil, queue: .main
+            ) { _ in
+                MainActor.assumeIsolated {
+                    markViewReady(for: id)
+                    if let token { NotificationCenter.default.removeObserver(token) }
+                }
+            }
+            // CGEvent uses global coordinates with the origin at the top left of
+            // the primary screen; AppKit frames start at its bottom left. The
+            // first row sits about a fifth of the way down the fixture window.
+            let primaryHeight = NSScreen.screens.first?.frame.height ?? window.frame.maxY
+            let point = CGPoint(
+                x: window.frame.minX + window.frame.width * 0.45,
+                y: primaryHeight - window.frame.maxY + window.frame.height * 0.2
+            )
+            CGEvent(mouseEventSource: nil, mouseType: .rightMouseDown, mouseCursorPosition: point, mouseButton: .right)?
+                .post(tap: .cghidEventTap)
+            CGEvent(mouseEventSource: nil, mouseType: .rightMouseUp, mouseCursorPosition: point, mouseButton: .right)?
+                .post(tap: .cghidEventTap)
         }
 
         /// Sample whitelist, ops and bans for USERS-* states.

@@ -6,9 +6,9 @@
 # (spec/idea/native-swiftui-edition/ui-reference/screens/<ID>.png).
 #
 # Each capture launches the debug app with fresh fixture data from
-# native/scripts/fixtures/<fixture>/ copied into native/.build/fixtures/, passes
-# --capture-state <ID>, waits until the app reports the state is ready, then
-# grabs only the app window with `screencapture -l`. Output:
+# native/scripts/fixtures/<fixture>/ copied into the capture runtime directory,
+# passes --capture-state <ID>, waits until the app reports the state is ready,
+# then grabs only the app window with `screencapture -l`. Output:
 # native/.build/captures/<locale>/<ID>.png.
 #
 # Usage: native/scripts/capture.sh [--fixture e2e|groups|empty] [--locale en|ja]
@@ -35,6 +35,8 @@ Options:
                     "empty" starts without servers)
   --locale <en|ja>  UI language written to the fixture config.json (default: en)
   --no-build        Do not run native/build.sh first
+  MCVECTOR_CAPTURE_RUN_DIR=<absolute path> overrides the runtime directory
+                    (default: ~/Library/Caches/com.tukuyomi032.mcvector.capture)
   -h, --help        Show this help and exit
 EOF
 }
@@ -77,7 +79,14 @@ mkdir -p "$OUT_DIR" "$TOOLS_DIR" "$BUILD_DIR/logs"
 # ready signal, the stand-in Java) lives outside ~/Documents. Files in Documents
 # need a privacy grant, and the ad-hoc signed debug app is a new app to macOS
 # after every build, so the "access Documents" prompt would block each capture.
-RUN_DIR="$HOME/Library/Caches/com.tukuyomi032.mcvector.capture"
+RUN_DIR="${MCVECTOR_CAPTURE_RUN_DIR:-$HOME/Library/Caches/com.tukuyomi032.mcvector.capture}"
+case "$RUN_DIR" in
+  /*) ;;
+  *) log_fail "Capture runtime directory must be absolute: $RUN_DIR"; exit 2 ;;
+esac
+case "/$RUN_DIR/" in
+  */../*|*/./*) log_fail "Capture runtime directory must not contain '.' or '..': $RUN_DIR"; exit 2 ;;
+esac
 mkdir -p "$RUN_DIR/fixtures" "$RUN_DIR/logs"
 
 # ensure_inside_run <path>: refuse to touch anything outside RUN_DIR.
