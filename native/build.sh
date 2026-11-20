@@ -208,6 +208,9 @@ build_swift() {
   for triple in "${SWIFT_TRIPLES[@]}"; do
     flags=(--package-path "$NATIVE_DIR" --scratch-path "$BUILD_DIR/swift" \
       --cache-path "$BUILD_DIR/cache" -c "$cfg" --triple "$triple")
+    if [ "${SWIFT_DISABLE_SANDBOX:-0}" = "1" ]; then
+      flags+=(--disable-sandbox)
+    fi
     run_logged "swift-build-$triple" swift build "${flags[@]}" \
       -Xlinker -L -Xlinker "$BUILD_DIR/rust/lib" --product MCVector || return 1
     bin_dir="$(swift build "${flags[@]}" --show-bin-path 2>/dev/null)" || {
