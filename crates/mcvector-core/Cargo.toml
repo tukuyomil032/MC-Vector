@@ -26,6 +26,7 @@ sysinfo = "0.33"
 reqwest = { version = "0.12", features = ["stream"] }
 futures-util = "0.3"
 sha2 = "0.10"
+zip = "9"
 # `server_creation` stamps createdDate like the Tauri edition did.
 chrono = { version = "0.4", features = ["clock"] }
 

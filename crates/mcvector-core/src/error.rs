@@ -124,6 +124,20 @@ pub enum CoreErrorCode {
     ServerSettingsIo,
     /// The server registry could not be updated with server settings.
     ServerSettingsRegistry,
+    /// The requested backup name is invalid.
+    BackupInvalidName,
+    /// The requested backup does not exist in the managed backup catalog.
+    BackupNotFound,
+    /// The backup archive is corrupt or fails integrity validation.
+    BackupCorruptArchive,
+    /// The backup catalog could not be read or written.
+    BackupCatalogFailed,
+    /// A backup could not be restored safely.
+    BackupRestoreFailed,
+    /// A backup source is invalid or has no files to archive.
+    BackupInvalidSource,
+    /// A backup filesystem operation failed.
+    BackupIo,
 }
 
 impl CoreErrorCode {
@@ -181,6 +195,13 @@ impl CoreErrorCode {
         CoreErrorCode::ServerSettingsInvalidRequest,
         CoreErrorCode::ServerSettingsIo,
         CoreErrorCode::ServerSettingsRegistry,
+        CoreErrorCode::BackupInvalidName,
+        CoreErrorCode::BackupNotFound,
+        CoreErrorCode::BackupCorruptArchive,
+        CoreErrorCode::BackupCatalogFailed,
+        CoreErrorCode::BackupRestoreFailed,
+        CoreErrorCode::BackupInvalidSource,
+        CoreErrorCode::BackupIo,
     ];
 
     /// The stable `<domain>.<reason>` string for this code.
@@ -238,6 +259,13 @@ impl CoreErrorCode {
             Self::ServerSettingsInvalidRequest => "server_settings.invalid_request",
             Self::ServerSettingsIo => "server_settings.io",
             Self::ServerSettingsRegistry => "server_settings.registry",
+            Self::BackupInvalidName => "backup.invalid_name",
+            Self::BackupNotFound => "backup.not_found",
+            Self::BackupCorruptArchive => "backup.corrupt_archive",
+            Self::BackupCatalogFailed => "backup.catalog_failed",
+            Self::BackupRestoreFailed => "backup.restore_failed",
+            Self::BackupInvalidSource => "backup.invalid_source",
+            Self::BackupIo => "backup.io",
         }
     }
 
@@ -299,11 +327,18 @@ impl CoreErrorCode {
             | Self::ServerSettingsInvalidName
             | Self::ServerSettingsInvalidPort
             | Self::ServerSettingsInvalidMemory
-            | Self::ServerSettingsInvalidRequest => false,
+            | Self::ServerSettingsInvalidRequest
+            | Self::BackupInvalidName
+            | Self::BackupNotFound
+            | Self::BackupCorruptArchive
+            | Self::BackupRestoreFailed
+            | Self::BackupInvalidSource => false,
             Self::PropertiesIo
             | Self::PlayerIo
             | Self::ServerSettingsIo
-            | Self::ServerSettingsRegistry => true,
+            | Self::ServerSettingsRegistry
+            | Self::BackupCatalogFailed
+            | Self::BackupIo => true,
         }
     }
 
@@ -422,10 +457,17 @@ mod tests {
             CoreErrorCode::ServerSettingsInvalidRequest => 49,
             CoreErrorCode::ServerSettingsIo => 50,
             CoreErrorCode::ServerSettingsRegistry => 51,
+            CoreErrorCode::BackupInvalidName => 52,
+            CoreErrorCode::BackupNotFound => 53,
+            CoreErrorCode::BackupCorruptArchive => 54,
+            CoreErrorCode::BackupCatalogFailed => 55,
+            CoreErrorCode::BackupRestoreFailed => 56,
+            CoreErrorCode::BackupInvalidSource => 57,
+            CoreErrorCode::BackupIo => 58,
         }
     }
 
-    const VARIANT_COUNT: usize = 52;
+    const VARIANT_COUNT: usize = 59;
 
     /// Checks `^[a-z]+(_[a-z]+)*\.[a-z]+(_[a-z]+)*$` without a regex crate.
     fn is_valid_code_string(s: &str) -> bool {
@@ -645,6 +687,33 @@ mod tests {
                 "server_settings.registry",
                 true,
             ),
+            (
+                CoreErrorCode::BackupInvalidName,
+                "backup.invalid_name",
+                false,
+            ),
+            (CoreErrorCode::BackupNotFound, "backup.not_found", false),
+            (
+                CoreErrorCode::BackupCorruptArchive,
+                "backup.corrupt_archive",
+                false,
+            ),
+            (
+                CoreErrorCode::BackupCatalogFailed,
+                "backup.catalog_failed",
+                true,
+            ),
+            (
+                CoreErrorCode::BackupRestoreFailed,
+                "backup.restore_failed",
+                false,
+            ),
+            (
+                CoreErrorCode::BackupInvalidSource,
+                "backup.invalid_source",
+                false,
+            ),
+            (CoreErrorCode::BackupIo, "backup.io", true),
         ];
         for (code, wire, retryable) in expected {
             assert_eq!(code.as_str(), wire);

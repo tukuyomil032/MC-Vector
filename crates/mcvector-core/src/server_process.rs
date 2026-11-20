@@ -683,6 +683,17 @@ fn start_config_for_profile(profile: MinecraftServer) -> Result<ServerStartConfi
     })
 }
 
+fn java_command_args(memory: u32, extra_args: Vec<String>, jar_file: &str) -> Vec<String> {
+    let mut args = vec![format!("-Xmx{memory}M"), format!("-Xms{memory}M")];
+    args.extend(extra_args);
+    args.extend([
+        "-jar".to_string(),
+        jar_file.to_string(),
+        "nogui".to_string(),
+    ]);
+    args
+}
+
 async fn load_start_config(
     registry: &ServerRegistry,
     server_id: &str,
@@ -850,13 +861,7 @@ async fn start_server_with_guard(
         .reserve_start_with_guard(&validated_server_id, operation)
         .await?;
 
-    let mut jvm_args: Vec<String> = vec![format!("-Xmx{}M", memory), format!("-Xms{}M", memory)];
-    jvm_args.extend(extra_args);
-    jvm_args.extend([
-        "-jar".to_string(),
-        validated_jar_file.clone(),
-        "nogui".to_string(),
-    ]);
+    let jvm_args = java_command_args(memory, extra_args, &validated_jar_file);
 
     // Re-check immediately before spawning to narrow the in-process race
     // between EULA acceptance and process creation.
@@ -1429,11 +1434,12 @@ impl ServerManager {
 mod tests {
     use super::read_lossy_line;
     use super::{
-        load_start_config, resolve_java_executable_path, start_config_for_profile,
-        stop_server_with_guard, supervise_server_child, Path, RunningServer, ServerManager,
-        ServerProcessControl, ServerProcessExit, ServerStatus, ServerStatusEvent,
-        MAX_RUNNING_SERVERS,
+        java_command_args, load_start_config, resolve_java_executable_path,
+        start_config_for_profile, stop_server_with_guard, supervise_server_child, Path,
+        RunningServer, ServerManager, ServerProcessControl, ServerProcessExit, ServerStatus,
+        ServerStatusEvent, MAX_RUNNING_SERVERS,
     };
+    use crate::java_policy::validate_jvm_extra_args;
     use crate::metric_history::MetricHistory;
     use crate::operations::{OperationKind, ServerOperationManager};
     use crate::registry::{MinecraftServer, ServerRegistry};
@@ -1472,6 +1478,26 @@ mod tests {
         assert_eq!(config.jar_file, "forge-server.jar");
         assert_eq!(config.jvm_extra_args.as_deref(), Some("-XX:+UseG1GC"));
         assert_eq!(config.software, "Forge");
+    }
+
+    #[test]
+    fn jvm_arguments_preserve_windows_path_backslashes_without_shell_quoting() {
+        let extra_args = validate_jvm_extra_args(r"-Dmc.server=C:\MC-Vector\server -XX:+UseG1GC")
+            .expect("valid JVM arguments");
+        let args = java_command_args(4096, extra_args, "server.jar");
+
+        assert_eq!(
+            args,
+            [
+                "-Xmx4096M",
+                "-Xms4096M",
+                r"-Dmc.server=C:\MC-Vector\server",
+                "-XX:+UseG1GC",
+                "-jar",
+                "server.jar",
+                "nogui",
+            ]
+        );
     }
 
     #[test]

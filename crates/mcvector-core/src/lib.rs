@@ -4,6 +4,7 @@
 //! `mcvector-ffi`) depend on this crate. It must never depend on `tauri` or any
 //! `tauri-plugin-*` crate.
 
+pub mod backups;
 pub mod config;
 pub mod console_line;
 pub mod download;
