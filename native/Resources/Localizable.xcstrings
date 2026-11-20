@@ -4370,6 +4370,159 @@
         }
       }
     },
+    "error.java.archive_invalid": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The downloaded Java archive is invalid."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ダウンロードした Java のアーカイブが正しくありません。"
+          }
+        }
+      }
+    },
+    "error.java.duplicate": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A Java runtime with this major version is already managed by MC-Vector."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このメジャーバージョンの Java は、もう MC-Vector が管理しています。"
+          }
+        }
+      }
+    },
+    "error.java.in_use": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This Java runtime is used by a running server. Stop the server first."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "この Java は起動中のサーバーが使っています。先にサーバーを止めてください。"
+          }
+        }
+      }
+    },
+    "error.java.install_failed": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Java could not be installed."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Java を入れられませんでした。"
+          }
+        }
+      }
+    },
+    "error.java.invalid_executable": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The selected file is not a usable Java executable."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "選んだファイルは、使える Java の実行ファイルではありません。"
+          }
+        }
+      }
+    },
+    "error.java.invalid_request": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The Java request is invalid."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Java の指定が正しくありません。"
+          }
+        }
+      }
+    },
+    "error.java.probe_failed": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The Java version could not be read."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Java のバージョンを読み取れませんでした。"
+          }
+        }
+      }
+    },
+    "error.java.registry_invalid": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The list of Java runtimes could not be read or saved."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Java の一覧を読み込めないか、保存できませんでした。"
+          }
+        }
+      }
+    },
+    "error.java.unsupported_platform": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No Java build is available for this computer."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このコンピュータ向けの Java がありません。"
+          }
+        }
+      }
+    },
     "error.lock.held_by_other": {
       "extractionState": "manual",
       "localizations": {
@@ -5012,6 +5165,125 @@
           "stringUnit": {
             "state": "translated",
             "value": "このサーバーのフォルダーは MC-Vector の管理フォルダーの外にあるため、ここでは変更できません。"
+          }
+        }
+      }
+    },
+    "error.server_jar.install_failed": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The new server JAR could not be installed. The previous JAR was kept."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "新しいサーバーの JAR を入れられませんでした。前の JAR はそのまま残っています。"
+          }
+        }
+      }
+    },
+    "error.server_jar.invalid_request": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The upgrade request is invalid."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "更新の指定が正しくありません。"
+          }
+        }
+      }
+    },
+    "error.server_jar.not_available": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The selected version is not available."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "選んだバージョンは手に入りません。"
+          }
+        }
+      }
+    },
+    "error.server_jar.plan_expired": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The upgrade plan expired. Check for versions again."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "更新の準備の期限が切れました。もう一度バージョンを確かめてください。"
+          }
+        }
+      }
+    },
+    "error.server_jar.profile_changed": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The server changed while preparing the upgrade. Check for versions again."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "更新の準備中にサーバーが変わりました。もう一度バージョンを確かめてください。"
+          }
+        }
+      }
+    },
+    "error.server_jar.unsupported": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Automatic upgrade is not supported for this server software."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このサーバーの種類は、自動の更新に対応していません。"
+          }
+        }
+      }
+    },
+    "error.server_jar.unverified": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This release publishes no checksum, so the file cannot be verified and was not installed."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このリリースにはチェックサムがないため、ファイルを確かめられず、入れていません。"
           }
         }
       }

@@ -8,7 +8,11 @@
 //! instance lock (NAT-010): `start` stores the lock and the opened registry in
 //! process-wide state, and every other function reads that state.
 
+mod jar_upgrade;
+mod java_runtimes;
 mod plugins;
+pub use jar_upgrade::*;
+pub use java_runtimes::*;
 pub use plugins::*;
 
 use std::collections::HashMap;
@@ -328,6 +332,10 @@ fn start_in(data_dir: PathBuf, bundle_path: String) -> Result<StartOutcome, FfiE
             redact(&failure.error, &data_dir),
         ));
     }
+    // Interrupted server jar upgrades are finished or undone before any
+    // server can start; a server that cannot be recovered is marked
+    // unavailable (and the failure logged) by the core, so startup continues.
+    let _deferred = mcvector_core::server_upgrade::recover_startup(&data_dir, &registry);
     *session = Some(Session {
         _lock: lock,
         data_dir: data_dir.clone(),

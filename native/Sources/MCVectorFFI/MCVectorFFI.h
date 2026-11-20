@@ -285,6 +285,20 @@ typedef void (*UniffiCallbackInterfaceServerEventObserverMethod3)(uint64_t, Rust
     );
 
 #endif
+#ifndef UNIFFI_FFIDEF_CALLBACK_INTERFACE_SERVER_JAR_UPGRADE_OBSERVER_METHOD0
+#define UNIFFI_FFIDEF_CALLBACK_INTERFACE_SERVER_JAR_UPGRADE_OBSERVER_METHOD0
+typedef void (*UniffiCallbackInterfaceServerJarUpgradeObserverMethod0)(uint64_t, RustBuffer, void* _Nonnull, 
+        RustCallStatus *_Nonnull uniffiCallStatus
+    );
+
+#endif
+#ifndef UNIFFI_FFIDEF_CALLBACK_INTERFACE_JAVA_INSTALL_OBSERVER_METHOD0
+#define UNIFFI_FFIDEF_CALLBACK_INTERFACE_JAVA_INSTALL_OBSERVER_METHOD0
+typedef void (*UniffiCallbackInterfaceJavaInstallObserverMethod0)(uint64_t, RustBuffer, void* _Nonnull, 
+        RustCallStatus *_Nonnull uniffiCallStatus
+    );
+
+#endif
 #ifndef UNIFFI_FFIDEF_CALLBACK_INTERFACE_PLUGIN_BULK_OBSERVER_METHOD0
 #define UNIFFI_FFIDEF_CALLBACK_INTERFACE_PLUGIN_BULK_OBSERVER_METHOD0
 typedef void (*UniffiCallbackInterfacePluginBulkObserverMethod0)(uint64_t, RustBuffer, void* _Nonnull, 
@@ -327,6 +341,24 @@ typedef struct UniffiVTableCallbackInterfaceServerEventObserver {
     UniffiCallbackInterfaceServerEventObserverMethod2 _Nonnull onStats;
     UniffiCallbackInterfaceServerEventObserverMethod3 _Nonnull onMetrics;
 } UniffiVTableCallbackInterfaceServerEventObserver;
+
+#endif
+#ifndef UNIFFI_FFIDEF_V_TABLE_CALLBACK_INTERFACE_SERVER_JAR_UPGRADE_OBSERVER
+#define UNIFFI_FFIDEF_V_TABLE_CALLBACK_INTERFACE_SERVER_JAR_UPGRADE_OBSERVER
+typedef struct UniffiVTableCallbackInterfaceServerJarUpgradeObserver {
+    UniffiCallbackInterfaceFree _Nonnull uniffiFree;
+    UniffiCallbackInterfaceClone _Nonnull uniffiClone;
+    UniffiCallbackInterfaceServerJarUpgradeObserverMethod0 _Nonnull onProgress;
+} UniffiVTableCallbackInterfaceServerJarUpgradeObserver;
+
+#endif
+#ifndef UNIFFI_FFIDEF_V_TABLE_CALLBACK_INTERFACE_JAVA_INSTALL_OBSERVER
+#define UNIFFI_FFIDEF_V_TABLE_CALLBACK_INTERFACE_JAVA_INSTALL_OBSERVER
+typedef struct UniffiVTableCallbackInterfaceJavaInstallObserver {
+    UniffiCallbackInterfaceFree _Nonnull uniffiFree;
+    UniffiCallbackInterfaceClone _Nonnull uniffiClone;
+    UniffiCallbackInterfaceJavaInstallObserverMethod0 _Nonnull onProgress;
+} UniffiVTableCallbackInterfaceJavaInstallObserver;
 
 #endif
 #ifndef UNIFFI_FFIDEF_V_TABLE_CALLBACK_INTERFACE_PLUGIN_BULK_OBSERVER
@@ -420,6 +452,46 @@ void uniffi_mcvector_ffi_fn_method_servereventobserver_on_stats(uint64_t ptr, Ru
 #ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_METHOD_SERVEREVENTOBSERVER_ON_METRICS
 #define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_METHOD_SERVEREVENTOBSERVER_ON_METRICS
 void uniffi_mcvector_ffi_fn_method_servereventobserver_on_metrics(uint64_t ptr, RustBuffer snapshot, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_CLONE_SERVERJARUPGRADEOBSERVER
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_CLONE_SERVERJARUPGRADEOBSERVER
+uint64_t uniffi_mcvector_ffi_fn_clone_serverjarupgradeobserver(uint64_t handle, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FREE_SERVERJARUPGRADEOBSERVER
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FREE_SERVERJARUPGRADEOBSERVER
+void uniffi_mcvector_ffi_fn_free_serverjarupgradeobserver(uint64_t handle, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_INIT_CALLBACK_VTABLE_SERVERJARUPGRADEOBSERVER
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_INIT_CALLBACK_VTABLE_SERVERJARUPGRADEOBSERVER
+void uniffi_mcvector_ffi_fn_init_callback_vtable_serverjarupgradeobserver(const UniffiVTableCallbackInterfaceServerJarUpgradeObserver* _Nonnull vtable
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_METHOD_SERVERJARUPGRADEOBSERVER_ON_PROGRESS
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_METHOD_SERVERJARUPGRADEOBSERVER_ON_PROGRESS
+void uniffi_mcvector_ffi_fn_method_serverjarupgradeobserver_on_progress(uint64_t ptr, RustBuffer event, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_CLONE_JAVAINSTALLOBSERVER
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_CLONE_JAVAINSTALLOBSERVER
+uint64_t uniffi_mcvector_ffi_fn_clone_javainstallobserver(uint64_t handle, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FREE_JAVAINSTALLOBSERVER
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FREE_JAVAINSTALLOBSERVER
+void uniffi_mcvector_ffi_fn_free_javainstallobserver(uint64_t handle, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_INIT_CALLBACK_VTABLE_JAVAINSTALLOBSERVER
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_INIT_CALLBACK_VTABLE_JAVAINSTALLOBSERVER
+void uniffi_mcvector_ffi_fn_init_callback_vtable_javainstallobserver(const UniffiVTableCallbackInterfaceJavaInstallObserver* _Nonnull vtable
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_METHOD_JAVAINSTALLOBSERVER_ON_PROGRESS
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_METHOD_JAVAINSTALLOBSERVER_ON_PROGRESS
+void uniffi_mcvector_ffi_fn_method_javainstallobserver_on_progress(uint64_t ptr, RustBuffer event, RustCallStatus *_Nonnull out_status
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_CLONE_PLUGINBULKOBSERVER
@@ -742,6 +814,68 @@ uint64_t uniffi_mcvector_ffi_fn_func_update_server_settings(RustBuffer server_id
 #ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_WRITE_TEXT_DOCUMENT
 #define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_WRITE_TEXT_DOCUMENT
 uint64_t uniffi_mcvector_ffi_fn_func_write_text_document(RustBuffer server_id, RustBuffer relative, RustBuffer document
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_CANCEL_SERVER_JAR_UPGRADE
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_CANCEL_SERVER_JAR_UPGRADE
+uint64_t uniffi_mcvector_ffi_fn_func_cancel_server_jar_upgrade(RustBuffer operation_id
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_EXECUTE_SERVER_JAR_UPGRADE
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_EXECUTE_SERVER_JAR_UPGRADE
+uint64_t uniffi_mcvector_ffi_fn_func_execute_server_jar_upgrade(RustBuffer operation_id, RustBuffer plan_id, uint64_t observer
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_PREPARE_SERVER_JAR_UPGRADE
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_PREPARE_SERVER_JAR_UPGRADE
+uint64_t uniffi_mcvector_ffi_fn_func_prepare_server_jar_upgrade(RustBuffer server_id, RustBuffer target_version
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_SERVER_JAR_UPGRADE_CANDIDATES
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_SERVER_JAR_UPGRADE_CANDIDATES
+uint64_t uniffi_mcvector_ffi_fn_func_server_jar_upgrade_candidates(RustBuffer server_id
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_ADD_CUSTOM_JAVA_RUNTIME
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_ADD_CUSTOM_JAVA_RUNTIME
+uint64_t uniffi_mcvector_ffi_fn_func_add_custom_java_runtime(RustBuffer path
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_CANCEL_JAVA_INSTALL
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_CANCEL_JAVA_INSTALL
+uint64_t uniffi_mcvector_ffi_fn_func_cancel_java_install(RustBuffer operation_id
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_DELETE_JAVA_RUNTIME
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_DELETE_JAVA_RUNTIME
+uint64_t uniffi_mcvector_ffi_fn_func_delete_java_runtime(uint32_t major
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_INSTALL_JAVA_RUNTIME
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_INSTALL_JAVA_RUNTIME
+uint64_t uniffi_mcvector_ffi_fn_func_install_java_runtime(RustBuffer operation_id, uint32_t major, uint64_t observer
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_JAVA_AVAILABLE_RELEASES
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_JAVA_AVAILABLE_RELEASES
+uint64_t uniffi_mcvector_ffi_fn_func_java_available_releases(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_JAVA_RUNTIMES
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_JAVA_RUNTIMES
+uint64_t uniffi_mcvector_ffi_fn_func_java_runtimes(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_REQUIRED_JAVA_FOR_VERSION
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_REQUIRED_JAVA_FOR_VERSION
+uint64_t uniffi_mcvector_ffi_fn_func_required_java_for_version(RustBuffer software, RustBuffer version
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_SERVER_JAVA_COMPATIBILITY
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_SERVER_JAVA_COMPATIBILITY
+uint64_t uniffi_mcvector_ffi_fn_func_server_java_compatibility(RustBuffer server_id
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_BULK_UPDATE_PLUGINS
@@ -1399,6 +1533,78 @@ uint16_t uniffi_mcvector_ffi_checksum_func_write_text_document(void
     
 );
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_CANCEL_SERVER_JAR_UPGRADE
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_CANCEL_SERVER_JAR_UPGRADE
+uint16_t uniffi_mcvector_ffi_checksum_func_cancel_server_jar_upgrade(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_EXECUTE_SERVER_JAR_UPGRADE
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_EXECUTE_SERVER_JAR_UPGRADE
+uint16_t uniffi_mcvector_ffi_checksum_func_execute_server_jar_upgrade(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_PREPARE_SERVER_JAR_UPGRADE
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_PREPARE_SERVER_JAR_UPGRADE
+uint16_t uniffi_mcvector_ffi_checksum_func_prepare_server_jar_upgrade(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_SERVER_JAR_UPGRADE_CANDIDATES
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_SERVER_JAR_UPGRADE_CANDIDATES
+uint16_t uniffi_mcvector_ffi_checksum_func_server_jar_upgrade_candidates(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_ADD_CUSTOM_JAVA_RUNTIME
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_ADD_CUSTOM_JAVA_RUNTIME
+uint16_t uniffi_mcvector_ffi_checksum_func_add_custom_java_runtime(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_CANCEL_JAVA_INSTALL
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_CANCEL_JAVA_INSTALL
+uint16_t uniffi_mcvector_ffi_checksum_func_cancel_java_install(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_DELETE_JAVA_RUNTIME
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_DELETE_JAVA_RUNTIME
+uint16_t uniffi_mcvector_ffi_checksum_func_delete_java_runtime(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_INSTALL_JAVA_RUNTIME
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_INSTALL_JAVA_RUNTIME
+uint16_t uniffi_mcvector_ffi_checksum_func_install_java_runtime(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_JAVA_AVAILABLE_RELEASES
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_JAVA_AVAILABLE_RELEASES
+uint16_t uniffi_mcvector_ffi_checksum_func_java_available_releases(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_JAVA_RUNTIMES
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_JAVA_RUNTIMES
+uint16_t uniffi_mcvector_ffi_checksum_func_java_runtimes(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_REQUIRED_JAVA_FOR_VERSION
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_REQUIRED_JAVA_FOR_VERSION
+uint16_t uniffi_mcvector_ffi_checksum_func_required_java_for_version(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_SERVER_JAVA_COMPATIBILITY
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_SERVER_JAVA_COMPATIBILITY
+uint16_t uniffi_mcvector_ffi_checksum_func_server_java_compatibility(void
+    
+);
+#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_BULK_UPDATE_PLUGINS
 #define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_BULK_UPDATE_PLUGINS
 uint16_t uniffi_mcvector_ffi_checksum_func_bulk_update_plugins(void
@@ -1510,6 +1716,18 @@ uint16_t uniffi_mcvector_ffi_checksum_method_servereventobserver_on_stats(void
 #ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_METHOD_SERVEREVENTOBSERVER_ON_METRICS
 #define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_METHOD_SERVEREVENTOBSERVER_ON_METRICS
 uint16_t uniffi_mcvector_ffi_checksum_method_servereventobserver_on_metrics(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_METHOD_SERVERJARUPGRADEOBSERVER_ON_PROGRESS
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_METHOD_SERVERJARUPGRADEOBSERVER_ON_PROGRESS
+uint16_t uniffi_mcvector_ffi_checksum_method_serverjarupgradeobserver_on_progress(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_METHOD_JAVAINSTALLOBSERVER_ON_PROGRESS
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_METHOD_JAVAINSTALLOBSERVER_ON_PROGRESS
+uint16_t uniffi_mcvector_ffi_checksum_method_javainstallobserver_on_progress(void
     
 );
 #endif

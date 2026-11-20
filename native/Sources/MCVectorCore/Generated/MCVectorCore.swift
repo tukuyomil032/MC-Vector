@@ -1061,6 +1061,204 @@ public func FfiConverterTypeCreationObserver_lower(_ value: CreationObserver) ->
 
 
 
+public protocol JavaInstallObserver: AnyObject, Sendable {
+    
+    func onProgress(event: JavaInstallProgress) 
+    
+}
+open class JavaInstallObserverImpl: JavaInstallObserver, @unchecked Sendable {
+    fileprivate let handle: UInt64
+
+    /// Used to instantiate a [FFIObject] without an actual handle, for fakes in tests, mostly.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public struct NoHandle {
+        public init() {}
+    }
+
+    // TODO: We'd like this to be `private` but for Swifty reasons,
+    // we can't implement `FfiConverter` without making this `required` and we can't
+    // make it `required` without making it `public`.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    required public init(unsafeFromHandle handle: UInt64) {
+        self.handle = handle
+    }
+
+    // This constructor can be used to instantiate a fake object.
+    // - Parameter noHandle: Placeholder value so we can have a constructor separate from the default empty one that may be implemented for classes extending [FFIObject].
+    //
+    // - Warning:
+    //     Any object instantiated with this constructor cannot be passed to an actual Rust-backed object. Since there isn't a backing handle the FFI lower functions will crash.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public init(noHandle: NoHandle) {
+        self.handle = 0
+    }
+
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public func uniffiCloneHandle() -> UInt64 {
+        return try! rustCall { uniffi_mcvector_ffi_fn_clone_javainstallobserver(self.handle, $0) }
+    }
+    // No primary constructor declared for this class.
+
+    deinit {
+        if handle == 0 {
+            // Mock objects have handle=0 don't try to free them
+            return
+        }
+
+        try! rustCall { uniffi_mcvector_ffi_fn_free_javainstallobserver(handle, $0) }
+    }
+
+    
+
+    
+open func onProgress(event: JavaInstallProgress)  {try! rustCall() {
+        uniffiCallStatus in
+    uniffi_mcvector_ffi_fn_method_javainstallobserver_on_progress(
+            self.uniffiCloneHandle(),
+        FfiConverterTypeJavaInstallProgress_lower(event),uniffiCallStatus
+    )
+}
+}
+    
+
+    
+}
+
+
+
+// Put the implementation in a struct so we don't pollute the top-level namespace
+fileprivate struct UniffiCallbackInterfaceJavaInstallObserver {
+
+    // Create the VTable using a series of closures.
+    // Swift automatically converts these into C callback functions.
+    //
+    // Store the vtable directly.
+    static let vtable: UniffiVTableCallbackInterfaceJavaInstallObserver = UniffiVTableCallbackInterfaceJavaInstallObserver(
+        uniffiFree: { (uniffiHandle: UInt64) -> () in
+            do {
+                try FfiConverterTypeJavaInstallObserver.handleMap.remove(handle: uniffiHandle)
+            } catch {
+                print("Uniffi callback interface JavaInstallObserver: handle missing in uniffiFree")
+            }
+        },
+        uniffiClone: { (uniffiHandle: UInt64) -> UInt64 in
+            do {
+                return try FfiConverterTypeJavaInstallObserver.handleMap.clone(handle: uniffiHandle)
+            } catch {
+                fatalError("Uniffi callback interface JavaInstallObserver: handle missing in uniffiClone")
+            }
+        },
+        onProgress: { (
+            uniffiHandle: UInt64,
+            event: RustBuffer,
+            uniffiOutReturn: UnsafeMutableRawPointer,
+            uniffiCallStatus: UnsafeMutablePointer<RustCallStatus>
+        ) in
+            let makeCall = {
+                () throws -> () in
+                guard let uniffiObj = try? FfiConverterTypeJavaInstallObserver.handleMap.get(handle: uniffiHandle) else {
+                    throw UniffiInternalError.unexpectedStaleHandle
+                }
+                return uniffiObj.onProgress(
+                     event: try FfiConverterTypeJavaInstallProgress_lift(event)
+                )
+            }
+
+            
+            let writeReturn = { () }
+            uniffiTraitInterfaceCall(
+                callStatus: uniffiCallStatus,
+                makeCall: makeCall,
+                writeReturn: writeReturn
+            )
+        }
+    )
+
+    // Rust stores this pointer for future callback invocations, so it must live
+    // for the process lifetime (not just for the init function call).
+    //
+    // `nonisolated(unsafe)` is needed under Swift 6 strict concurrency.
+    // This is safe because the pointee is initialized once during static init
+    // and never mutated by either side of the FFI.  Its fields are C function pointers.
+    nonisolated(unsafe) static let vtablePtr: UnsafePointer<UniffiVTableCallbackInterfaceJavaInstallObserver> = {
+        let ptr = UnsafeMutablePointer<UniffiVTableCallbackInterfaceJavaInstallObserver>.allocate(capacity: 1)
+        ptr.initialize(to: vtable)
+        return UnsafePointer(ptr)
+    }()
+}
+
+private func uniffiCallbackInitJavaInstallObserver() {
+    uniffi_mcvector_ffi_fn_init_callback_vtable_javainstallobserver(UniffiCallbackInterfaceJavaInstallObserver.vtablePtr)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeJavaInstallObserver: FfiConverter {
+    fileprivate static let handleMap = UniffiHandleMap<JavaInstallObserver>()
+
+    typealias FfiType = UInt64
+    typealias SwiftType = JavaInstallObserver
+
+    public static func lift(_ handle: UInt64) throws -> JavaInstallObserver {
+        if ((handle & 1) == 0) {
+            // Rust-generated handle, construct a new class that uses the handle to implement the
+            // interface
+            return JavaInstallObserverImpl(unsafeFromHandle: handle)
+        } else {
+            // Swift-generated handle, get the object from the handle map
+            return try handleMap.remove(handle: handle)
+        }
+    }
+
+    public static func lower(_ value: JavaInstallObserver) -> UInt64 {
+         if let rustImpl = value as? JavaInstallObserverImpl {
+             // Rust-implemented object.  Clone the handle and return it
+            return rustImpl.uniffiCloneHandle()
+         } else {
+            // Swift object, generate a new vtable handle and return that.
+            return handleMap.insert(obj: value)
+         }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> JavaInstallObserver {
+        let handle: UInt64 = try readInt(&buf)
+        return try lift(handle)
+    }
+
+    public static func write(_ value: JavaInstallObserver, into buf: inout [UInt8]) {
+        writeInt(&buf, lower(value))
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeJavaInstallObserver_lift(_ handle: UInt64) throws -> JavaInstallObserver {
+    return try FfiConverterTypeJavaInstallObserver.lift(handle)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeJavaInstallObserver_lower(_ value: JavaInstallObserver) -> UInt64 {
+    return FfiConverterTypeJavaInstallObserver.lower(value)
+}
+
+
+
+
+
+
 public protocol PluginBulkObserver: AnyObject, Sendable {
     
     func onProgress(event: PluginBulkProgress) 
@@ -1759,6 +1957,204 @@ public func FfiConverterTypeServerEventObserver_lift(_ handle: UInt64) throws ->
 #endif
 public func FfiConverterTypeServerEventObserver_lower(_ value: ServerEventObserver) -> UInt64 {
     return FfiConverterTypeServerEventObserver.lower(value)
+}
+
+
+
+
+
+
+public protocol ServerJarUpgradeObserver: AnyObject, Sendable {
+    
+    func onProgress(event: ServerJarUpgradeProgress) 
+    
+}
+open class ServerJarUpgradeObserverImpl: ServerJarUpgradeObserver, @unchecked Sendable {
+    fileprivate let handle: UInt64
+
+    /// Used to instantiate a [FFIObject] without an actual handle, for fakes in tests, mostly.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public struct NoHandle {
+        public init() {}
+    }
+
+    // TODO: We'd like this to be `private` but for Swifty reasons,
+    // we can't implement `FfiConverter` without making this `required` and we can't
+    // make it `required` without making it `public`.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    required public init(unsafeFromHandle handle: UInt64) {
+        self.handle = handle
+    }
+
+    // This constructor can be used to instantiate a fake object.
+    // - Parameter noHandle: Placeholder value so we can have a constructor separate from the default empty one that may be implemented for classes extending [FFIObject].
+    //
+    // - Warning:
+    //     Any object instantiated with this constructor cannot be passed to an actual Rust-backed object. Since there isn't a backing handle the FFI lower functions will crash.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public init(noHandle: NoHandle) {
+        self.handle = 0
+    }
+
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public func uniffiCloneHandle() -> UInt64 {
+        return try! rustCall { uniffi_mcvector_ffi_fn_clone_serverjarupgradeobserver(self.handle, $0) }
+    }
+    // No primary constructor declared for this class.
+
+    deinit {
+        if handle == 0 {
+            // Mock objects have handle=0 don't try to free them
+            return
+        }
+
+        try! rustCall { uniffi_mcvector_ffi_fn_free_serverjarupgradeobserver(handle, $0) }
+    }
+
+    
+
+    
+open func onProgress(event: ServerJarUpgradeProgress)  {try! rustCall() {
+        uniffiCallStatus in
+    uniffi_mcvector_ffi_fn_method_serverjarupgradeobserver_on_progress(
+            self.uniffiCloneHandle(),
+        FfiConverterTypeServerJarUpgradeProgress_lower(event),uniffiCallStatus
+    )
+}
+}
+    
+
+    
+}
+
+
+
+// Put the implementation in a struct so we don't pollute the top-level namespace
+fileprivate struct UniffiCallbackInterfaceServerJarUpgradeObserver {
+
+    // Create the VTable using a series of closures.
+    // Swift automatically converts these into C callback functions.
+    //
+    // Store the vtable directly.
+    static let vtable: UniffiVTableCallbackInterfaceServerJarUpgradeObserver = UniffiVTableCallbackInterfaceServerJarUpgradeObserver(
+        uniffiFree: { (uniffiHandle: UInt64) -> () in
+            do {
+                try FfiConverterTypeServerJarUpgradeObserver.handleMap.remove(handle: uniffiHandle)
+            } catch {
+                print("Uniffi callback interface ServerJarUpgradeObserver: handle missing in uniffiFree")
+            }
+        },
+        uniffiClone: { (uniffiHandle: UInt64) -> UInt64 in
+            do {
+                return try FfiConverterTypeServerJarUpgradeObserver.handleMap.clone(handle: uniffiHandle)
+            } catch {
+                fatalError("Uniffi callback interface ServerJarUpgradeObserver: handle missing in uniffiClone")
+            }
+        },
+        onProgress: { (
+            uniffiHandle: UInt64,
+            event: RustBuffer,
+            uniffiOutReturn: UnsafeMutableRawPointer,
+            uniffiCallStatus: UnsafeMutablePointer<RustCallStatus>
+        ) in
+            let makeCall = {
+                () throws -> () in
+                guard let uniffiObj = try? FfiConverterTypeServerJarUpgradeObserver.handleMap.get(handle: uniffiHandle) else {
+                    throw UniffiInternalError.unexpectedStaleHandle
+                }
+                return uniffiObj.onProgress(
+                     event: try FfiConverterTypeServerJarUpgradeProgress_lift(event)
+                )
+            }
+
+            
+            let writeReturn = { () }
+            uniffiTraitInterfaceCall(
+                callStatus: uniffiCallStatus,
+                makeCall: makeCall,
+                writeReturn: writeReturn
+            )
+        }
+    )
+
+    // Rust stores this pointer for future callback invocations, so it must live
+    // for the process lifetime (not just for the init function call).
+    //
+    // `nonisolated(unsafe)` is needed under Swift 6 strict concurrency.
+    // This is safe because the pointee is initialized once during static init
+    // and never mutated by either side of the FFI.  Its fields are C function pointers.
+    nonisolated(unsafe) static let vtablePtr: UnsafePointer<UniffiVTableCallbackInterfaceServerJarUpgradeObserver> = {
+        let ptr = UnsafeMutablePointer<UniffiVTableCallbackInterfaceServerJarUpgradeObserver>.allocate(capacity: 1)
+        ptr.initialize(to: vtable)
+        return UnsafePointer(ptr)
+    }()
+}
+
+private func uniffiCallbackInitServerJarUpgradeObserver() {
+    uniffi_mcvector_ffi_fn_init_callback_vtable_serverjarupgradeobserver(UniffiCallbackInterfaceServerJarUpgradeObserver.vtablePtr)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeServerJarUpgradeObserver: FfiConverter {
+    fileprivate static let handleMap = UniffiHandleMap<ServerJarUpgradeObserver>()
+
+    typealias FfiType = UInt64
+    typealias SwiftType = ServerJarUpgradeObserver
+
+    public static func lift(_ handle: UInt64) throws -> ServerJarUpgradeObserver {
+        if ((handle & 1) == 0) {
+            // Rust-generated handle, construct a new class that uses the handle to implement the
+            // interface
+            return ServerJarUpgradeObserverImpl(unsafeFromHandle: handle)
+        } else {
+            // Swift-generated handle, get the object from the handle map
+            return try handleMap.remove(handle: handle)
+        }
+    }
+
+    public static func lower(_ value: ServerJarUpgradeObserver) -> UInt64 {
+         if let rustImpl = value as? ServerJarUpgradeObserverImpl {
+             // Rust-implemented object.  Clone the handle and return it
+            return rustImpl.uniffiCloneHandle()
+         } else {
+            // Swift object, generate a new vtable handle and return that.
+            return handleMap.insert(obj: value)
+         }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> ServerJarUpgradeObserver {
+        let handle: UInt64 = try readInt(&buf)
+        return try lift(handle)
+    }
+
+    public static func write(_ value: ServerJarUpgradeObserver, into buf: inout [UInt8]) {
+        writeInt(&buf, lower(value))
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeServerJarUpgradeObserver_lift(_ handle: UInt64) throws -> ServerJarUpgradeObserver {
+    return try FfiConverterTypeServerJarUpgradeObserver.lift(handle)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeServerJarUpgradeObserver_lower(_ value: ServerJarUpgradeObserver) -> UInt64 {
+    return FfiConverterTypeServerJarUpgradeObserver.lower(value)
 }
 
 
@@ -3020,6 +3416,346 @@ public func FfiConverterTypeInstalledPlugin_lift(_ buf: RustBuffer) throws -> In
 #endif
 public func FfiConverterTypeInstalledPlugin_lower(_ value: InstalledPlugin) -> RustBuffer {
     return FfiConverterTypeInstalledPlugin.lower(value)
+}
+
+
+public struct JavaInstallProgress: Equatable, Hashable {
+    public var operationId: String
+    public var phase: JavaInstallPhase
+    public var downloaded: UInt64
+    /**
+     * Archive size in bytes.
+     */
+    public var total: UInt64
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(operationId: String, phase: JavaInstallPhase, downloaded: UInt64, 
+        /**
+         * Archive size in bytes.
+         */total: UInt64) {
+        self.operationId = operationId
+        self.phase = phase
+        self.downloaded = downloaded
+        self.total = total
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension JavaInstallProgress: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeJavaInstallProgress: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> JavaInstallProgress {
+        return
+            try JavaInstallProgress(
+                operationId: FfiConverterString.read(from: &buf), 
+                phase: FfiConverterTypeJavaInstallPhase.read(from: &buf), 
+                downloaded: FfiConverterUInt64.read(from: &buf), 
+                total: FfiConverterUInt64.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: JavaInstallProgress, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.operationId, into: &buf)
+        FfiConverterTypeJavaInstallPhase.write(value.phase, into: &buf)
+        FfiConverterUInt64.write(value.downloaded, into: &buf)
+        FfiConverterUInt64.write(value.total, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeJavaInstallProgress_lift(_ buf: RustBuffer) throws -> JavaInstallProgress {
+    return try FfiConverterTypeJavaInstallProgress.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeJavaInstallProgress_lower(_ value: JavaInstallProgress) -> RustBuffer {
+    return FfiConverterTypeJavaInstallProgress.lower(value)
+}
+
+
+public struct JavaReleaseList: Equatable, Hashable {
+    /**
+     * Adoptium LTS majors, newest first.
+     */
+    public var releases: [JavaReleaseRecord]
+    /**
+     * True when Adoptium was unreachable and the built-in list is shown.
+     */
+    public var offline: Bool
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(
+        /**
+         * Adoptium LTS majors, newest first.
+         */releases: [JavaReleaseRecord], 
+        /**
+         * True when Adoptium was unreachable and the built-in list is shown.
+         */offline: Bool) {
+        self.releases = releases
+        self.offline = offline
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension JavaReleaseList: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeJavaReleaseList: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> JavaReleaseList {
+        return
+            try JavaReleaseList(
+                releases: FfiConverterSequenceTypeJavaReleaseRecord.read(from: &buf), 
+                offline: FfiConverterBool.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: JavaReleaseList, into buf: inout [UInt8]) {
+        FfiConverterSequenceTypeJavaReleaseRecord.write(value.releases, into: &buf)
+        FfiConverterBool.write(value.offline, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeJavaReleaseList_lift(_ buf: RustBuffer) throws -> JavaReleaseList {
+    return try FfiConverterTypeJavaReleaseList.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeJavaReleaseList_lower(_ value: JavaReleaseList) -> RustBuffer {
+    return FfiConverterTypeJavaReleaseList.lower(value)
+}
+
+
+public struct JavaReleaseRecord: Equatable, Hashable {
+    public var major: UInt32
+    public var installed: Bool
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(major: UInt32, installed: Bool) {
+        self.major = major
+        self.installed = installed
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension JavaReleaseRecord: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeJavaReleaseRecord: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> JavaReleaseRecord {
+        return
+            try JavaReleaseRecord(
+                major: FfiConverterUInt32.read(from: &buf), 
+                installed: FfiConverterBool.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: JavaReleaseRecord, into buf: inout [UInt8]) {
+        FfiConverterUInt32.write(value.major, into: &buf)
+        FfiConverterBool.write(value.installed, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeJavaReleaseRecord_lift(_ buf: RustBuffer) throws -> JavaReleaseRecord {
+    return try FfiConverterTypeJavaReleaseRecord.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeJavaReleaseRecord_lower(_ value: JavaReleaseRecord) -> RustBuffer {
+    return FfiConverterTypeJavaReleaseRecord.lower(value)
+}
+
+
+public struct JavaRequirementRecord: Equatable, Hashable {
+    public var major: UInt32
+    public var source: JavaRequirementSource
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(major: UInt32, source: JavaRequirementSource) {
+        self.major = major
+        self.source = source
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension JavaRequirementRecord: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeJavaRequirementRecord: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> JavaRequirementRecord {
+        return
+            try JavaRequirementRecord(
+                major: FfiConverterUInt32.read(from: &buf), 
+                source: FfiConverterTypeJavaRequirementSource.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: JavaRequirementRecord, into buf: inout [UInt8]) {
+        FfiConverterUInt32.write(value.major, into: &buf)
+        FfiConverterTypeJavaRequirementSource.write(value.source, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeJavaRequirementRecord_lift(_ buf: RustBuffer) throws -> JavaRequirementRecord {
+    return try FfiConverterTypeJavaRequirementRecord.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeJavaRequirementRecord_lower(_ value: JavaRequirementRecord) -> RustBuffer {
+    return FfiConverterTypeJavaRequirementRecord.lower(value)
+}
+
+
+public struct JavaRuntimeRecord: Equatable, Hashable {
+    public var major: UInt32
+    /**
+     * Full version such as `21.0.5`, when the runtime reported it.
+     */
+    public var version: String?
+    public var name: String
+    /**
+     * Registry path: the Java home (managed) or the picked path (custom).
+     * Set a server's `javaPath` to this value to use the runtime.
+     */
+    public var path: String
+    public var executable: String
+    public var vendor: String?
+    public var origin: JavaRuntimeOrigin
+    /**
+     * Whether the executable still exists.
+     */
+    public var available: Bool
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(major: UInt32, 
+        /**
+         * Full version such as `21.0.5`, when the runtime reported it.
+         */version: String?, name: String, 
+        /**
+         * Registry path: the Java home (managed) or the picked path (custom).
+         * Set a server's `javaPath` to this value to use the runtime.
+         */path: String, executable: String, vendor: String?, origin: JavaRuntimeOrigin, 
+        /**
+         * Whether the executable still exists.
+         */available: Bool) {
+        self.major = major
+        self.version = version
+        self.name = name
+        self.path = path
+        self.executable = executable
+        self.vendor = vendor
+        self.origin = origin
+        self.available = available
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension JavaRuntimeRecord: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeJavaRuntimeRecord: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> JavaRuntimeRecord {
+        return
+            try JavaRuntimeRecord(
+                major: FfiConverterUInt32.read(from: &buf), 
+                version: FfiConverterOptionString.read(from: &buf), 
+                name: FfiConverterString.read(from: &buf), 
+                path: FfiConverterString.read(from: &buf), 
+                executable: FfiConverterString.read(from: &buf), 
+                vendor: FfiConverterOptionString.read(from: &buf), 
+                origin: FfiConverterTypeJavaRuntimeOrigin.read(from: &buf), 
+                available: FfiConverterBool.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: JavaRuntimeRecord, into buf: inout [UInt8]) {
+        FfiConverterUInt32.write(value.major, into: &buf)
+        FfiConverterOptionString.write(value.version, into: &buf)
+        FfiConverterString.write(value.name, into: &buf)
+        FfiConverterString.write(value.path, into: &buf)
+        FfiConverterString.write(value.executable, into: &buf)
+        FfiConverterOptionString.write(value.vendor, into: &buf)
+        FfiConverterTypeJavaRuntimeOrigin.write(value.origin, into: &buf)
+        FfiConverterBool.write(value.available, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeJavaRuntimeRecord_lift(_ buf: RustBuffer) throws -> JavaRuntimeRecord {
+    return try FfiConverterTypeJavaRuntimeRecord.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeJavaRuntimeRecord_lower(_ value: JavaRuntimeRecord) -> RustBuffer {
+    return FfiConverterTypeJavaRuntimeRecord.lower(value)
 }
 
 
@@ -4646,6 +5382,554 @@ public func FfiConverterTypeSavePropertiesResult_lower(_ value: SavePropertiesRe
 }
 
 
+public struct ServerJarCandidate: Equatable, Hashable {
+    public var version: String
+    /**
+     * The newest version the provider lists.
+     */
+    public var latest: Bool
+    public var releaseNotesUrl: String?
+    /**
+     * From the built-in table; the prepared plan carries Mojang's value.
+     */
+    public var requiredJavaMajor: UInt32?
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(version: String, 
+        /**
+         * The newest version the provider lists.
+         */latest: Bool, releaseNotesUrl: String?, 
+        /**
+         * From the built-in table; the prepared plan carries Mojang's value.
+         */requiredJavaMajor: UInt32?) {
+        self.version = version
+        self.latest = latest
+        self.releaseNotesUrl = releaseNotesUrl
+        self.requiredJavaMajor = requiredJavaMajor
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension ServerJarCandidate: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeServerJarCandidate: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> ServerJarCandidate {
+        return
+            try ServerJarCandidate(
+                version: FfiConverterString.read(from: &buf), 
+                latest: FfiConverterBool.read(from: &buf), 
+                releaseNotesUrl: FfiConverterOptionString.read(from: &buf), 
+                requiredJavaMajor: FfiConverterOptionUInt32.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: ServerJarCandidate, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.version, into: &buf)
+        FfiConverterBool.write(value.latest, into: &buf)
+        FfiConverterOptionString.write(value.releaseNotesUrl, into: &buf)
+        FfiConverterOptionUInt32.write(value.requiredJavaMajor, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeServerJarCandidate_lift(_ buf: RustBuffer) throws -> ServerJarCandidate {
+    return try FfiConverterTypeServerJarCandidate.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeServerJarCandidate_lower(_ value: ServerJarCandidate) -> RustBuffer {
+    return FfiConverterTypeServerJarCandidate.lower(value)
+}
+
+
+public struct ServerJarCandidates: Equatable, Hashable {
+    public var serverId: String
+    public var software: String
+    public var currentVersion: String
+    /**
+     * False when MC-Vector cannot install this software's jar by itself.
+     */
+    public var supported: Bool
+    /**
+     * Newer versions, newest first.
+     */
+    public var candidates: [ServerJarCandidate]
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(serverId: String, software: String, currentVersion: String, 
+        /**
+         * False when MC-Vector cannot install this software's jar by itself.
+         */supported: Bool, 
+        /**
+         * Newer versions, newest first.
+         */candidates: [ServerJarCandidate]) {
+        self.serverId = serverId
+        self.software = software
+        self.currentVersion = currentVersion
+        self.supported = supported
+        self.candidates = candidates
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension ServerJarCandidates: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeServerJarCandidates: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> ServerJarCandidates {
+        return
+            try ServerJarCandidates(
+                serverId: FfiConverterString.read(from: &buf), 
+                software: FfiConverterString.read(from: &buf), 
+                currentVersion: FfiConverterString.read(from: &buf), 
+                supported: FfiConverterBool.read(from: &buf), 
+                candidates: FfiConverterSequenceTypeServerJarCandidate.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: ServerJarCandidates, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.serverId, into: &buf)
+        FfiConverterString.write(value.software, into: &buf)
+        FfiConverterString.write(value.currentVersion, into: &buf)
+        FfiConverterBool.write(value.supported, into: &buf)
+        FfiConverterSequenceTypeServerJarCandidate.write(value.candidates, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeServerJarCandidates_lift(_ buf: RustBuffer) throws -> ServerJarCandidates {
+    return try FfiConverterTypeServerJarCandidates.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeServerJarCandidates_lower(_ value: ServerJarCandidates) -> RustBuffer {
+    return FfiConverterTypeServerJarCandidates.lower(value)
+}
+
+
+public struct ServerJarChecksum: Equatable, Hashable {
+    /**
+     * `sha256` or `sha1`.
+     */
+    public var algorithm: String
+    /**
+     * Lowercase hex.
+     */
+    public var value: String
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(
+        /**
+         * `sha256` or `sha1`.
+         */algorithm: String, 
+        /**
+         * Lowercase hex.
+         */value: String) {
+        self.algorithm = algorithm
+        self.value = value
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension ServerJarChecksum: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeServerJarChecksum: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> ServerJarChecksum {
+        return
+            try ServerJarChecksum(
+                algorithm: FfiConverterString.read(from: &buf), 
+                value: FfiConverterString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: ServerJarChecksum, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.algorithm, into: &buf)
+        FfiConverterString.write(value.value, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeServerJarChecksum_lift(_ buf: RustBuffer) throws -> ServerJarChecksum {
+    return try FfiConverterTypeServerJarChecksum.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeServerJarChecksum_lower(_ value: ServerJarChecksum) -> RustBuffer {
+    return FfiConverterTypeServerJarChecksum.lower(value)
+}
+
+
+public struct ServerJarUpgradePlan: Equatable, Hashable {
+    /**
+     * Pass to `execute_server_jar_upgrade` within `expires_in_seconds`.
+     */
+    public var planId: String
+    public var serverId: String
+    public var software: String
+    public var currentVersion: String
+    public var targetVersion: String
+    public var fileName: String
+    public var size: UInt64?
+    public var checksum: ServerJarChecksum?
+    /**
+     * False when the provider publishes no checksum; execute refuses such plans.
+     */
+    public var verified: Bool
+    public var requiredJava: JavaRequirementRecord?
+    /**
+     * The server must be stopped before execute.
+     */
+    public var serverRunning: Bool
+    public var releaseNotesUrl: String?
+    public var expiresInSeconds: UInt64
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(
+        /**
+         * Pass to `execute_server_jar_upgrade` within `expires_in_seconds`.
+         */planId: String, serverId: String, software: String, currentVersion: String, targetVersion: String, fileName: String, size: UInt64?, checksum: ServerJarChecksum?, 
+        /**
+         * False when the provider publishes no checksum; execute refuses such plans.
+         */verified: Bool, requiredJava: JavaRequirementRecord?, 
+        /**
+         * The server must be stopped before execute.
+         */serverRunning: Bool, releaseNotesUrl: String?, expiresInSeconds: UInt64) {
+        self.planId = planId
+        self.serverId = serverId
+        self.software = software
+        self.currentVersion = currentVersion
+        self.targetVersion = targetVersion
+        self.fileName = fileName
+        self.size = size
+        self.checksum = checksum
+        self.verified = verified
+        self.requiredJava = requiredJava
+        self.serverRunning = serverRunning
+        self.releaseNotesUrl = releaseNotesUrl
+        self.expiresInSeconds = expiresInSeconds
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension ServerJarUpgradePlan: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeServerJarUpgradePlan: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> ServerJarUpgradePlan {
+        return
+            try ServerJarUpgradePlan(
+                planId: FfiConverterString.read(from: &buf), 
+                serverId: FfiConverterString.read(from: &buf), 
+                software: FfiConverterString.read(from: &buf), 
+                currentVersion: FfiConverterString.read(from: &buf), 
+                targetVersion: FfiConverterString.read(from: &buf), 
+                fileName: FfiConverterString.read(from: &buf), 
+                size: FfiConverterOptionUInt64.read(from: &buf), 
+                checksum: FfiConverterOptionTypeServerJarChecksum.read(from: &buf), 
+                verified: FfiConverterBool.read(from: &buf), 
+                requiredJava: FfiConverterOptionTypeJavaRequirementRecord.read(from: &buf), 
+                serverRunning: FfiConverterBool.read(from: &buf), 
+                releaseNotesUrl: FfiConverterOptionString.read(from: &buf), 
+                expiresInSeconds: FfiConverterUInt64.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: ServerJarUpgradePlan, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.planId, into: &buf)
+        FfiConverterString.write(value.serverId, into: &buf)
+        FfiConverterString.write(value.software, into: &buf)
+        FfiConverterString.write(value.currentVersion, into: &buf)
+        FfiConverterString.write(value.targetVersion, into: &buf)
+        FfiConverterString.write(value.fileName, into: &buf)
+        FfiConverterOptionUInt64.write(value.size, into: &buf)
+        FfiConverterOptionTypeServerJarChecksum.write(value.checksum, into: &buf)
+        FfiConverterBool.write(value.verified, into: &buf)
+        FfiConverterOptionTypeJavaRequirementRecord.write(value.requiredJava, into: &buf)
+        FfiConverterBool.write(value.serverRunning, into: &buf)
+        FfiConverterOptionString.write(value.releaseNotesUrl, into: &buf)
+        FfiConverterUInt64.write(value.expiresInSeconds, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeServerJarUpgradePlan_lift(_ buf: RustBuffer) throws -> ServerJarUpgradePlan {
+    return try FfiConverterTypeServerJarUpgradePlan.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeServerJarUpgradePlan_lower(_ value: ServerJarUpgradePlan) -> RustBuffer {
+    return FfiConverterTypeServerJarUpgradePlan.lower(value)
+}
+
+
+public struct ServerJarUpgradeProgress: Equatable, Hashable {
+    public var operationId: String
+    public var phase: ServerJarUpgradePhase
+    public var downloaded: UInt64
+    /**
+     * 0 while the size is unknown.
+     */
+    public var total: UInt64
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(operationId: String, phase: ServerJarUpgradePhase, downloaded: UInt64, 
+        /**
+         * 0 while the size is unknown.
+         */total: UInt64) {
+        self.operationId = operationId
+        self.phase = phase
+        self.downloaded = downloaded
+        self.total = total
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension ServerJarUpgradeProgress: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeServerJarUpgradeProgress: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> ServerJarUpgradeProgress {
+        return
+            try ServerJarUpgradeProgress(
+                operationId: FfiConverterString.read(from: &buf), 
+                phase: FfiConverterTypeServerJarUpgradePhase.read(from: &buf), 
+                downloaded: FfiConverterUInt64.read(from: &buf), 
+                total: FfiConverterUInt64.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: ServerJarUpgradeProgress, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.operationId, into: &buf)
+        FfiConverterTypeServerJarUpgradePhase.write(value.phase, into: &buf)
+        FfiConverterUInt64.write(value.downloaded, into: &buf)
+        FfiConverterUInt64.write(value.total, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeServerJarUpgradeProgress_lift(_ buf: RustBuffer) throws -> ServerJarUpgradeProgress {
+    return try FfiConverterTypeServerJarUpgradeProgress.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeServerJarUpgradeProgress_lower(_ value: ServerJarUpgradeProgress) -> RustBuffer {
+    return FfiConverterTypeServerJarUpgradeProgress.lower(value)
+}
+
+
+public struct ServerJarUpgradeResult: Equatable, Hashable {
+    public var serverId: String
+    public var previousVersion: String
+    public var version: String
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(serverId: String, previousVersion: String, version: String) {
+        self.serverId = serverId
+        self.previousVersion = previousVersion
+        self.version = version
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension ServerJarUpgradeResult: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeServerJarUpgradeResult: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> ServerJarUpgradeResult {
+        return
+            try ServerJarUpgradeResult(
+                serverId: FfiConverterString.read(from: &buf), 
+                previousVersion: FfiConverterString.read(from: &buf), 
+                version: FfiConverterString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: ServerJarUpgradeResult, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.serverId, into: &buf)
+        FfiConverterString.write(value.previousVersion, into: &buf)
+        FfiConverterString.write(value.version, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeServerJarUpgradeResult_lift(_ buf: RustBuffer) throws -> ServerJarUpgradeResult {
+    return try FfiConverterTypeServerJarUpgradeResult.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeServerJarUpgradeResult_lower(_ value: ServerJarUpgradeResult) -> RustBuffer {
+    return FfiConverterTypeServerJarUpgradeResult.lower(value)
+}
+
+
+public struct ServerJavaCompatibility: Equatable, Hashable {
+    public var serverId: String
+    /**
+     * None for proxies and versions neither Mojang nor the table knows.
+     */
+    public var required: JavaRequirementRecord?
+    /**
+     * The profile's Java path, or None for the system default.
+     */
+    public var configuredPath: String?
+    public var configuredMajor: UInt32?
+    public var configuredVersion: String?
+    /**
+     * `configured_major >= required.major`; None when either is unknown.
+     */
+    public var satisfied: Bool?
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(serverId: String, 
+        /**
+         * None for proxies and versions neither Mojang nor the table knows.
+         */required: JavaRequirementRecord?, 
+        /**
+         * The profile's Java path, or None for the system default.
+         */configuredPath: String?, configuredMajor: UInt32?, configuredVersion: String?, 
+        /**
+         * `configured_major >= required.major`; None when either is unknown.
+         */satisfied: Bool?) {
+        self.serverId = serverId
+        self.required = required
+        self.configuredPath = configuredPath
+        self.configuredMajor = configuredMajor
+        self.configuredVersion = configuredVersion
+        self.satisfied = satisfied
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension ServerJavaCompatibility: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeServerJavaCompatibility: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> ServerJavaCompatibility {
+        return
+            try ServerJavaCompatibility(
+                serverId: FfiConverterString.read(from: &buf), 
+                required: FfiConverterOptionTypeJavaRequirementRecord.read(from: &buf), 
+                configuredPath: FfiConverterOptionString.read(from: &buf), 
+                configuredMajor: FfiConverterOptionUInt32.read(from: &buf), 
+                configuredVersion: FfiConverterOptionString.read(from: &buf), 
+                satisfied: FfiConverterOptionBool.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: ServerJavaCompatibility, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.serverId, into: &buf)
+        FfiConverterOptionTypeJavaRequirementRecord.write(value.required, into: &buf)
+        FfiConverterOptionString.write(value.configuredPath, into: &buf)
+        FfiConverterOptionUInt32.write(value.configuredMajor, into: &buf)
+        FfiConverterOptionString.write(value.configuredVersion, into: &buf)
+        FfiConverterOptionBool.write(value.satisfied, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeServerJavaCompatibility_lift(_ buf: RustBuffer) throws -> ServerJavaCompatibility {
+    return try FfiConverterTypeServerJavaCompatibility.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeServerJavaCompatibility_lower(_ value: ServerJavaCompatibility) -> RustBuffer {
+    return FfiConverterTypeServerJavaCompatibility.lower(value)
+}
+
+
 /**
  * What the Native UI needs to list servers. Numeric JSON fields are converted
  * here so Swift never sees raw JSON (API-001).
@@ -6137,6 +7421,230 @@ public func FfiConverterTypeFfiError_lower(_ value: FfiError) -> RustBuffer {
 
 
 
+public enum JavaInstallPhase: Equatable, Hashable {
+    
+    case download
+    case verify
+    case extract
+    case install
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension JavaInstallPhase: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeJavaInstallPhase: FfiConverterRustBuffer {
+    typealias SwiftType = JavaInstallPhase
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> JavaInstallPhase {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .download
+        
+        case 2: return .verify
+        
+        case 3: return .extract
+        
+        case 4: return .install
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: JavaInstallPhase, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case .download:
+            writeInt(&buf, Int32(1))
+        
+        
+        case .verify:
+            writeInt(&buf, Int32(2))
+        
+        
+        case .extract:
+            writeInt(&buf, Int32(3))
+        
+        
+        case .install:
+            writeInt(&buf, Int32(4))
+        
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeJavaInstallPhase_lift(_ buf: RustBuffer) throws -> JavaInstallPhase {
+    return try FfiConverterTypeJavaInstallPhase.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeJavaInstallPhase_lower(_ value: JavaInstallPhase) -> RustBuffer {
+    return FfiConverterTypeJavaInstallPhase.lower(value)
+}
+
+
+
+
+public enum JavaRequirementSource: Equatable, Hashable {
+    
+    /**
+     * Mojang's version metadata.
+     */
+    case mojang
+    /**
+     * MC-Vector's built-in table (offline or unlisted versions).
+     */
+    case table
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension JavaRequirementSource: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeJavaRequirementSource: FfiConverterRustBuffer {
+    typealias SwiftType = JavaRequirementSource
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> JavaRequirementSource {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .mojang
+        
+        case 2: return .table
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: JavaRequirementSource, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case .mojang:
+            writeInt(&buf, Int32(1))
+        
+        
+        case .table:
+            writeInt(&buf, Int32(2))
+        
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeJavaRequirementSource_lift(_ buf: RustBuffer) throws -> JavaRequirementSource {
+    return try FfiConverterTypeJavaRequirementSource.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeJavaRequirementSource_lower(_ value: JavaRequirementSource) -> RustBuffer {
+    return FfiConverterTypeJavaRequirementSource.lower(value)
+}
+
+
+
+
+public enum JavaRuntimeOrigin: Equatable, Hashable {
+    
+    /**
+     * Downloaded by MC-Vector into the managed `java` folder.
+     */
+    case managed
+    /**
+     * Added by the user from an existing installation.
+     */
+    case custom
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension JavaRuntimeOrigin: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeJavaRuntimeOrigin: FfiConverterRustBuffer {
+    typealias SwiftType = JavaRuntimeOrigin
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> JavaRuntimeOrigin {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .managed
+        
+        case 2: return .custom
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: JavaRuntimeOrigin, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case .managed:
+            writeInt(&buf, Int32(1))
+        
+        
+        case .custom:
+            writeInt(&buf, Int32(2))
+        
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeJavaRuntimeOrigin_lift(_ buf: RustBuffer) throws -> JavaRuntimeOrigin {
+    return try FfiConverterTypeJavaRuntimeOrigin.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeJavaRuntimeOrigin_lower(_ value: JavaRuntimeOrigin) -> RustBuffer {
+    return FfiConverterTypeJavaRuntimeOrigin.lower(value)
+}
+
+
+
+
 public enum LineEnding: Equatable, Hashable {
     
     case lf
@@ -7175,6 +8683,79 @@ public func FfiConverterTypePropertyLineEnding_lower(_ value: PropertyLineEnding
 
 
 
+public enum ServerJarUpgradePhase: Equatable, Hashable {
+    
+    case download
+    case verify
+    case install
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension ServerJarUpgradePhase: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeServerJarUpgradePhase: FfiConverterRustBuffer {
+    typealias SwiftType = ServerJarUpgradePhase
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> ServerJarUpgradePhase {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .download
+        
+        case 2: return .verify
+        
+        case 3: return .install
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: ServerJarUpgradePhase, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case .download:
+            writeInt(&buf, Int32(1))
+        
+        
+        case .verify:
+            writeInt(&buf, Int32(2))
+        
+        
+        case .install:
+            writeInt(&buf, Int32(3))
+        
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeServerJarUpgradePhase_lift(_ buf: RustBuffer) throws -> ServerJarUpgradePhase {
+    return try FfiConverterTypeServerJarUpgradePhase.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeServerJarUpgradePhase_lower(_ value: ServerJarUpgradePhase) -> RustBuffer {
+    return FfiConverterTypeServerJarUpgradePhase.lower(value)
+}
+
+
+
+
 public enum ServerRunStatus: Equatable, Hashable {
     
     case online
@@ -7689,6 +9270,30 @@ fileprivate struct FfiConverterOptionTypeBackupRetentionReport: FfiConverterRust
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterOptionTypeJavaRequirementRecord: FfiConverterRustBuffer {
+    typealias SwiftType = JavaRequirementRecord?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterTypeJavaRequirementRecord.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterTypeJavaRequirementRecord.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterOptionTypeLockOwnerInfo: FfiConverterRustBuffer {
     typealias SwiftType = LockOwnerInfo?
 
@@ -7753,6 +9358,30 @@ fileprivate struct FfiConverterOptionTypePluginOrigin: FfiConverterRustBuffer {
         switch try readInt(&buf) as Int8 {
         case 0: return nil
         case 1: return try FfiConverterTypePluginOrigin.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterOptionTypeServerJarChecksum: FfiConverterRustBuffer {
+    typealias SwiftType = ServerJarChecksum?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterTypeServerJarChecksum.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterTypeServerJarChecksum.read(from: &buf)
         default: throw UniffiInternalError.unexpectedOptionalTag
         }
     }
@@ -7928,6 +9557,56 @@ fileprivate struct FfiConverterSequenceTypeInstalledPlugin: FfiConverterRustBuff
         seq.reserveCapacity(Int(len))
         for _ in 0 ..< len {
             seq.append(try FfiConverterTypeInstalledPlugin.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypeJavaReleaseRecord: FfiConverterRustBuffer {
+    typealias SwiftType = [JavaReleaseRecord]
+
+    public static func write(_ value: [JavaReleaseRecord], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeJavaReleaseRecord.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [JavaReleaseRecord] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [JavaReleaseRecord]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeJavaReleaseRecord.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypeJavaRuntimeRecord: FfiConverterRustBuffer {
+    typealias SwiftType = [JavaRuntimeRecord]
+
+    public static func write(_ value: [JavaRuntimeRecord], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeJavaRuntimeRecord.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [JavaRuntimeRecord] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [JavaRuntimeRecord]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeJavaRuntimeRecord.read(from: &buf))
         }
         return seq
     }
@@ -8153,6 +9832,31 @@ fileprivate struct FfiConverterSequenceTypeResourcePoint: FfiConverterRustBuffer
         seq.reserveCapacity(Int(len))
         for _ in 0 ..< len {
             seq.append(try FfiConverterTypeResourcePoint.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypeServerJarCandidate: FfiConverterRustBuffer {
+    typealias SwiftType = [ServerJarCandidate]
+
+    public static func write(_ value: [ServerJarCandidate], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeServerJarCandidate.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [ServerJarCandidate] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [ServerJarCandidate]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeServerJarCandidate.read(from: &buf))
         }
         return seq
     }
@@ -9166,6 +10870,216 @@ public func writeTextDocument(serverId: String, relative: String, document: Text
             errorHandler: FfiConverterTypeFfiError_lift
         )
 }
+/**
+ * Requests cancellation of an active upgrade. True when the ID was active.
+ */
+public func cancelServerJarUpgrade(operationId: String)async  -> Bool  {
+    return
+        try!  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_mcvector_ffi_fn_func_cancel_server_jar_upgrade(FfiConverterString.lower(operationId)
+                )
+            },
+            pollFunc: ffi_mcvector_ffi_rust_future_poll_i8,
+            completeFunc: ffi_mcvector_ffi_rust_future_complete_i8,
+            freeFunc: ffi_mcvector_ffi_rust_future_free_i8,
+            liftFunc: FfiConverterBool.lift,
+            errorHandler: nil
+            
+        )
+}
+/**
+ * Installs a prepared plan: stopped servers only, verified jars only, atomic
+ * swap with rollback. Cancel with `cancel_server_jar_upgrade(operation_id)`
+ * (honored until the swap starts).
+ */
+public func executeServerJarUpgrade(operationId: String, planId: String, observer: ServerJarUpgradeObserver)async throws  -> ServerJarUpgradeResult  {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_mcvector_ffi_fn_func_execute_server_jar_upgrade(FfiConverterString.lower(operationId),FfiConverterString.lower(planId),FfiConverterTypeServerJarUpgradeObserver_lower(observer)
+                )
+            },
+            pollFunc: ffi_mcvector_ffi_rust_future_poll_rust_buffer,
+            completeFunc: ffi_mcvector_ffi_rust_future_complete_rust_buffer,
+            freeFunc: ffi_mcvector_ffi_rust_future_free_rust_buffer,
+            liftFunc: FfiConverterTypeServerJarUpgradeResult_lift,
+            errorHandler: FfiConverterTypeFfiError_lift
+        )
+}
+/**
+ * Resolves `target_version` (the newest when None) into a short-lived plan.
+ */
+public func prepareServerJarUpgrade(serverId: String, targetVersion: String?)async throws  -> ServerJarUpgradePlan  {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_mcvector_ffi_fn_func_prepare_server_jar_upgrade(FfiConverterString.lower(serverId),FfiConverterOptionString.lower(targetVersion)
+                )
+            },
+            pollFunc: ffi_mcvector_ffi_rust_future_poll_rust_buffer,
+            completeFunc: ffi_mcvector_ffi_rust_future_complete_rust_buffer,
+            freeFunc: ffi_mcvector_ffi_rust_future_free_rust_buffer,
+            liftFunc: FfiConverterTypeServerJarUpgradePlan_lift,
+            errorHandler: FfiConverterTypeFfiError_lift
+        )
+}
+/**
+ * Newer versions the provider offers for the server.
+ */
+public func serverJarUpgradeCandidates(serverId: String)async throws  -> ServerJarCandidates  {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_mcvector_ffi_fn_func_server_jar_upgrade_candidates(FfiConverterString.lower(serverId)
+                )
+            },
+            pollFunc: ffi_mcvector_ffi_rust_future_poll_rust_buffer,
+            completeFunc: ffi_mcvector_ffi_rust_future_complete_rust_buffer,
+            freeFunc: ffi_mcvector_ffi_rust_future_free_rust_buffer,
+            liftFunc: FfiConverterTypeServerJarCandidates_lift,
+            errorHandler: FfiConverterTypeFfiError_lift
+        )
+}
+/**
+ * Registers an existing java executable or Java home after checking its version.
+ */
+public func addCustomJavaRuntime(path: String)async throws  -> JavaRuntimeRecord  {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_mcvector_ffi_fn_func_add_custom_java_runtime(FfiConverterString.lower(path)
+                )
+            },
+            pollFunc: ffi_mcvector_ffi_rust_future_poll_rust_buffer,
+            completeFunc: ffi_mcvector_ffi_rust_future_complete_rust_buffer,
+            freeFunc: ffi_mcvector_ffi_rust_future_free_rust_buffer,
+            liftFunc: FfiConverterTypeJavaRuntimeRecord_lift,
+            errorHandler: FfiConverterTypeFfiError_lift
+        )
+}
+/**
+ * Requests cancellation of an active Java install. True when the ID was active.
+ */
+public func cancelJavaInstall(operationId: String)async  -> Bool  {
+    return
+        try!  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_mcvector_ffi_fn_func_cancel_java_install(FfiConverterString.lower(operationId)
+                )
+            },
+            pollFunc: ffi_mcvector_ffi_rust_future_poll_i8,
+            completeFunc: ffi_mcvector_ffi_rust_future_complete_i8,
+            freeFunc: ffi_mcvector_ffi_rust_future_free_i8,
+            liftFunc: FfiConverterBool.lift,
+            errorHandler: nil
+            
+        )
+}
+/**
+ * Removes a runtime. Managed folders are deleted unless a running server uses them.
+ */
+public func deleteJavaRuntime(major: UInt32)async throws   {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_mcvector_ffi_fn_func_delete_java_runtime(FfiConverterUInt32.lower(major)
+                )
+            },
+            pollFunc: ffi_mcvector_ffi_rust_future_poll_void,
+            completeFunc: ffi_mcvector_ffi_rust_future_complete_void,
+            freeFunc: ffi_mcvector_ffi_rust_future_free_void,
+            liftFunc: { $0 },
+            errorHandler: FfiConverterTypeFfiError_lift
+        )
+}
+/**
+ * Downloads, verifies and installs the newest Temurin JDK of `major`.
+ * Cancel with `cancel_java_install(operation_id)`.
+ */
+public func installJavaRuntime(operationId: String, major: UInt32, observer: JavaInstallObserver)async throws  -> JavaRuntimeRecord  {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_mcvector_ffi_fn_func_install_java_runtime(FfiConverterString.lower(operationId),FfiConverterUInt32.lower(major),FfiConverterTypeJavaInstallObserver_lower(observer)
+                )
+            },
+            pollFunc: ffi_mcvector_ffi_rust_future_poll_rust_buffer,
+            completeFunc: ffi_mcvector_ffi_rust_future_complete_rust_buffer,
+            freeFunc: ffi_mcvector_ffi_rust_future_free_rust_buffer,
+            liftFunc: FfiConverterTypeJavaRuntimeRecord_lift,
+            errorHandler: FfiConverterTypeFfiError_lift
+        )
+}
+/**
+ * LTS majors Adoptium offers (or the built-in list when offline).
+ */
+public func javaAvailableReleases()async throws  -> JavaReleaseList  {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_mcvector_ffi_fn_func_java_available_releases(
+                )
+            },
+            pollFunc: ffi_mcvector_ffi_rust_future_poll_rust_buffer,
+            completeFunc: ffi_mcvector_ffi_rust_future_complete_rust_buffer,
+            freeFunc: ffi_mcvector_ffi_rust_future_free_rust_buffer,
+            liftFunc: FfiConverterTypeJavaReleaseList_lift,
+            errorHandler: FfiConverterTypeFfiError_lift
+        )
+}
+/**
+ * Registered runtimes, newest major first. No process is started.
+ */
+public func javaRuntimes()async throws  -> [JavaRuntimeRecord]  {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_mcvector_ffi_fn_func_java_runtimes(
+                )
+            },
+            pollFunc: ffi_mcvector_ffi_rust_future_poll_rust_buffer,
+            completeFunc: ffi_mcvector_ffi_rust_future_complete_rust_buffer,
+            freeFunc: ffi_mcvector_ffi_rust_future_free_rust_buffer,
+            liftFunc: FfiConverterSequenceTypeJavaRuntimeRecord.lift,
+            errorHandler: FfiConverterTypeFfiError_lift
+        )
+}
+/**
+ * The Java major `software` at `version` needs, or None (proxies, unknown versions).
+ */
+public func requiredJavaForVersion(software: String, version: String)async  -> JavaRequirementRecord?  {
+    return
+        try!  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_mcvector_ffi_fn_func_required_java_for_version(FfiConverterString.lower(software),FfiConverterString.lower(version)
+                )
+            },
+            pollFunc: ffi_mcvector_ffi_rust_future_poll_rust_buffer,
+            completeFunc: ffi_mcvector_ffi_rust_future_complete_rust_buffer,
+            freeFunc: ffi_mcvector_ffi_rust_future_free_rust_buffer,
+            liftFunc: FfiConverterOptionTypeJavaRequirementRecord.lift,
+            errorHandler: nil
+            
+        )
+}
+/**
+ * The server's configured Java against what its version needs.
+ */
+public func serverJavaCompatibility(serverId: String)async throws  -> ServerJavaCompatibility  {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_mcvector_ffi_fn_func_server_java_compatibility(FfiConverterString.lower(serverId)
+                )
+            },
+            pollFunc: ffi_mcvector_ffi_rust_future_poll_rust_buffer,
+            completeFunc: ffi_mcvector_ffi_rust_future_complete_rust_buffer,
+            freeFunc: ffi_mcvector_ffi_rust_future_free_rust_buffer,
+            liftFunc: FfiConverterTypeServerJavaCompatibility_lift,
+            errorHandler: FfiConverterTypeFfiError_lift
+        )
+}
 public func bulkUpdatePlugins(operationId: String, serverId: String, observer: PluginBulkObserver)async throws  -> PluginBulkOutcome  {
     return
         try  await uniffiRustCallAsync(
@@ -9523,6 +11437,42 @@ private let initializationResult: InitializationResult = {
     if (uniffi_mcvector_ffi_checksum_func_write_text_document() != 40172) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_mcvector_ffi_checksum_func_cancel_server_jar_upgrade() != 51188) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mcvector_ffi_checksum_func_execute_server_jar_upgrade() != 771) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mcvector_ffi_checksum_func_prepare_server_jar_upgrade() != 43790) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mcvector_ffi_checksum_func_server_jar_upgrade_candidates() != 15193) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mcvector_ffi_checksum_func_add_custom_java_runtime() != 18357) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mcvector_ffi_checksum_func_cancel_java_install() != 38091) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mcvector_ffi_checksum_func_delete_java_runtime() != 44874) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mcvector_ffi_checksum_func_install_java_runtime() != 17636) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mcvector_ffi_checksum_func_java_available_releases() != 15170) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mcvector_ffi_checksum_func_java_runtimes() != 2920) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mcvector_ffi_checksum_func_required_java_for_version() != 30556) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mcvector_ffi_checksum_func_server_java_compatibility() != 48929) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_mcvector_ffi_checksum_func_bulk_update_plugins() != 10162) {
         return InitializationResult.apiChecksumMismatch
     }
@@ -9580,6 +11530,12 @@ private let initializationResult: InitializationResult = {
     if (uniffi_mcvector_ffi_checksum_method_servereventobserver_on_metrics() != 47854) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_mcvector_ffi_checksum_method_serverjarupgradeobserver_on_progress() != 9032) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mcvector_ffi_checksum_method_javainstallobserver_on_progress() != 58852) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_mcvector_ffi_checksum_method_pluginbulkobserver_on_progress() != 58331) {
         return InitializationResult.apiChecksumMismatch
     }
@@ -9589,9 +11545,11 @@ private let initializationResult: InitializationResult = {
 
     uniffiCallbackInitBackupProgressObserver()
     uniffiCallbackInitCreationObserver()
+    uniffiCallbackInitJavaInstallObserver()
     uniffiCallbackInitPluginBulkObserver()
     uniffiCallbackInitPluginInstallObserver()
     uniffiCallbackInitServerEventObserver()
+    uniffiCallbackInitServerJarUpgradeObserver()
     return InitializationResult.ok
 }()
 

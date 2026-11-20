@@ -131,6 +131,64 @@
     "en": "A player list file is not valid JSON. It was left unchanged.",
     "ja": "プレイヤー一覧のファイルが正しい JSON ではありません。ファイルは変更していません。"
   },
+  "error.java.invalid_request": { "en": "The Java request is invalid.", "ja": "Java の指定が正しくありません。" },
+  "error.java.in_use": {
+    "en": "This Java runtime is used by a running server. Stop the server first.",
+    "ja": "この Java は起動中のサーバーが使っています。先にサーバーを止めてください。"
+  },
+  "error.java.duplicate": {
+    "en": "A Java runtime with this major version is already managed by MC-Vector.",
+    "ja": "このメジャーバージョンの Java は、もう MC-Vector が管理しています。"
+  },
+  "error.java.unsupported_platform": {
+    "en": "No Java build is available for this computer.",
+    "ja": "このコンピュータ向けの Java がありません。"
+  },
+  "error.java.invalid_executable": {
+    "en": "The selected file is not a usable Java executable.",
+    "ja": "選んだファイルは、使える Java の実行ファイルではありません。"
+  },
+  "error.java.probe_failed": {
+    "en": "The Java version could not be read.",
+    "ja": "Java のバージョンを読み取れませんでした。"
+  },
+  "error.java.archive_invalid": {
+    "en": "The downloaded Java archive is invalid.",
+    "ja": "ダウンロードした Java のアーカイブが正しくありません。"
+  },
+  "error.java.registry_invalid": {
+    "en": "The list of Java runtimes could not be read or saved.",
+    "ja": "Java の一覧を読み込めないか、保存できませんでした。"
+  },
+  "error.java.install_failed": { "en": "Java could not be installed.", "ja": "Java を入れられませんでした。" },
+  "error.server_jar.unsupported": {
+    "en": "Automatic upgrade is not supported for this server software.",
+    "ja": "このサーバーの種類は、自動の更新に対応していません。"
+  },
+  "error.server_jar.not_available": {
+    "en": "The selected version is not available.",
+    "ja": "選んだバージョンは手に入りません。"
+  },
+  "error.server_jar.unverified": {
+    "en": "This release publishes no checksum, so the file cannot be verified and was not installed.",
+    "ja": "このリリースにはチェックサムがないため、ファイルを確かめられず、入れていません。"
+  },
+  "error.server_jar.plan_expired": {
+    "en": "The upgrade plan expired. Check for versions again.",
+    "ja": "更新の準備の期限が切れました。もう一度バージョンを確かめてください。"
+  },
+  "error.server_jar.profile_changed": {
+    "en": "The server changed while preparing the upgrade. Check for versions again.",
+    "ja": "更新の準備中にサーバーが変わりました。もう一度バージョンを確かめてください。"
+  },
+  "error.server_jar.install_failed": {
+    "en": "The new server JAR could not be installed. The previous JAR was kept.",
+    "ja": "新しいサーバーの JAR を入れられませんでした。前の JAR はそのまま残っています。"
+  },
+  "error.server_jar.invalid_request": {
+    "en": "The upgrade request is invalid.",
+    "ja": "更新の指定が正しくありません。"
+  },
   "error.plugin.catalog_failed": {
     "en": "The plugin catalog could not be loaded.",
     "ja": "プラグインの一覧を取得できませんでした。"
