@@ -42,8 +42,8 @@
                 app.selectedServerID = nil
             case let id where id.hasPrefix("SERVERSETTINGS-"):
                 await showServerSettings(id, app: app)
-            case "SETTINGS-root", "SETTINGS-general", "SETTINGS-editor", "SETTINGS-updates", "SETTINGS-security",
-                "SETTINGS-about":
+            case "SETTINGS-root", "SETTINGS-general", "SETTINGS-java", "SETTINGS-editor", "SETTINGS-updates",
+                "SETTINGS-security", "SETTINGS-about":
                 // SettingsView picks the pane from the ID. capture.sh takes the first
                 // window of the app, so hide the main window once Settings is open.
                 let main = NSApp.windows.first(where: { $0.isVisible && $0.canBecomeMain })
@@ -56,8 +56,9 @@
                 } else {
                     signal("[capture] Settings window did not open")
                 }
-                // Give the pane time to draw before capture.sh takes the picture.
-                try? await Task.sleep(for: .milliseconds(1000))
+                // Give the window time to finish opening and the pane to draw (the
+                // Java pane asks Adoptium first).
+                try? await Task.sleep(for: .milliseconds(id == "SETTINGS-java" ? 4000 : 2500))
             case "SEARCH-open":
                 app.isSearchFocused = true
             case "SEARCH-filtered":
@@ -720,6 +721,10 @@
             case "secret":
                 page = .category(.properties, "remote")
                 ServerSettingsWindow.captureScript = .init(reveal: "rcon.password")
+            case "upgrade":
+                // GeneralRows opens the upgrade wizard for this ID.
+                section = .general
+                page = .category(.general, "basic")
             case let general where general.hasPrefix("general-"):
                 section = .general
                 page = .category(.general, String(general.dropFirst("general-".count)))
@@ -736,7 +741,8 @@
             } else {
                 signal("[capture] Server Settings window did not open")
             }
-            try? await Task.sleep(for: .milliseconds(1000))
+            // The upgrade wizard asks the providers for versions first.
+            try? await Task.sleep(for: .milliseconds(name == "upgrade" ? 5000 : 1000))
         }
 
         /// Two real backups of the fixture server, one tagged with a note.
