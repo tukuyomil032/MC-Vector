@@ -12,4 +12,10 @@ ignore = [
   # RUSTSEC-2026-0429: the updater unpacks archives from our own release feed only after verifying their signatures.
   # Remove this ignore when a stable tauri-plugin-updater depends on zip >= 9.
   "RUSTSEC-2026-0429",
+  # RUSTSEC-2026-0545: the updater unpacks archives from our own release feed only after verifying their signatures.
+  # Remove this ignore when a stable tauri-plugin-updater depends on zip >= 9.
+  "RUSTSEC-2026-0545",
+  # RUSTSEC-2026-0548: the updater unpacks archives from our own release feed only after verifying their signatures.
+  # Remove this ignore when a stable tauri-plugin-updater depends on zip >= 9.
+  "RUSTSEC-2026-0548",
 ]
