@@ -143,6 +143,7 @@ private struct GeneralRows: View {
     let category: GeneralSettingsCategory
     let model: GeneralSettingsModel
     @Environment(\.openSettings) private var openSettings
+    @State private var showsUpgrade = false
 
     var body: some View {
         if model.draft != nil {
@@ -215,9 +216,18 @@ private struct GeneralRows: View {
                 title: L10n.t("serverSettings.version"),
                 versions: Self.versions(including: draft.version), selection: field(\.version, ""))
             SettingsRow(title: L10n.t("serverSettings.versionUpgrade.buttonLabel")) {
-                Button(L10n.t("serverSettings.versionUpgrade.buttonLabel")) {}
-                    .disabled(true)
-                    .help(L10n.t("native.serverSettings.later"))
+                Button(L10n.t("serverSettings.versionUpgrade.buttonLabel")) { showsUpgrade = true }
+                    .sheet(isPresented: $showsUpgrade) {
+                        UpgradeWizard(serverID: model.serverID) { Task { await model.reload() } }
+                    }
+                    #if DEBUG
+                        .task {
+                            if CaptureState.requestedID == "SERVERSETTINGS-upgrade" {
+                                try? await Task.sleep(for: .milliseconds(300))
+                                showsUpgrade = true
+                            }
+                        }
+                    #endif
             }
         } footer: {
             Text(L10n.t("native.serverSettings.softwareFooter"))

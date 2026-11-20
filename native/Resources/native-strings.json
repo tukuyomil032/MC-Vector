@@ -902,6 +902,27 @@
   },
   "native.plugins.bulkFailed": { "en": "Update All failed", "ja": "すべて更新に失敗しました" },
   "native.settings.java": { "en": "Java", "ja": "Java" },
+  "native.upgrade.targetVersion": { "en": "Upgrade To", "ja": "更新先" },
+  "native.upgrade.latestTag": { "en": "{version} (latest)", "ja": "{version}（最新）" },
+  "native.upgrade.releaseNotes": { "en": "Release Notes", "ja": "変更内容" },
+  "native.upgrade.checkFailed": { "en": "Could not check for versions", "ja": "バージョンを確かめられませんでした" },
+  "native.upgrade.javaTooOld": {
+    "en": "{target} needs Java {required}, but this server uses Java {configured}.",
+    "ja": "{target} には Java {required} がいりますが、このサーバーは Java {configured} を使っています。"
+  },
+  "native.upgrade.javaUnknown": {
+    "en": "{target} needs Java {required}. This server's Java version could not be read.",
+    "ja": "{target} には Java {required} がいります。このサーバーの Java のバージョンは読み取れませんでした。"
+  },
+  "native.upgrade.javaFix": { "en": "Use Java {major} for This Server", "ja": "このサーバーで Java {major} を使う" },
+  "native.upgrade.javaSet": { "en": "Java {major} is set for this server", "ja": "このサーバーに Java {major} を設定しました" },
+  "native.upgrade.skipBackup": { "en": "Skip the backup this time", "ja": "今回はバックアップを取らない" },
+  "native.upgrade.skipBackupNote": {
+    "en": "If the upgrade goes wrong, there is no backup to restore.",
+    "ja": "更新がうまくいかなかったとき、戻せるバックアップがありません。"
+  },
+  "native.upgrade.continue": { "en": "Continue", "ja": "次へ" },
+  "native.upgrade.upgradedFrom": { "en": "Upgraded from {from} to {to}.", "ja": "{from} から {to} に更新しました。" },
   "native.java.lts": { "en": "Long-term support · Eclipse Temurin", "ja": "長期サポート版 · Eclipse Temurin" },
   "native.java.offline": {
     "en": "Adoptium could not be reached; showing the usual LTS versions.",

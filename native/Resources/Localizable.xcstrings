@@ -10952,6 +10952,216 @@
         }
       }
     },
+    "native.upgrade.checkFailed": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Could not check for versions"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "バージョンを確かめられませんでした"
+          }
+        }
+      }
+    },
+    "native.upgrade.continue": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Continue"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "次へ"
+          }
+        }
+      }
+    },
+    "native.upgrade.javaFix": {
+      "comment": "Placeholders: {major}",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Use Java {major} for This Server"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このサーバーで Java {major} を使う"
+          }
+        }
+      }
+    },
+    "native.upgrade.javaSet": {
+      "comment": "Placeholders: {major}",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Java {major} is set for this server"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このサーバーに Java {major} を設定しました"
+          }
+        }
+      }
+    },
+    "native.upgrade.javaTooOld": {
+      "comment": "Placeholders: {target}, {required}, {configured}",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "{target} needs Java {required}, but this server uses Java {configured}."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "{target} には Java {required} がいりますが、このサーバーは Java {configured} を使っています。"
+          }
+        }
+      }
+    },
+    "native.upgrade.javaUnknown": {
+      "comment": "Placeholders: {target}, {required}",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "{target} needs Java {required}. This server's Java version could not be read."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "{target} には Java {required} がいります。このサーバーの Java のバージョンは読み取れませんでした。"
+          }
+        }
+      }
+    },
+    "native.upgrade.latestTag": {
+      "comment": "Placeholders: {version}",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "{version} (latest)"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "{version}（最新）"
+          }
+        }
+      }
+    },
+    "native.upgrade.releaseNotes": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Release Notes"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "変更内容"
+          }
+        }
+      }
+    },
+    "native.upgrade.skipBackup": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Skip the backup this time"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "今回はバックアップを取らない"
+          }
+        }
+      }
+    },
+    "native.upgrade.skipBackupNote": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "If the upgrade goes wrong, there is no backup to restore."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "更新がうまくいかなかったとき、戻せるバックアップがありません。"
+          }
+        }
+      }
+    },
+    "native.upgrade.targetVersion": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Upgrade To"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "更新先"
+          }
+        }
+      }
+    },
+    "native.upgrade.upgradedFrom": {
+      "comment": "Placeholders: {from}, {to}",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Upgraded from {from} to {to}."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "{from} から {to} に更新しました。"
+          }
+        }
+      }
+    },
     "nav.addServer": {
       "extractionState": "manual",
       "localizations": {

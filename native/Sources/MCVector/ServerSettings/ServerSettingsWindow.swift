@@ -59,6 +59,7 @@ struct ServerSettingsWindow: View {
         .frame(minWidth: 760, minHeight: 520)
         .overlay(alignment: .top) { ToastHUD(feedback: feedback) }
         .feedbackHost(feedback)
+        .environment(feedback)
         .background(
             WindowAccessor { found in
                 window = found
