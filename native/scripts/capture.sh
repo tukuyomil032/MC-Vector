@@ -252,8 +252,24 @@ for id in "${IDS[@]}"; do
       ready=1
       break
     fi
+    # States that post mouse events need the Accessibility grant; the app
+    # reports a missing grant at once (and opens the settings pane).
+    if grep -q "\[capture\] accessibility required: $id" "$log_file" 2>/dev/null; then
+      ready=2
+      break
+    fi
     sleep 0.25
   done
+  if [ "$ready" -eq 2 ]; then
+    log_fail "$id needs Accessibility: allow \"MC-Vector Native\" in System Settings > Privacy & Security > Accessibility, then capture again"
+    failed=1
+    if [ -n "$pid" ]; then
+      kill "$pid" 2>/dev/null || true
+      for _ in $(seq 1 40); do kill -0 "$pid" 2>/dev/null || break; sleep 0.1; done
+      stop_fixture_servers
+    fi
+    continue
+  fi
   wid=""
   if [ "$ready" -eq 1 ] && [ -n "$pid" ]; then
     sleep 1.2 # let sheets, alerts and transitions settle
@@ -276,7 +292,19 @@ for id in "${IDS[@]}"; do
     screencapture -x -v -V "$CAPTURE_RECORD" -l "$wid" "$OUT_DIR/$id.mov" || true
   fi
   if [ -n "$wid" ]; then
-    screencapture -o -x -l "$wid" "$OUT_DIR/$id.png"
+    case "$id" in
+      *-context-menu)
+        # A context menu is its own window: take the window's screen area so
+        # the menu drawn over it is included.
+        rect="$(WINDOW_ID_BOUNDS=1 "$WINDOW_ID" "$pid" || true)"
+        if [ -n "$rect" ]; then
+          screencapture -o -x -R "$rect" "$OUT_DIR/$id.png"
+        else
+          screencapture -o -x -l "$wid" "$OUT_DIR/$id.png"
+        fi
+        ;;
+      *) screencapture -o -x -l "$wid" "$OUT_DIR/$id.png" ;;
+    esac
     log_ok "$OUT_DIR/$id.png"
   else
     log_fail "No window for $id (see $log_file)"

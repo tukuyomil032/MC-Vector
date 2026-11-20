@@ -75,6 +75,26 @@ on_interrupt() {
   exit 130
 }
 
+# A self-signed code-signing certificate made once per machine (native/README.md).
+# Signing with it keeps the app's identity across builds, so macOS privacy
+# grants such as Accessibility stay; an ad-hoc signature changes every build.
+DEFAULT_SIGN_IDENTITY="MC-Vector Dev"
+
+# resolve_sign_identity: MCVECTOR_SIGN_IDENTITY ("-" = ad-hoc), else ad-hoc for
+# --release (the local certificate means nothing on other Macs), else the local
+# certificate when the keychain has it, else ad-hoc (CI).
+resolve_sign_identity() {
+  if [ -n "${MCVECTOR_SIGN_IDENTITY:-}" ]; then
+    printf '%s' "$MCVECTOR_SIGN_IDENTITY"
+  elif [ "$PROFILE" = "release" ]; then
+    printf '%s' "-"
+  elif security find-identity -p codesigning 2>/dev/null | grep -qF "\"$DEFAULT_SIGN_IDENTITY\""; then
+    printf '%s' "$DEFAULT_SIGN_IDENTITY"
+  else
+    printf '%s' "-"
+  fi
+}
+
 # stamp_is_fresh <stamp> <guard> <input>...
 # True when the stamp exists, the guard path exists, every input exists and no
 # input is newer than the stamp.
@@ -287,6 +307,12 @@ assemble_app() {
     log_fail "Minecraft version list not found: $versions (run bun native/scripts/sync-versions.ts)"
     return 1
   fi
+  local identity identity_file="$BUILD_DIR/stamps/sign-identity"
+  identity="$(resolve_sign_identity)"
+  # A changed signing identity re-signs the app even when nothing else changed.
+  if [ "$(cat "$identity_file" 2>/dev/null)" != "$identity" ]; then
+    rm -f "$stamp"
+  fi
   if stamp_is_fresh "$stamp" "$app/Contents/MacOS/MCVector" \
     "$APP_BINARY" "$template" "$crate_toml" "$catalog" "$NATIVE_DIR/Resources"; then
     log_skip "Up to date"
@@ -341,7 +367,10 @@ assemble_app() {
       cp "$NATIVE_DIR/Resources/$folder/"*.json "$staged_app/Contents/Resources/$folder/" || return 1
     fi
   done
-  run_logged "codesign" codesign --force --deep --sign - "$staged_app" || return 1
+  if [ "$identity" = "-" ] && [ "$PROFILE" != "release" ]; then
+    log_warn "Ad-hoc signed: macOS treats every build as a new app, so privacy grants (Accessibility) do not survive a rebuild. Create the \"$DEFAULT_SIGN_IDENTITY\" code-signing certificate (see native/README.md)."
+  fi
+  run_logged "codesign" codesign --force --deep --timestamp=none --sign "$identity" "$staged_app" || return 1
 
   ensure_inside_build "$app"
   rm -rf "$app" || return 1
@@ -351,7 +380,12 @@ assemble_app() {
   ensure_inside_build "$BUILD_DIR/stamps"
   mkdir -p "$BUILD_DIR/stamps" || return 1
   touch "$stamp" || return 1
-  log_ok "App assembled" "$(timer_elapsed "$t0")"
+  printf '%s' "$identity" > "$identity_file" || return 1
+  if [ "$identity" = "-" ]; then
+    log_ok "App assembled (ad-hoc signed)" "$(timer_elapsed "$t0")"
+  else
+    log_ok "App assembled (signed: $identity)" "$(timer_elapsed "$t0")"
+  fi
 }
 
 main() {

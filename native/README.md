@@ -23,7 +23,7 @@ All three scripts work from any directory.
 
 | Script | What it does | Options |
 |---|---|---|
-| `native/build.sh` | Builds the Rust core, regenerates the Swift bindings, builds the Swift app and assembles `MC-Vector Native.app` (ad-hoc signed) | `--release`, `--universal`, `--clean`, `--verbose` |
+| `native/build.sh` | Builds the Rust core, regenerates the Swift bindings, builds the Swift app and assembles `MC-Vector Native.app` (signed as described in [Signing debug builds](#signing-debug-builds)) | `--release`, `--universal`, `--clean`, `--verbose` |
 | `native/run.sh` | Builds if needed, then launches the app in the foreground with its logs in the terminal | `--release`, `--no-build` |
 | `native/test.sh` | Runs the Rust core tests, the Swift tests, the bindings drift check and the strings drift check, then prints a summary | `--rust-only`, `--swift-only`, `--check-bindings`, `--check-strings`, `--filter <pattern>` |
 
@@ -34,6 +34,17 @@ Logs use symbols and colors; set `NO_COLOR=1` (or pipe the output) for plain tex
 Everything — Cargo output, SwiftPM build and cache, temp files, the `.app` — goes to `native/.build/`. Nothing is written to `~/Library/Developer/Xcode/DerivedData`, `~/Library/Caches`, or `/tmp`. The scripts refuse to write outside `native/.build`. Delete that folder (or run `native/build.sh --clean`) to start from scratch.
 
 Do not build with plain `swift build` or Xcode: the Swift package links the Rust static library that `build.sh` produces.
+
+## Signing debug builds
+
+macOS remembers privacy grants (Accessibility, Documents, …) by the app's code signature. An ad-hoc signature changes with every build, so each build looks like a new app and loses its grants. `build.sh` therefore signs with, in order:
+
+1. `MCVECTOR_SIGN_IDENTITY` when set (`-` forces an ad-hoc signature);
+2. ad-hoc for `--release` builds, since the local certificate means nothing on other Macs;
+3. a code-signing certificate named `MC-Vector Dev` when the keychain has one;
+4. otherwise ad-hoc, with a warning (CI takes this path).
+
+Create the certificate once per machine (free, about a minute): Keychain Access › Keychain Access menu › Certificate Assistant › Create a Certificate… — name `MC-Vector Dev`, identity type *Self-Signed Root*, certificate type *Code Signing*, tick *Let me override defaults* and set the validity to 3650 days; keep the other defaults and store it in the login keychain. `security find-identity -p codesigning` should list it (marked not trusted, which is fine for local signing). On the first signed build, allow `codesign` to use the key with *Always Allow*.
 
 ## Generated bindings
 
@@ -76,6 +87,7 @@ native/scripts/capture.sh --fixture groups --locale ja SHELL-ROOT TOAST-stack-3
 - States are defined in `Sources/MCVector/Capture/CaptureState.swift` (debug builds only).
 - `--fixture` picks the server data in `scripts/fixtures/<name>/` (`e2e`, `groups`, or `empty`); each launch gets a fresh copy in `native/.build/fixtures/`, so your real data is never touched.
 - Output: `native/.build/captures/<locale>/<ID>.png`. The terminal needs the Screen Recording permission.
+- States that open a context menu (`*-context-menu`) post a right click, which needs the Accessibility permission for "MC-Vector Native". Without it the capture stops at once and opens that settings pane. The grant survives rebuilds only with a stable signature (see [Signing debug builds](#signing-debug-builds)).
 
 ## Layout
 

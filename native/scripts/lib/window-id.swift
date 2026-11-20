@@ -23,4 +23,13 @@ let match = windows.first { info in
         && ((info[kCGWindowBounds as String] as? [String: Double])?["Width"] ?? 0) > minWidth
 }
 guard let id = match?[kCGWindowNumber as String] as? Int else { exit(1) }
-print(id)
+// WINDOW_ID_BOUNDS=1 prints "x,y,w,h" (global points, top-left origin) for
+// `screencapture -R`, which also takes menus drawn over the window.
+if ProcessInfo.processInfo.environment["WINDOW_ID_BOUNDS"] == "1",
+    let bounds = match?[kCGWindowBounds as String] as? [String: Double]
+{
+    let parts = ["X", "Y", "Width", "Height"].map { Int(bounds[$0] ?? 0) }
+    print(parts.map(String.init).joined(separator: ","))
+} else {
+    print(id)
+}
