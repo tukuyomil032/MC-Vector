@@ -64,6 +64,10 @@ struct ContentRouter: View {
             case .files: FilesView(serverID: serverID)
             case .users: UsersView(serverID: serverID)
             case .backups: BackupsView(serverID: serverID)
+            case .plugins:
+                if let server = app.servers.first(where: { $0.id == serverID }) {
+                    PluginsView(server: server)
+                }
             default: NotPortedView(route: app.route)
             }
         }

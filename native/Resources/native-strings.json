@@ -131,6 +131,42 @@
     "en": "A player list file is not valid JSON. It was left unchanged.",
     "ja": "プレイヤー一覧のファイルが正しい JSON ではありません。ファイルは変更していません。"
   },
+  "error.plugin.catalog_failed": {
+    "en": "The plugin catalog could not be loaded.",
+    "ja": "プラグインの一覧を取得できませんでした。"
+  },
+  "error.plugin.destination_rejected": {
+    "en": "The installation folder did not pass validation.",
+    "ja": "インストール先を安全に確認できませんでした。"
+  },
+  "error.plugin.incompatible": {
+    "en": "This plugin is incompatible with the selected server software or version.",
+    "ja": "このプラグインは、選択したサーバーのソフトウェアかバージョンに対応していません。"
+  },
+  "error.plugin.install_failed": {
+    "en": "The plugin could not be installed safely.",
+    "ja": "プラグインを安全にインストールできませんでした。"
+  },
+  "error.plugin.invalid_request": {
+    "en": "The plugin request is invalid.",
+    "ja": "プラグイン操作の内容が正しくありません。"
+  },
+  "error.plugin.io": {
+    "en": "Plugin files could not be read or written.",
+    "ja": "プラグインのファイルを読み書きできませんでした。"
+  },
+  "error.plugin.session_expired": {
+    "en": "The installation preview has expired. Prepare a new preview.",
+    "ja": "インストールの確認内容が期限切れです。もう一度確認してください。"
+  },
+  "error.plugin.source_rejected": {
+    "en": "The plugin download source did not pass validation.",
+    "ja": "プラグインの入手元を安全に確認できませんでした。"
+  },
+  "error.plugin.unverified_blocked": {
+    "en": "This plugin has no published checksum. Unverified downloads are disabled in Settings.",
+    "ja": "このプラグインには公開されたチェックサムがありません。設定で未検証のダウンロードが無効になっています。"
+  },
   "error.properties.invalid": {
     "en": "A property name or value is not valid.",
     "ja": "プロパティの名前か値が正しくありません。"
@@ -790,6 +826,38 @@
   "native.settings.license": {
     "en": "License",
     "ja": "ライセンス"
+  },
+  "native.plugins.source.modrinth": { "en": "Modrinth", "ja": "Modrinth" },
+  "native.plugins.source.hangar": { "en": "Hangar", "ja": "Hangar" },
+  "native.plugins.source.spigot": { "en": "SpigotMC", "ja": "SpigotMC" },
+  "native.plugins.versions": { "en": "Versions", "ja": "バージョン" },
+  "native.plugins.category": { "en": "Category", "ja": "カテゴリ" },
+  "native.plugins.allCategories": { "en": "All Categories", "ja": "すべてのカテゴリ" },
+  "native.plugins.results": { "en": "{count} results", "ja": "{count} 件" },
+  "native.plugins.searchInstalled": { "en": "Search installed", "ja": "入れたものを検索" },
+  "native.plugins.refresh": { "en": "Check for Updates", "ja": "更新を確認" },
+  "native.plugins.updateAll": { "en": "Update All ({count})", "ja": "すべて更新（{count}）" },
+  "native.plugins.updatingAll": { "en": "Updating {completed} of {total}", "ja": "更新中 {completed} / {total}" },
+  "native.plugins.bulkDone": {
+    "en": "Update All finished: {updated} updated, {failed} failed",
+    "ja": "すべて更新が終わりました（更新 {updated} 件、失敗 {failed} 件）"
+  },
+  "native.plugins.bulkFailed": { "en": "Update All failed", "ja": "すべて更新に失敗しました" },
+  "native.settings.pluginsPaging": {
+    "en": "Plugin search results",
+    "ja": "プラグインの検索結果"
+  },
+  "native.settings.pluginsPaging.infinite": {
+    "en": "Load more when scrolled to the end",
+    "ja": "下まで行ったら続きを読む"
+  },
+  "native.settings.pluginsPaging.pages": {
+    "en": "Page numbers",
+    "ja": "ページ番号"
+  },
+  "native.settings.pluginsPagingFooter": {
+    "en": "How the plugin browser shows more results than fit on one page.",
+    "ja": "1ページに入りきらない検索結果の見せ方です。"
   },
   "native.settings.reportIssue": {
     "en": "Report an Issue",

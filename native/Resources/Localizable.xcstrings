@@ -4540,6 +4540,159 @@
         }
       }
     },
+    "error.plugin.catalog_failed": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The plugin catalog could not be loaded."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "プラグインの一覧を取得できませんでした。"
+          }
+        }
+      }
+    },
+    "error.plugin.destination_rejected": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The installation folder did not pass validation."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "インストール先を安全に確認できませんでした。"
+          }
+        }
+      }
+    },
+    "error.plugin.incompatible": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This plugin is incompatible with the selected server software or version."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このプラグインは、選択したサーバーのソフトウェアかバージョンに対応していません。"
+          }
+        }
+      }
+    },
+    "error.plugin.install_failed": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The plugin could not be installed safely."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "プラグインを安全にインストールできませんでした。"
+          }
+        }
+      }
+    },
+    "error.plugin.invalid_request": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The plugin request is invalid."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "プラグイン操作の内容が正しくありません。"
+          }
+        }
+      }
+    },
+    "error.plugin.io": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Plugin files could not be read or written."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "プラグインのファイルを読み書きできませんでした。"
+          }
+        }
+      }
+    },
+    "error.plugin.session_expired": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The installation preview has expired. Prepare a new preview."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "インストールの確認内容が期限切れです。もう一度確認してください。"
+          }
+        }
+      }
+    },
+    "error.plugin.source_rejected": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The plugin download source did not pass validation."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "プラグインの入手元を安全に確認できませんでした。"
+          }
+        }
+      }
+    },
+    "error.plugin.unverified_blocked": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This plugin has no published checksum. Unverified downloads are disabled in Settings."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このプラグインには公開されたチェックサムがありません。設定で未検証のダウンロードが無効になっています。"
+          }
+        }
+      }
+    },
     "error.properties.invalid": {
       "extractionState": "manual",
       "localizations": {
@@ -8853,6 +9006,231 @@
         }
       }
     },
+    "native.plugins.allCategories": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "All Categories"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "すべてのカテゴリ"
+          }
+        }
+      }
+    },
+    "native.plugins.bulkDone": {
+      "comment": "Placeholders: {updated}, {failed}",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Update All finished: {updated} updated, {failed} failed"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "すべて更新が終わりました（更新 {updated} 件、失敗 {failed} 件）"
+          }
+        }
+      }
+    },
+    "native.plugins.bulkFailed": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Update All failed"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "すべて更新に失敗しました"
+          }
+        }
+      }
+    },
+    "native.plugins.category": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Category"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "カテゴリ"
+          }
+        }
+      }
+    },
+    "native.plugins.refresh": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Check for Updates"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "更新を確認"
+          }
+        }
+      }
+    },
+    "native.plugins.results": {
+      "comment": "Placeholders: {count}",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "{count} results"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "{count} 件"
+          }
+        }
+      }
+    },
+    "native.plugins.searchInstalled": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Search installed"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "入れたものを検索"
+          }
+        }
+      }
+    },
+    "native.plugins.source.hangar": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hangar"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hangar"
+          }
+        }
+      }
+    },
+    "native.plugins.source.modrinth": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modrinth"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modrinth"
+          }
+        }
+      }
+    },
+    "native.plugins.source.spigot": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "SpigotMC"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "SpigotMC"
+          }
+        }
+      }
+    },
+    "native.plugins.updateAll": {
+      "comment": "Placeholders: {count}",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Update All ({count})"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "すべて更新（{count}）"
+          }
+        }
+      }
+    },
+    "native.plugins.updatingAll": {
+      "comment": "Placeholders: {completed}, {total}",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Updating {completed} of {total}"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "更新中 {completed} / {total}"
+          }
+        }
+      }
+    },
+    "native.plugins.versions": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Versions"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "バージョン"
+          }
+        }
+      }
+    },
     "native.properties.hide": {
       "extractionState": "manual",
       "localizations": {
@@ -9872,6 +10250,74 @@
           "stringUnit": {
             "state": "translated",
             "value": "ライセンス"
+          }
+        }
+      }
+    },
+    "native.settings.pluginsPaging": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Plugin search results"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "プラグインの検索結果"
+          }
+        }
+      }
+    },
+    "native.settings.pluginsPaging.infinite": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Load more when scrolled to the end"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "下まで行ったら続きを読む"
+          }
+        }
+      }
+    },
+    "native.settings.pluginsPaging.pages": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Page numbers"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ページ番号"
+          }
+        }
+      }
+    },
+    "native.settings.pluginsPagingFooter": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "How the plugin browser shows more results than fit on one page."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1ページに入りきらない検索結果の見せ方です。"
           }
         }
       }
