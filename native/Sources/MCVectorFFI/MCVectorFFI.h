@@ -243,6 +243,13 @@ typedef void (*UniffiForeignFutureCompleteVoid)(uint64_t, UniffiForeignFutureRes
     );
 
 #endif
+#ifndef UNIFFI_FFIDEF_CALLBACK_INTERFACE_BACKUP_PROGRESS_OBSERVER_METHOD0
+#define UNIFFI_FFIDEF_CALLBACK_INTERFACE_BACKUP_PROGRESS_OBSERVER_METHOD0
+typedef void (*UniffiCallbackInterfaceBackupProgressObserverMethod0)(uint64_t, RustBuffer, void* _Nonnull, 
+        RustCallStatus *_Nonnull uniffiCallStatus
+    );
+
+#endif
 #ifndef UNIFFI_FFIDEF_CALLBACK_INTERFACE_CREATION_OBSERVER_METHOD0
 #define UNIFFI_FFIDEF_CALLBACK_INTERFACE_CREATION_OBSERVER_METHOD0
 typedef void (*UniffiCallbackInterfaceCreationObserverMethod0)(uint64_t, RustBuffer, void* _Nonnull, 
@@ -278,6 +285,15 @@ typedef void (*UniffiCallbackInterfaceServerEventObserverMethod3)(uint64_t, Rust
     );
 
 #endif
+#ifndef UNIFFI_FFIDEF_V_TABLE_CALLBACK_INTERFACE_BACKUP_PROGRESS_OBSERVER
+#define UNIFFI_FFIDEF_V_TABLE_CALLBACK_INTERFACE_BACKUP_PROGRESS_OBSERVER
+typedef struct UniffiVTableCallbackInterfaceBackupProgressObserver {
+    UniffiCallbackInterfaceFree _Nonnull uniffiFree;
+    UniffiCallbackInterfaceClone _Nonnull uniffiClone;
+    UniffiCallbackInterfaceBackupProgressObserverMethod0 _Nonnull onProgress;
+} UniffiVTableCallbackInterfaceBackupProgressObserver;
+
+#endif
 #ifndef UNIFFI_FFIDEF_V_TABLE_CALLBACK_INTERFACE_CREATION_OBSERVER
 #define UNIFFI_FFIDEF_V_TABLE_CALLBACK_INTERFACE_CREATION_OBSERVER
 typedef struct UniffiVTableCallbackInterfaceCreationObserver {
@@ -298,6 +314,26 @@ typedef struct UniffiVTableCallbackInterfaceServerEventObserver {
     UniffiCallbackInterfaceServerEventObserverMethod3 _Nonnull onMetrics;
 } UniffiVTableCallbackInterfaceServerEventObserver;
 
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_CLONE_BACKUPPROGRESSOBSERVER
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_CLONE_BACKUPPROGRESSOBSERVER
+uint64_t uniffi_mcvector_ffi_fn_clone_backupprogressobserver(uint64_t handle, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FREE_BACKUPPROGRESSOBSERVER
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FREE_BACKUPPROGRESSOBSERVER
+void uniffi_mcvector_ffi_fn_free_backupprogressobserver(uint64_t handle, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_INIT_CALLBACK_VTABLE_BACKUPPROGRESSOBSERVER
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_INIT_CALLBACK_VTABLE_BACKUPPROGRESSOBSERVER
+void uniffi_mcvector_ffi_fn_init_callback_vtable_backupprogressobserver(const UniffiVTableCallbackInterfaceBackupProgressObserver* _Nonnull vtable
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_METHOD_BACKUPPROGRESSOBSERVER_ON_PROGRESS
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_METHOD_BACKUPPROGRESSOBSERVER_ON_PROGRESS
+void uniffi_mcvector_ffi_fn_method_backupprogressobserver_on_progress(uint64_t ptr, RustBuffer event, RustCallStatus *_Nonnull out_status
+);
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_CLONE_CREATIONOBSERVER
 #define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_CLONE_CREATIONOBSERVER
@@ -359,9 +395,19 @@ void uniffi_mcvector_ffi_fn_method_servereventobserver_on_metrics(uint64_t ptr, 
 void uniffi_mcvector_ffi_fn_func_accept_server_eula(RustBuffer server_id, RustCallStatus *_Nonnull out_status
 );
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_APPLY_MANAGED_BACKUP_RETENTION
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_APPLY_MANAGED_BACKUP_RETENTION
+uint64_t uniffi_mcvector_ffi_fn_func_apply_managed_backup_retention(RustBuffer server_id, uint32_t retain_count, uint32_t retain_days
+);
+#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_BEGIN_SERVER_IMPORT
 #define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_BEGIN_SERVER_IMPORT
 uint64_t uniffi_mcvector_ffi_fn_func_begin_server_import(RustBuffer path
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_CANCEL_BACKUP
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_CANCEL_BACKUP
+uint64_t uniffi_mcvector_ffi_fn_func_cancel_backup(RustBuffer operation_id
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_CANCEL_SERVER_CREATION
@@ -390,6 +436,11 @@ RustBuffer uniffi_mcvector_ffi_fn_func_config_locale(RustCallStatus *_Nonnull ou
 uint64_t uniffi_mcvector_ffi_fn_func_create_file_entry(RustBuffer server_id, RustBuffer parent, RustBuffer name, int8_t is_directory
 );
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_CREATE_MANAGED_BACKUP
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_CREATE_MANAGED_BACKUP
+uint64_t uniffi_mcvector_ffi_fn_func_create_managed_backup(RustBuffer input, uint64_t observer
+);
+#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_CREATE_SERVER
 #define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_CREATE_SERVER
 uint64_t uniffi_mcvector_ffi_fn_func_create_server(RustBuffer input, uint64_t observer
@@ -400,9 +451,19 @@ uint64_t uniffi_mcvector_ffi_fn_func_create_server(RustBuffer input, uint64_t ob
 uint64_t uniffi_mcvector_ffi_fn_func_delete_file_entries(RustBuffer server_id, RustBuffer entries
 );
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_DELETE_MANAGED_BACKUP
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_DELETE_MANAGED_BACKUP
+uint64_t uniffi_mcvector_ffi_fn_func_delete_managed_backup(RustBuffer server_id, RustBuffer backup_name
+);
+#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_DELETE_SERVER
 #define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_DELETE_SERVER
 uint64_t uniffi_mcvector_ffi_fn_func_delete_server(RustBuffer server_id
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_ESTIMATE_BACKUP_DURATION
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_ESTIMATE_BACKUP_DURATION
+RustBuffer uniffi_mcvector_ffi_fn_func_estimate_backup_duration(uint64_t target_bytes, RustBuffer history, RustCallStatus *_Nonnull out_status
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_FILE_ENTRY_PATH
@@ -457,6 +518,16 @@ int8_t uniffi_mcvector_ffi_fn_func_is_valid_server_name(RustBuffer name, RustCal
 uint64_t uniffi_mcvector_ffi_fn_func_list_files(RustBuffer server_id, RustBuffer relative
 );
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_LIST_MANAGED_BACKUPS
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_LIST_MANAGED_BACKUPS
+uint64_t uniffi_mcvector_ffi_fn_func_list_managed_backups(RustBuffer server_id
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_LOAD_MANAGED_BACKUP_METADATA
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_LOAD_MANAGED_BACKUP_METADATA
+uint64_t uniffi_mcvector_ffi_fn_func_load_managed_backup_metadata(RustBuffer server_id
+);
+#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_MOVE_FILE_ENTRIES
 #define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_MOVE_FILE_ENTRIES
 uint64_t uniffi_mcvector_ffi_fn_func_move_file_entries(RustBuffer server_id, RustBuffer entries, RustBuffer destination
@@ -480,6 +551,16 @@ uint64_t uniffi_mcvector_ffi_fn_func_rename_file_entry(RustBuffer server_id, Rus
 #ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_RESTART_SERVER
 #define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_RESTART_SERVER
 uint64_t uniffi_mcvector_ffi_fn_func_restart_server(RustBuffer server_id
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_RESTORE_MANAGED_BACKUP
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_RESTORE_MANAGED_BACKUP
+uint64_t uniffi_mcvector_ffi_fn_func_restore_managed_backup(RustBuffer server_id, RustBuffer backup_name
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_RESTORE_MANAGED_BACKUP_WITH_PROGRESS
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_RESTORE_MANAGED_BACKUP_WITH_PROGRESS
+uint64_t uniffi_mcvector_ffi_fn_func_restore_managed_backup_with_progress(RustBuffer server_id, RustBuffer backup_name, RustBuffer operation_id, uint64_t observer
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_RUNNING_SERVER_IDS
@@ -534,6 +615,11 @@ void uniffi_mcvector_ffi_fn_func_set_app_version(RustBuffer version, RustCallSta
 void uniffi_mcvector_ffi_fn_func_set_locale(RustBuffer locale, RustCallStatus *_Nonnull out_status
 );
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_SET_MANAGED_BACKUP_TAGS
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_SET_MANAGED_BACKUP_TAGS
+uint64_t uniffi_mcvector_ffi_fn_func_set_managed_backup_tags(RustBuffer server_id, RustBuffer backup_name, RustBuffer tags, RustBuffer note
+);
+#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_SET_UPDATE_CHANNEL
 #define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_SET_UPDATE_CHANNEL
 void uniffi_mcvector_ffi_fn_func_set_update_channel(RustBuffer channel, RustCallStatus *_Nonnull out_status
@@ -569,6 +655,11 @@ uint64_t uniffi_mcvector_ffi_fn_func_stop_server(RustBuffer server_id
 #ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_SUBSCRIBE_SERVER_EVENTS
 #define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_SUBSCRIBE_SERVER_EVENTS
 void uniffi_mcvector_ffi_fn_func_subscribe_server_events(uint64_t observer, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_TICK_AUTOMATIC_BACKUPS
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_TICK_AUTOMATIC_BACKUPS
+uint64_t uniffi_mcvector_ffi_fn_func_tick_automatic_backups(uint64_t observer
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_UPDATE_SERVER_SETTINGS
@@ -847,9 +938,21 @@ uint16_t uniffi_mcvector_ffi_checksum_func_accept_server_eula(void
     
 );
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_APPLY_MANAGED_BACKUP_RETENTION
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_APPLY_MANAGED_BACKUP_RETENTION
+uint16_t uniffi_mcvector_ffi_checksum_func_apply_managed_backup_retention(void
+    
+);
+#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_BEGIN_SERVER_IMPORT
 #define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_BEGIN_SERVER_IMPORT
 uint16_t uniffi_mcvector_ffi_checksum_func_begin_server_import(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_CANCEL_BACKUP
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_CANCEL_BACKUP
+uint16_t uniffi_mcvector_ffi_checksum_func_cancel_backup(void
     
 );
 #endif
@@ -883,6 +986,12 @@ uint16_t uniffi_mcvector_ffi_checksum_func_create_file_entry(void
     
 );
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_CREATE_MANAGED_BACKUP
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_CREATE_MANAGED_BACKUP
+uint16_t uniffi_mcvector_ffi_checksum_func_create_managed_backup(void
+    
+);
+#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_CREATE_SERVER
 #define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_CREATE_SERVER
 uint16_t uniffi_mcvector_ffi_checksum_func_create_server(void
@@ -895,9 +1004,21 @@ uint16_t uniffi_mcvector_ffi_checksum_func_delete_file_entries(void
     
 );
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_DELETE_MANAGED_BACKUP
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_DELETE_MANAGED_BACKUP
+uint16_t uniffi_mcvector_ffi_checksum_func_delete_managed_backup(void
+    
+);
+#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_DELETE_SERVER
 #define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_DELETE_SERVER
 uint16_t uniffi_mcvector_ffi_checksum_func_delete_server(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_ESTIMATE_BACKUP_DURATION
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_ESTIMATE_BACKUP_DURATION
+uint16_t uniffi_mcvector_ffi_checksum_func_estimate_backup_duration(void
     
 );
 #endif
@@ -961,6 +1082,18 @@ uint16_t uniffi_mcvector_ffi_checksum_func_list_files(void
     
 );
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_LIST_MANAGED_BACKUPS
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_LIST_MANAGED_BACKUPS
+uint16_t uniffi_mcvector_ffi_checksum_func_list_managed_backups(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_LOAD_MANAGED_BACKUP_METADATA
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_LOAD_MANAGED_BACKUP_METADATA
+uint16_t uniffi_mcvector_ffi_checksum_func_load_managed_backup_metadata(void
+    
+);
+#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_MOVE_FILE_ENTRIES
 #define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_MOVE_FILE_ENTRIES
 uint16_t uniffi_mcvector_ffi_checksum_func_move_file_entries(void
@@ -988,6 +1121,18 @@ uint16_t uniffi_mcvector_ffi_checksum_func_rename_file_entry(void
 #ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_RESTART_SERVER
 #define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_RESTART_SERVER
 uint16_t uniffi_mcvector_ffi_checksum_func_restart_server(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_RESTORE_MANAGED_BACKUP
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_RESTORE_MANAGED_BACKUP
+uint16_t uniffi_mcvector_ffi_checksum_func_restore_managed_backup(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_RESTORE_MANAGED_BACKUP_WITH_PROGRESS
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_RESTORE_MANAGED_BACKUP_WITH_PROGRESS
+uint16_t uniffi_mcvector_ffi_checksum_func_restore_managed_backup_with_progress(void
     
 );
 #endif
@@ -1051,6 +1196,12 @@ uint16_t uniffi_mcvector_ffi_checksum_func_set_locale(void
     
 );
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_SET_MANAGED_BACKUP_TAGS
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_SET_MANAGED_BACKUP_TAGS
+uint16_t uniffi_mcvector_ffi_checksum_func_set_managed_backup_tags(void
+    
+);
+#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_SET_UPDATE_CHANNEL
 #define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_SET_UPDATE_CHANNEL
 uint16_t uniffi_mcvector_ffi_checksum_func_set_update_channel(void
@@ -1093,6 +1244,12 @@ uint16_t uniffi_mcvector_ffi_checksum_func_subscribe_server_events(void
     
 );
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_TICK_AUTOMATIC_BACKUPS
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_TICK_AUTOMATIC_BACKUPS
+uint16_t uniffi_mcvector_ffi_checksum_func_tick_automatic_backups(void
+    
+);
+#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_UPDATE_SERVER_SETTINGS
 #define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_UPDATE_SERVER_SETTINGS
 uint16_t uniffi_mcvector_ffi_checksum_func_update_server_settings(void
@@ -1102,6 +1259,12 @@ uint16_t uniffi_mcvector_ffi_checksum_func_update_server_settings(void
 #ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_WRITE_TEXT_DOCUMENT
 #define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_WRITE_TEXT_DOCUMENT
 uint16_t uniffi_mcvector_ffi_checksum_func_write_text_document(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_METHOD_BACKUPPROGRESSOBSERVER_ON_PROGRESS
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_METHOD_BACKUPPROGRESSOBSERVER_ON_PROGRESS
+uint16_t uniffi_mcvector_ffi_checksum_method_backupprogressobserver_on_progress(void
     
 );
 #endif

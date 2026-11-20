@@ -654,6 +654,210 @@ fileprivate struct FfiConverterString: FfiConverter {
 
 
 /**
+ * Receives progress for manual and automatic backup creation.
+ */
+public protocol BackupProgressObserver: AnyObject, Sendable {
+    
+    func onProgress(event: BackupProgressEvent) 
+    
+}
+/**
+ * Receives progress for manual and automatic backup creation.
+ */
+open class BackupProgressObserverImpl: BackupProgressObserver, @unchecked Sendable {
+    fileprivate let handle: UInt64
+
+    /// Used to instantiate a [FFIObject] without an actual handle, for fakes in tests, mostly.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public struct NoHandle {
+        public init() {}
+    }
+
+    // TODO: We'd like this to be `private` but for Swifty reasons,
+    // we can't implement `FfiConverter` without making this `required` and we can't
+    // make it `required` without making it `public`.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    required public init(unsafeFromHandle handle: UInt64) {
+        self.handle = handle
+    }
+
+    // This constructor can be used to instantiate a fake object.
+    // - Parameter noHandle: Placeholder value so we can have a constructor separate from the default empty one that may be implemented for classes extending [FFIObject].
+    //
+    // - Warning:
+    //     Any object instantiated with this constructor cannot be passed to an actual Rust-backed object. Since there isn't a backing handle the FFI lower functions will crash.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public init(noHandle: NoHandle) {
+        self.handle = 0
+    }
+
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public func uniffiCloneHandle() -> UInt64 {
+        return try! rustCall { uniffi_mcvector_ffi_fn_clone_backupprogressobserver(self.handle, $0) }
+    }
+    // No primary constructor declared for this class.
+
+    deinit {
+        if handle == 0 {
+            // Mock objects have handle=0 don't try to free them
+            return
+        }
+
+        try! rustCall { uniffi_mcvector_ffi_fn_free_backupprogressobserver(handle, $0) }
+    }
+
+    
+
+    
+open func onProgress(event: BackupProgressEvent)  {try! rustCall() {
+        uniffiCallStatus in
+    uniffi_mcvector_ffi_fn_method_backupprogressobserver_on_progress(
+            self.uniffiCloneHandle(),
+        FfiConverterTypeBackupProgressEvent_lower(event),uniffiCallStatus
+    )
+}
+}
+    
+
+    
+}
+
+
+
+// Put the implementation in a struct so we don't pollute the top-level namespace
+fileprivate struct UniffiCallbackInterfaceBackupProgressObserver {
+
+    // Create the VTable using a series of closures.
+    // Swift automatically converts these into C callback functions.
+    //
+    // Store the vtable directly.
+    static let vtable: UniffiVTableCallbackInterfaceBackupProgressObserver = UniffiVTableCallbackInterfaceBackupProgressObserver(
+        uniffiFree: { (uniffiHandle: UInt64) -> () in
+            do {
+                try FfiConverterTypeBackupProgressObserver.handleMap.remove(handle: uniffiHandle)
+            } catch {
+                print("Uniffi callback interface BackupProgressObserver: handle missing in uniffiFree")
+            }
+        },
+        uniffiClone: { (uniffiHandle: UInt64) -> UInt64 in
+            do {
+                return try FfiConverterTypeBackupProgressObserver.handleMap.clone(handle: uniffiHandle)
+            } catch {
+                fatalError("Uniffi callback interface BackupProgressObserver: handle missing in uniffiClone")
+            }
+        },
+        onProgress: { (
+            uniffiHandle: UInt64,
+            event: RustBuffer,
+            uniffiOutReturn: UnsafeMutableRawPointer,
+            uniffiCallStatus: UnsafeMutablePointer<RustCallStatus>
+        ) in
+            let makeCall = {
+                () throws -> () in
+                guard let uniffiObj = try? FfiConverterTypeBackupProgressObserver.handleMap.get(handle: uniffiHandle) else {
+                    throw UniffiInternalError.unexpectedStaleHandle
+                }
+                return uniffiObj.onProgress(
+                     event: try FfiConverterTypeBackupProgressEvent_lift(event)
+                )
+            }
+
+            
+            let writeReturn = { () }
+            uniffiTraitInterfaceCall(
+                callStatus: uniffiCallStatus,
+                makeCall: makeCall,
+                writeReturn: writeReturn
+            )
+        }
+    )
+
+    // Rust stores this pointer for future callback invocations, so it must live
+    // for the process lifetime (not just for the init function call).
+    //
+    // `nonisolated(unsafe)` is needed under Swift 6 strict concurrency.
+    // This is safe because the pointee is initialized once during static init
+    // and never mutated by either side of the FFI.  Its fields are C function pointers.
+    nonisolated(unsafe) static let vtablePtr: UnsafePointer<UniffiVTableCallbackInterfaceBackupProgressObserver> = {
+        let ptr = UnsafeMutablePointer<UniffiVTableCallbackInterfaceBackupProgressObserver>.allocate(capacity: 1)
+        ptr.initialize(to: vtable)
+        return UnsafePointer(ptr)
+    }()
+}
+
+private func uniffiCallbackInitBackupProgressObserver() {
+    uniffi_mcvector_ffi_fn_init_callback_vtable_backupprogressobserver(UniffiCallbackInterfaceBackupProgressObserver.vtablePtr)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeBackupProgressObserver: FfiConverter {
+    fileprivate static let handleMap = UniffiHandleMap<BackupProgressObserver>()
+
+    typealias FfiType = UInt64
+    typealias SwiftType = BackupProgressObserver
+
+    public static func lift(_ handle: UInt64) throws -> BackupProgressObserver {
+        if ((handle & 1) == 0) {
+            // Rust-generated handle, construct a new class that uses the handle to implement the
+            // interface
+            return BackupProgressObserverImpl(unsafeFromHandle: handle)
+        } else {
+            // Swift-generated handle, get the object from the handle map
+            return try handleMap.remove(handle: handle)
+        }
+    }
+
+    public static func lower(_ value: BackupProgressObserver) -> UInt64 {
+         if let rustImpl = value as? BackupProgressObserverImpl {
+             // Rust-implemented object.  Clone the handle and return it
+            return rustImpl.uniffiCloneHandle()
+         } else {
+            // Swift object, generate a new vtable handle and return that.
+            return handleMap.insert(obj: value)
+         }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> BackupProgressObserver {
+        let handle: UInt64 = try readInt(&buf)
+        return try lift(handle)
+    }
+
+    public static func write(_ value: BackupProgressObserver, into buf: inout [UInt8]) {
+        writeInt(&buf, lower(value))
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeBackupProgressObserver_lift(_ handle: UInt64) throws -> BackupProgressObserver {
+    return try FfiConverterTypeBackupProgressObserver.lift(handle)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeBackupProgressObserver_lower(_ value: BackupProgressObserver) -> UInt64 {
+    return FfiConverterTypeBackupProgressObserver.lower(value)
+}
+
+
+
+
+
+
+/**
  * Receives creation progress. Called from a background thread.
  */
 public protocol CreationObserver: AnyObject, Sendable {
@@ -1231,6 +1435,727 @@ public func FfiConverterTypeAppSettings_lift(_ buf: RustBuffer) throws -> AppSet
 #endif
 public func FfiConverterTypeAppSettings_lower(_ value: AppSettings) -> RustBuffer {
     return FfiConverterTypeAppSettings.lower(value)
+}
+
+
+/**
+ * Terminal result for one due automatic backup. Not-due servers are omitted.
+ */
+public struct AutomaticBackupTickResult: Equatable, Hashable {
+    public var operationId: String
+    public var serverId: String
+    public var serverName: String
+    public var status: AutomaticBackupTickStatus
+    public var backupName: String?
+    public var catalogWarning: BackupOperationWarning?
+    public var retention: BackupRetentionReport?
+    public var retentionWarning: BackupOperationWarning?
+    public var error: String?
+    public var restartError: String?
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(operationId: String, serverId: String, serverName: String, status: AutomaticBackupTickStatus, backupName: String?, catalogWarning: BackupOperationWarning?, retention: BackupRetentionReport?, retentionWarning: BackupOperationWarning?, error: String?, restartError: String?) {
+        self.operationId = operationId
+        self.serverId = serverId
+        self.serverName = serverName
+        self.status = status
+        self.backupName = backupName
+        self.catalogWarning = catalogWarning
+        self.retention = retention
+        self.retentionWarning = retentionWarning
+        self.error = error
+        self.restartError = restartError
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension AutomaticBackupTickResult: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeAutomaticBackupTickResult: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> AutomaticBackupTickResult {
+        return
+            try AutomaticBackupTickResult(
+                operationId: FfiConverterString.read(from: &buf), 
+                serverId: FfiConverterString.read(from: &buf), 
+                serverName: FfiConverterString.read(from: &buf), 
+                status: FfiConverterTypeAutomaticBackupTickStatus.read(from: &buf), 
+                backupName: FfiConverterOptionString.read(from: &buf), 
+                catalogWarning: FfiConverterOptionTypeBackupOperationWarning.read(from: &buf), 
+                retention: FfiConverterOptionTypeBackupRetentionReport.read(from: &buf), 
+                retentionWarning: FfiConverterOptionTypeBackupOperationWarning.read(from: &buf), 
+                error: FfiConverterOptionString.read(from: &buf), 
+                restartError: FfiConverterOptionString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: AutomaticBackupTickResult, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.operationId, into: &buf)
+        FfiConverterString.write(value.serverId, into: &buf)
+        FfiConverterString.write(value.serverName, into: &buf)
+        FfiConverterTypeAutomaticBackupTickStatus.write(value.status, into: &buf)
+        FfiConverterOptionString.write(value.backupName, into: &buf)
+        FfiConverterOptionTypeBackupOperationWarning.write(value.catalogWarning, into: &buf)
+        FfiConverterOptionTypeBackupRetentionReport.write(value.retention, into: &buf)
+        FfiConverterOptionTypeBackupOperationWarning.write(value.retentionWarning, into: &buf)
+        FfiConverterOptionString.write(value.error, into: &buf)
+        FfiConverterOptionString.write(value.restartError, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeAutomaticBackupTickResult_lift(_ buf: RustBuffer) throws -> AutomaticBackupTickResult {
+    return try FfiConverterTypeAutomaticBackupTickResult.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeAutomaticBackupTickResult_lower(_ value: AutomaticBackupTickResult) -> RustBuffer {
+    return FfiConverterTypeAutomaticBackupTickResult.lower(value)
+}
+
+
+/**
+ * Inputs for a manual full backup. The Native edition always includes the
+ * whole managed server; `operation_id` also identifies progress and cancel.
+ */
+public struct BackupCreateInput: Equatable, Hashable {
+    public var operationId: String
+    public var serverId: String
+    public var backupName: String?
+    public var compressionLevel: Int64?
+    public var stopRunningServer: Bool
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(operationId: String, serverId: String, backupName: String?, compressionLevel: Int64?, stopRunningServer: Bool) {
+        self.operationId = operationId
+        self.serverId = serverId
+        self.backupName = backupName
+        self.compressionLevel = compressionLevel
+        self.stopRunningServer = stopRunningServer
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension BackupCreateInput: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeBackupCreateInput: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> BackupCreateInput {
+        return
+            try BackupCreateInput(
+                operationId: FfiConverterString.read(from: &buf), 
+                serverId: FfiConverterString.read(from: &buf), 
+                backupName: FfiConverterOptionString.read(from: &buf), 
+                compressionLevel: FfiConverterOptionInt64.read(from: &buf), 
+                stopRunningServer: FfiConverterBool.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: BackupCreateInput, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.operationId, into: &buf)
+        FfiConverterString.write(value.serverId, into: &buf)
+        FfiConverterOptionString.write(value.backupName, into: &buf)
+        FfiConverterOptionInt64.write(value.compressionLevel, into: &buf)
+        FfiConverterBool.write(value.stopRunningServer, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeBackupCreateInput_lift(_ buf: RustBuffer) throws -> BackupCreateInput {
+    return try FfiConverterTypeBackupCreateInput.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeBackupCreateInput_lower(_ value: BackupCreateInput) -> RustBuffer {
+    return FfiConverterTypeBackupCreateInput.lower(value)
+}
+
+
+/**
+ * Direct estimate based on up to five recent backup-throughput samples.
+ */
+public struct BackupEstimate: Equatable, Hashable {
+    public var sizeBytes: UInt64
+    public var durationMs: UInt64
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(sizeBytes: UInt64, durationMs: UInt64) {
+        self.sizeBytes = sizeBytes
+        self.durationMs = durationMs
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension BackupEstimate: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeBackupEstimate: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> BackupEstimate {
+        return
+            try BackupEstimate(
+                sizeBytes: FfiConverterUInt64.read(from: &buf), 
+                durationMs: FfiConverterUInt64.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: BackupEstimate, into buf: inout [UInt8]) {
+        FfiConverterUInt64.write(value.sizeBytes, into: &buf)
+        FfiConverterUInt64.write(value.durationMs, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeBackupEstimate_lift(_ buf: RustBuffer) throws -> BackupEstimate {
+    return try FfiConverterTypeBackupEstimate.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeBackupEstimate_lower(_ value: BackupEstimate) -> RustBuffer {
+    return FfiConverterTypeBackupEstimate.lower(value)
+}
+
+
+/**
+ * Shared metadata catalog used by both editions.
+ */
+public struct BackupMetadataCatalog: Equatable, Hashable {
+    public var lastBackupName: String?
+    public var latestSnapshot: [BackupSnapshotEntry]
+    public var entries: [BackupMetadataEntry]
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(lastBackupName: String?, latestSnapshot: [BackupSnapshotEntry], entries: [BackupMetadataEntry]) {
+        self.lastBackupName = lastBackupName
+        self.latestSnapshot = latestSnapshot
+        self.entries = entries
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension BackupMetadataCatalog: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeBackupMetadataCatalog: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> BackupMetadataCatalog {
+        return
+            try BackupMetadataCatalog(
+                lastBackupName: FfiConverterOptionString.read(from: &buf), 
+                latestSnapshot: FfiConverterSequenceTypeBackupSnapshotEntry.read(from: &buf), 
+                entries: FfiConverterSequenceTypeBackupMetadataEntry.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: BackupMetadataCatalog, into buf: inout [UInt8]) {
+        FfiConverterOptionString.write(value.lastBackupName, into: &buf)
+        FfiConverterSequenceTypeBackupSnapshotEntry.write(value.latestSnapshot, into: &buf)
+        FfiConverterSequenceTypeBackupMetadataEntry.write(value.entries, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeBackupMetadataCatalog_lift(_ buf: RustBuffer) throws -> BackupMetadataCatalog {
+    return try FfiConverterTypeBackupMetadataCatalog.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeBackupMetadataCatalog_lower(_ value: BackupMetadataCatalog) -> RustBuffer {
+    return FfiConverterTypeBackupMetadataCatalog.lower(value)
+}
+
+
+/**
+ * User-maintained tags and note for a single backup.
+ */
+public struct BackupMetadataEntry: Equatable, Hashable {
+    public var backupName: String
+    public var tags: [String]
+    public var note: String
+    public var createdAt: String
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(backupName: String, tags: [String], note: String, createdAt: String) {
+        self.backupName = backupName
+        self.tags = tags
+        self.note = note
+        self.createdAt = createdAt
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension BackupMetadataEntry: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeBackupMetadataEntry: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> BackupMetadataEntry {
+        return
+            try BackupMetadataEntry(
+                backupName: FfiConverterString.read(from: &buf), 
+                tags: FfiConverterSequenceString.read(from: &buf), 
+                note: FfiConverterString.read(from: &buf), 
+                createdAt: FfiConverterString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: BackupMetadataEntry, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.backupName, into: &buf)
+        FfiConverterSequenceString.write(value.tags, into: &buf)
+        FfiConverterString.write(value.note, into: &buf)
+        FfiConverterString.write(value.createdAt, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeBackupMetadataEntry_lift(_ buf: RustBuffer) throws -> BackupMetadataEntry {
+    return try FfiConverterTypeBackupMetadataEntry.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeBackupMetadataEntry_lower(_ value: BackupMetadataEntry) -> RustBuffer {
+    return FfiConverterTypeBackupMetadataEntry.lower(value)
+}
+
+
+/**
+ * Structured warning that does not invalidate an already-installed archive.
+ */
+public struct BackupOperationWarning: Equatable, Hashable {
+    public var code: String
+    public var message: String
+    public var retryable: Bool
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(code: String, message: String, retryable: Bool) {
+        self.code = code
+        self.message = message
+        self.retryable = retryable
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension BackupOperationWarning: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeBackupOperationWarning: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> BackupOperationWarning {
+        return
+            try BackupOperationWarning(
+                code: FfiConverterString.read(from: &buf), 
+                message: FfiConverterString.read(from: &buf), 
+                retryable: FfiConverterBool.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: BackupOperationWarning, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.code, into: &buf)
+        FfiConverterString.write(value.message, into: &buf)
+        FfiConverterBool.write(value.retryable, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeBackupOperationWarning_lift(_ buf: RustBuffer) throws -> BackupOperationWarning {
+    return try FfiConverterTypeBackupOperationWarning.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeBackupOperationWarning_lower(_ value: BackupOperationWarning) -> RustBuffer {
+    return FfiConverterTypeBackupOperationWarning.lower(value)
+}
+
+
+/**
+ * Native progress events use a normalized 0.0–1.0 fraction and include per-run
+ * ordering fields so parallel servers cannot overwrite each other's state.
+ */
+public struct BackupProgressEvent: Equatable, Hashable {
+    public var operationId: String
+    public var serverId: String
+    public var sequence: UInt64
+    public var emittedAtMs: UInt64
+    public var progress: Float
+    public var currentFile: String
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(operationId: String, serverId: String, sequence: UInt64, emittedAtMs: UInt64, progress: Float, currentFile: String) {
+        self.operationId = operationId
+        self.serverId = serverId
+        self.sequence = sequence
+        self.emittedAtMs = emittedAtMs
+        self.progress = progress
+        self.currentFile = currentFile
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension BackupProgressEvent: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeBackupProgressEvent: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> BackupProgressEvent {
+        return
+            try BackupProgressEvent(
+                operationId: FfiConverterString.read(from: &buf), 
+                serverId: FfiConverterString.read(from: &buf), 
+                sequence: FfiConverterUInt64.read(from: &buf), 
+                emittedAtMs: FfiConverterUInt64.read(from: &buf), 
+                progress: FfiConverterFloat.read(from: &buf), 
+                currentFile: FfiConverterString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: BackupProgressEvent, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.operationId, into: &buf)
+        FfiConverterString.write(value.serverId, into: &buf)
+        FfiConverterUInt64.write(value.sequence, into: &buf)
+        FfiConverterUInt64.write(value.emittedAtMs, into: &buf)
+        FfiConverterFloat.write(value.progress, into: &buf)
+        FfiConverterString.write(value.currentFile, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeBackupProgressEvent_lift(_ buf: RustBuffer) throws -> BackupProgressEvent {
+    return try FfiConverterTypeBackupProgressEvent.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeBackupProgressEvent_lower(_ value: BackupProgressEvent) -> RustBuffer {
+    return FfiConverterTypeBackupProgressEvent.lower(value)
+}
+
+
+/**
+ * One full backup archive and its verified manifest metadata.
+ */
+public struct BackupRecord: Equatable, Hashable {
+    /**
+     * Archive file name, for display and managed backup operations.
+     */
+    public var name: String
+    /**
+     * User metadata joined from the shared backup sidecar.
+     */
+    public var tags: [String]
+    public var note: String
+    public var backupId: String
+    public var serverId: String
+    public var archivePath: String
+    public var kind: String
+    public var consistency: String
+    public var origin: String
+    public var createdAt: String
+    public var fileCount: UInt64
+    public var totalBytes: UInt64
+    public var archiveSha256: String
+    public var manifestVersion: UInt32
+    public var restoreEligible: Bool
+    public var durationMs: UInt64?
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(
+        /**
+         * Archive file name, for display and managed backup operations.
+         */name: String, 
+        /**
+         * User metadata joined from the shared backup sidecar.
+         */tags: [String], note: String, backupId: String, serverId: String, archivePath: String, kind: String, consistency: String, origin: String, createdAt: String, fileCount: UInt64, totalBytes: UInt64, archiveSha256: String, manifestVersion: UInt32, restoreEligible: Bool, durationMs: UInt64?) {
+        self.name = name
+        self.tags = tags
+        self.note = note
+        self.backupId = backupId
+        self.serverId = serverId
+        self.archivePath = archivePath
+        self.kind = kind
+        self.consistency = consistency
+        self.origin = origin
+        self.createdAt = createdAt
+        self.fileCount = fileCount
+        self.totalBytes = totalBytes
+        self.archiveSha256 = archiveSha256
+        self.manifestVersion = manifestVersion
+        self.restoreEligible = restoreEligible
+        self.durationMs = durationMs
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension BackupRecord: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeBackupRecord: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> BackupRecord {
+        return
+            try BackupRecord(
+                name: FfiConverterString.read(from: &buf), 
+                tags: FfiConverterSequenceString.read(from: &buf), 
+                note: FfiConverterString.read(from: &buf), 
+                backupId: FfiConverterString.read(from: &buf), 
+                serverId: FfiConverterString.read(from: &buf), 
+                archivePath: FfiConverterString.read(from: &buf), 
+                kind: FfiConverterString.read(from: &buf), 
+                consistency: FfiConverterString.read(from: &buf), 
+                origin: FfiConverterString.read(from: &buf), 
+                createdAt: FfiConverterString.read(from: &buf), 
+                fileCount: FfiConverterUInt64.read(from: &buf), 
+                totalBytes: FfiConverterUInt64.read(from: &buf), 
+                archiveSha256: FfiConverterString.read(from: &buf), 
+                manifestVersion: FfiConverterUInt32.read(from: &buf), 
+                restoreEligible: FfiConverterBool.read(from: &buf), 
+                durationMs: FfiConverterOptionUInt64.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: BackupRecord, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.name, into: &buf)
+        FfiConverterSequenceString.write(value.tags, into: &buf)
+        FfiConverterString.write(value.note, into: &buf)
+        FfiConverterString.write(value.backupId, into: &buf)
+        FfiConverterString.write(value.serverId, into: &buf)
+        FfiConverterString.write(value.archivePath, into: &buf)
+        FfiConverterString.write(value.kind, into: &buf)
+        FfiConverterString.write(value.consistency, into: &buf)
+        FfiConverterString.write(value.origin, into: &buf)
+        FfiConverterString.write(value.createdAt, into: &buf)
+        FfiConverterUInt64.write(value.fileCount, into: &buf)
+        FfiConverterUInt64.write(value.totalBytes, into: &buf)
+        FfiConverterString.write(value.archiveSha256, into: &buf)
+        FfiConverterUInt32.write(value.manifestVersion, into: &buf)
+        FfiConverterBool.write(value.restoreEligible, into: &buf)
+        FfiConverterOptionUInt64.write(value.durationMs, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeBackupRecord_lift(_ buf: RustBuffer) throws -> BackupRecord {
+    return try FfiConverterTypeBackupRecord.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeBackupRecord_lower(_ value: BackupRecord) -> RustBuffer {
+    return FfiConverterTypeBackupRecord.lower(value)
+}
+
+
+public struct BackupRetentionReport: Equatable, Hashable {
+    public var deletedNames: [String]
+    public var failedDeleteCount: UInt32
+    public var records: [BackupRecord]
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(deletedNames: [String], failedDeleteCount: UInt32, records: [BackupRecord]) {
+        self.deletedNames = deletedNames
+        self.failedDeleteCount = failedDeleteCount
+        self.records = records
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension BackupRetentionReport: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeBackupRetentionReport: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> BackupRetentionReport {
+        return
+            try BackupRetentionReport(
+                deletedNames: FfiConverterSequenceString.read(from: &buf), 
+                failedDeleteCount: FfiConverterUInt32.read(from: &buf), 
+                records: FfiConverterSequenceTypeBackupRecord.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: BackupRetentionReport, into buf: inout [UInt8]) {
+        FfiConverterSequenceString.write(value.deletedNames, into: &buf)
+        FfiConverterUInt32.write(value.failedDeleteCount, into: &buf)
+        FfiConverterSequenceTypeBackupRecord.write(value.records, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeBackupRetentionReport_lift(_ buf: RustBuffer) throws -> BackupRetentionReport {
+    return try FfiConverterTypeBackupRetentionReport.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeBackupRetentionReport_lower(_ value: BackupRetentionReport) -> RustBuffer {
+    return FfiConverterTypeBackupRetentionReport.lower(value)
+}
+
+
+/**
+ * The backup list's latest managed-file snapshot, keyed by relative path.
+ */
+public struct BackupSnapshotEntry: Equatable, Hashable {
+    public var relativePath: String
+    public var size: UInt64
+    public var modified: UInt64
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(relativePath: String, size: UInt64, modified: UInt64) {
+        self.relativePath = relativePath
+        self.size = size
+        self.modified = modified
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension BackupSnapshotEntry: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeBackupSnapshotEntry: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> BackupSnapshotEntry {
+        return
+            try BackupSnapshotEntry(
+                relativePath: FfiConverterString.read(from: &buf), 
+                size: FfiConverterUInt64.read(from: &buf), 
+                modified: FfiConverterUInt64.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: BackupSnapshotEntry, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.relativePath, into: &buf)
+        FfiConverterUInt64.write(value.size, into: &buf)
+        FfiConverterUInt64.write(value.modified, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeBackupSnapshotEntry_lift(_ buf: RustBuffer) throws -> BackupSnapshotEntry {
+    return try FfiConverterTypeBackupSnapshotEntry.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeBackupSnapshotEntry_lower(_ value: BackupSnapshotEntry) -> RustBuffer {
+    return FfiConverterTypeBackupSnapshotEntry.lower(value)
 }
 
 
@@ -3370,6 +4295,227 @@ public func FfiConverterTypeAutoBackupScheduleType_lower(_ value: AutoBackupSche
 
 
 
+public enum AutomaticBackupTickStatus: Equatable, Hashable {
+    
+    case created
+    case skipped
+    case failed
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension AutomaticBackupTickStatus: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeAutomaticBackupTickStatus: FfiConverterRustBuffer {
+    typealias SwiftType = AutomaticBackupTickStatus
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> AutomaticBackupTickStatus {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .created
+        
+        case 2: return .skipped
+        
+        case 3: return .failed
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: AutomaticBackupTickStatus, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case .created:
+            writeInt(&buf, Int32(1))
+        
+        
+        case .skipped:
+            writeInt(&buf, Int32(2))
+        
+        
+        case .failed:
+            writeInt(&buf, Int32(3))
+        
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeAutomaticBackupTickStatus_lift(_ buf: RustBuffer) throws -> AutomaticBackupTickStatus {
+    return try FfiConverterTypeAutomaticBackupTickStatus.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeAutomaticBackupTickStatus_lower(_ value: AutomaticBackupTickStatus) -> RustBuffer {
+    return FfiConverterTypeAutomaticBackupTickStatus.lower(value)
+}
+
+
+
+
+public enum BackupCreateOutcome: Equatable, Hashable {
+    
+    case confirmationRequired
+    case created(backupName: String, record: BackupRecord?, catalogWarning: BackupOperationWarning?, restart: BackupRestartOutcome
+    )
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension BackupCreateOutcome: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeBackupCreateOutcome: FfiConverterRustBuffer {
+    typealias SwiftType = BackupCreateOutcome
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> BackupCreateOutcome {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .confirmationRequired
+        
+        case 2: return .created(backupName: try FfiConverterString.read(from: &buf), record: try FfiConverterOptionTypeBackupRecord.read(from: &buf), catalogWarning: try FfiConverterOptionTypeBackupOperationWarning.read(from: &buf), restart: try FfiConverterTypeBackupRestartOutcome.read(from: &buf)
+        )
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: BackupCreateOutcome, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case .confirmationRequired:
+            writeInt(&buf, Int32(1))
+        
+        
+        case let .created(backupName,record,catalogWarning,restart):
+            writeInt(&buf, Int32(2))
+            FfiConverterString.write(backupName, into: &buf)
+            FfiConverterOptionTypeBackupRecord.write(record, into: &buf)
+            FfiConverterOptionTypeBackupOperationWarning.write(catalogWarning, into: &buf)
+            FfiConverterTypeBackupRestartOutcome.write(restart, into: &buf)
+            
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeBackupCreateOutcome_lift(_ buf: RustBuffer) throws -> BackupCreateOutcome {
+    return try FfiConverterTypeBackupCreateOutcome.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeBackupCreateOutcome_lower(_ value: BackupCreateOutcome) -> RustBuffer {
+    return FfiConverterTypeBackupCreateOutcome.lower(value)
+}
+
+
+
+
+public enum BackupRestartOutcome: Equatable, Hashable {
+    
+    case notNeeded
+    case restarted
+    case failed(error: String
+    )
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension BackupRestartOutcome: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeBackupRestartOutcome: FfiConverterRustBuffer {
+    typealias SwiftType = BackupRestartOutcome
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> BackupRestartOutcome {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .notNeeded
+        
+        case 2: return .restarted
+        
+        case 3: return .failed(error: try FfiConverterString.read(from: &buf)
+        )
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: BackupRestartOutcome, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case .notNeeded:
+            writeInt(&buf, Int32(1))
+        
+        
+        case .restarted:
+            writeInt(&buf, Int32(2))
+        
+        
+        case let .failed(error):
+            writeInt(&buf, Int32(3))
+            FfiConverterString.write(error, into: &buf)
+            
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeBackupRestartOutcome_lift(_ buf: RustBuffer) throws -> BackupRestartOutcome {
+    return try FfiConverterTypeBackupRestartOutcome.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeBackupRestartOutcome_lower(_ value: BackupRestartOutcome) -> RustBuffer {
+    return FfiConverterTypeBackupRestartOutcome.lower(value)
+}
+
+
+
+
 public enum CreationStage: Equatable, Hashable {
     
     /**
@@ -4394,6 +5540,102 @@ fileprivate struct FfiConverterOptionString: FfiConverterRustBuffer {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterOptionTypeBackupEstimate: FfiConverterRustBuffer {
+    typealias SwiftType = BackupEstimate?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterTypeBackupEstimate.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterTypeBackupEstimate.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterOptionTypeBackupOperationWarning: FfiConverterRustBuffer {
+    typealias SwiftType = BackupOperationWarning?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterTypeBackupOperationWarning.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterTypeBackupOperationWarning.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterOptionTypeBackupRecord: FfiConverterRustBuffer {
+    typealias SwiftType = BackupRecord?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterTypeBackupRecord.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterTypeBackupRecord.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterOptionTypeBackupRetentionReport: FfiConverterRustBuffer {
+    typealias SwiftType = BackupRetentionReport?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterTypeBackupRetentionReport.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterTypeBackupRetentionReport.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterOptionTypeLockOwnerInfo: FfiConverterRustBuffer {
     typealias SwiftType = LockOwnerInfo?
 
@@ -4459,6 +5701,106 @@ fileprivate struct FfiConverterSequenceString: FfiConverterRustBuffer {
         seq.reserveCapacity(Int(len))
         for _ in 0 ..< len {
             seq.append(try FfiConverterString.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypeAutomaticBackupTickResult: FfiConverterRustBuffer {
+    typealias SwiftType = [AutomaticBackupTickResult]
+
+    public static func write(_ value: [AutomaticBackupTickResult], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeAutomaticBackupTickResult.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [AutomaticBackupTickResult] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [AutomaticBackupTickResult]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeAutomaticBackupTickResult.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypeBackupMetadataEntry: FfiConverterRustBuffer {
+    typealias SwiftType = [BackupMetadataEntry]
+
+    public static func write(_ value: [BackupMetadataEntry], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeBackupMetadataEntry.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [BackupMetadataEntry] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [BackupMetadataEntry]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeBackupMetadataEntry.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypeBackupRecord: FfiConverterRustBuffer {
+    typealias SwiftType = [BackupRecord]
+
+    public static func write(_ value: [BackupRecord], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeBackupRecord.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [BackupRecord] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [BackupRecord]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeBackupRecord.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypeBackupSnapshotEntry: FfiConverterRustBuffer {
+    typealias SwiftType = [BackupSnapshotEntry]
+
+    public static func write(_ value: [BackupSnapshotEntry], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeBackupSnapshotEntry.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [BackupSnapshotEntry] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [BackupSnapshotEntry]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeBackupSnapshotEntry.read(from: &buf))
         }
         return seq
     }
@@ -4747,6 +6089,23 @@ public func acceptServerEula(serverId: String)throws   {try rustCallWithError(Ff
 }
 }
 /**
+ * Applies count/day retention and reports each successful and failed deletion.
+ */
+public func applyManagedBackupRetention(serverId: String, retainCount: UInt32, retainDays: UInt32)async throws  -> BackupRetentionReport  {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_mcvector_ffi_fn_func_apply_managed_backup_retention(FfiConverterString.lower(serverId),FfiConverterUInt32.lower(retainCount),FfiConverterUInt32.lower(retainDays)
+                )
+            },
+            pollFunc: ffi_mcvector_ffi_rust_future_poll_rust_buffer,
+            completeFunc: ffi_mcvector_ffi_rust_future_complete_rust_buffer,
+            freeFunc: ffi_mcvector_ffi_rust_future_free_rust_buffer,
+            liftFunc: FfiConverterTypeBackupRetentionReport_lift,
+            errorHandler: FfiConverterTypeFfiError_lift
+        )
+}
+/**
  * Analyzes a folder the user picked (it is not copied yet). The folder path
  * stays in the core; the returned token refers to it for 30 minutes.
  */
@@ -4762,6 +6121,24 @@ public func beginServerImport(path: String)async throws  -> ImportAnalysisInfo  
             freeFunc: ffi_mcvector_ffi_rust_future_free_rust_buffer,
             liftFunc: FfiConverterTypeImportAnalysisInfo_lift,
             errorHandler: FfiConverterTypeFfiError_lift
+        )
+}
+/**
+ * Cancels an active manual or automatic backup by operation ID.
+ */
+public func cancelBackup(operationId: String)async  -> Bool  {
+    return
+        try!  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_mcvector_ffi_fn_func_cancel_backup(FfiConverterString.lower(operationId)
+                )
+            },
+            pollFunc: ffi_mcvector_ffi_rust_future_poll_i8,
+            completeFunc: ffi_mcvector_ffi_rust_future_complete_i8,
+            freeFunc: ffi_mcvector_ffi_rust_future_free_i8,
+            liftFunc: FfiConverterBool.lift,
+            errorHandler: nil
+            
         )
 }
 /**
@@ -4833,6 +6210,24 @@ public func createFileEntry(serverId: String, parent: String, name: String, isDi
         )
 }
 /**
+ * Creates a manual, full-server backup. The listener is attached before work
+ * begins; cancel by the supplied operation ID at archive checkpoints.
+ */
+public func createManagedBackup(input: BackupCreateInput, observer: BackupProgressObserver)async throws  -> BackupCreateOutcome  {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_mcvector_ffi_fn_func_create_managed_backup(FfiConverterTypeBackupCreateInput_lower(input),FfiConverterTypeBackupProgressObserver_lower(observer)
+                )
+            },
+            pollFunc: ffi_mcvector_ffi_rust_future_poll_rust_buffer,
+            completeFunc: ffi_mcvector_ffi_rust_future_complete_rust_buffer,
+            freeFunc: ffi_mcvector_ffi_rust_future_free_rust_buffer,
+            liftFunc: FfiConverterTypeBackupCreateOutcome_lift,
+            errorHandler: FfiConverterTypeFfiError_lift
+        )
+}
+/**
  * Creates a server: validates, makes its folder, downloads and verifies the
  * jar when possible, and registers it. On failure or cancellation nothing is
  * left behind.
@@ -4869,6 +6264,23 @@ public func deleteFileEntries(serverId: String, entries: [String])async throws  
         )
 }
 /**
+ * Deletes one backup archive and returns the refreshed manifest list.
+ */
+public func deleteManagedBackup(serverId: String, backupName: String)async throws  -> [BackupRecord]  {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_mcvector_ffi_fn_func_delete_managed_backup(FfiConverterString.lower(serverId),FfiConverterString.lower(backupName)
+                )
+            },
+            pollFunc: ffi_mcvector_ffi_rust_future_poll_rust_buffer,
+            completeFunc: ffi_mcvector_ffi_rust_future_complete_rust_buffer,
+            freeFunc: ffi_mcvector_ffi_rust_future_free_rust_buffer,
+            liftFunc: FfiConverterSequenceTypeBackupRecord.lift,
+            errorHandler: FfiConverterTypeFfiError_lift
+        )
+}
+/**
  * Deletes a stopped server and its managed folder. False when nothing was removed.
  */
 public func deleteServer(serverId: String)async throws  -> Bool  {
@@ -4884,6 +6296,18 @@ public func deleteServer(serverId: String)async throws  -> Bool  {
             liftFunc: FfiConverterBool.lift,
             errorHandler: FfiConverterTypeFfiError_lift
         )
+}
+/**
+ * Estimates duration from the newest usable backup throughput samples.
+ */
+public func estimateBackupDuration(targetBytes: UInt64, history: [BackupRecord]) -> BackupEstimate?  {
+    return try!  FfiConverterOptionTypeBackupEstimate.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_mcvector_ffi_fn_func_estimate_backup_duration(
+        FfiConverterUInt64.lower(targetBytes),
+        FfiConverterSequenceTypeBackupRecord.lower(history),uniffiCallStatus
+    )
+})
 }
 /**
  * The absolute path of an entry, for revealing it in Finder.
@@ -5031,6 +6455,40 @@ public func listFiles(serverId: String, relative: String)async throws  -> [FileI
         )
 }
 /**
+ * Reads and verifies the backup manifests for a registered managed server.
+ */
+public func listManagedBackups(serverId: String)async throws  -> [BackupRecord]  {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_mcvector_ffi_fn_func_list_managed_backups(FfiConverterString.lower(serverId)
+                )
+            },
+            pollFunc: ffi_mcvector_ffi_rust_future_poll_rust_buffer,
+            completeFunc: ffi_mcvector_ffi_rust_future_complete_rust_buffer,
+            freeFunc: ffi_mcvector_ffi_rust_future_free_rust_buffer,
+            liftFunc: FfiConverterSequenceTypeBackupRecord.lift,
+            errorHandler: FfiConverterTypeFfiError_lift
+        )
+}
+/**
+ * Loads tags and notes for the shared backup list.
+ */
+public func loadManagedBackupMetadata(serverId: String)async throws  -> BackupMetadataCatalog  {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_mcvector_ffi_fn_func_load_managed_backup_metadata(FfiConverterString.lower(serverId)
+                )
+            },
+            pollFunc: ffi_mcvector_ffi_rust_future_poll_rust_buffer,
+            completeFunc: ffi_mcvector_ffi_rust_future_complete_rust_buffer,
+            freeFunc: ffi_mcvector_ffi_rust_future_free_rust_buffer,
+            liftFunc: FfiConverterTypeBackupMetadataCatalog_lift,
+            errorHandler: FfiConverterTypeFfiError_lift
+        )
+}
+/**
  * Moves entries into the folder `destination` ("" is the server folder).
  * Stops at the first failure; earlier moves stay done.
  */
@@ -5108,6 +6566,42 @@ public func restartServer(serverId: String)async throws   {
         try  await uniffiRustCallAsync(
             rustFutureFunc: {
                 uniffi_mcvector_ffi_fn_func_restart_server(FfiConverterString.lower(serverId)
+                )
+            },
+            pollFunc: ffi_mcvector_ffi_rust_future_poll_void,
+            completeFunc: ffi_mcvector_ffi_rust_future_complete_void,
+            freeFunc: ffi_mcvector_ffi_rust_future_free_void,
+            liftFunc: { $0 },
+            errorHandler: FfiConverterTypeFfiError_lift
+        )
+}
+/**
+ * Restores one validated archive into a stopped, registered server folder.
+ */
+public func restoreManagedBackup(serverId: String, backupName: String)async throws   {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_mcvector_ffi_fn_func_restore_managed_backup(FfiConverterString.lower(serverId),FfiConverterString.lower(backupName)
+                )
+            },
+            pollFunc: ffi_mcvector_ffi_rust_future_poll_void,
+            completeFunc: ffi_mcvector_ffi_rust_future_complete_void,
+            freeFunc: ffi_mcvector_ffi_rust_future_free_void,
+            liftFunc: { $0 },
+            errorHandler: FfiConverterTypeFfiError_lift
+        )
+}
+/**
+ * Restores one validated archive and streams progress through the Native API.
+ * Restore intentionally has no cancellation token: the shared core keeps the
+ * existing transaction and rollback boundary intact.
+ */
+public func restoreManagedBackupWithProgress(serverId: String, backupName: String, operationId: String, observer: BackupProgressObserver)async throws   {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_mcvector_ffi_fn_func_restore_managed_backup_with_progress(FfiConverterString.lower(serverId),FfiConverterString.lower(backupName),FfiConverterString.lower(operationId),FfiConverterTypeBackupProgressObserver_lower(observer)
                 )
             },
             pollFunc: ffi_mcvector_ffi_rust_future_poll_void,
@@ -5252,6 +6746,23 @@ public func setLocale(locale: String)throws   {try rustCallWithError(FfiConverte
     )
 }
 }
+/**
+ * Saves tags and a note while preserving the other metadata catalog entries.
+ */
+public func setManagedBackupTags(serverId: String, backupName: String, tags: [String], note: String)async throws  -> BackupMetadataCatalog  {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_mcvector_ffi_fn_func_set_managed_backup_tags(FfiConverterString.lower(serverId),FfiConverterString.lower(backupName),FfiConverterSequenceString.lower(tags),FfiConverterString.lower(note)
+                )
+            },
+            pollFunc: ffi_mcvector_ffi_rust_future_poll_rust_buffer,
+            completeFunc: ffi_mcvector_ffi_rust_future_complete_rust_buffer,
+            freeFunc: ffi_mcvector_ffi_rust_future_free_rust_buffer,
+            liftFunc: FfiConverterTypeBackupMetadataCatalog_lift,
+            errorHandler: FfiConverterTypeFfiError_lift
+        )
+}
 public func setUpdateChannel(channel: String)throws   {try rustCallWithError(FfiConverterTypeFfiError_lift) {
         uniffiCallStatus in
     uniffi_mcvector_ffi_fn_func_set_update_channel(
@@ -5353,6 +6864,23 @@ public func subscribeServerEvents(observer: ServerEventObserver)  {try! rustCall
 }
 }
 /**
+ * Runs one Native-owned scheduler tick. Call from the app's one-minute timer.
+ */
+public func tickAutomaticBackups(observer: BackupProgressObserver)async throws  -> [AutomaticBackupTickResult]  {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_mcvector_ffi_fn_func_tick_automatic_backups(FfiConverterTypeBackupProgressObserver_lower(observer)
+                )
+            },
+            pollFunc: ffi_mcvector_ffi_rust_future_poll_rust_buffer,
+            completeFunc: ffi_mcvector_ffi_rust_future_complete_rust_buffer,
+            freeFunc: ffi_mcvector_ffi_rust_future_free_rust_buffer,
+            liftFunc: FfiConverterSequenceTypeAutomaticBackupTickResult.lift,
+            errorHandler: FfiConverterTypeFfiError_lift
+        )
+}
+/**
  * Saves the typed general settings for one registered server.
  */
 public func updateServerSettings(serverId: String, settings: ServerSettingsUpdate)async throws  -> ServerSettingsSaveResult  {
@@ -5405,7 +6933,13 @@ private let initializationResult: InitializationResult = {
     if (uniffi_mcvector_ffi_checksum_func_accept_server_eula() != 47316) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_mcvector_ffi_checksum_func_apply_managed_backup_retention() != 29686) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_mcvector_ffi_checksum_func_begin_server_import() != 47583) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mcvector_ffi_checksum_func_cancel_backup() != 7787) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_mcvector_ffi_checksum_func_cancel_server_creation() != 36497) {
@@ -5423,13 +6957,22 @@ private let initializationResult: InitializationResult = {
     if (uniffi_mcvector_ffi_checksum_func_create_file_entry() != 9895) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_mcvector_ffi_checksum_func_create_managed_backup() != 18) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_mcvector_ffi_checksum_func_create_server() != 60091) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_mcvector_ffi_checksum_func_delete_file_entries() != 5432) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_mcvector_ffi_checksum_func_delete_managed_backup() != 58939) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_mcvector_ffi_checksum_func_delete_server() != 34295) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mcvector_ffi_checksum_func_estimate_backup_duration() != 39741) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_mcvector_ffi_checksum_func_file_entry_path() != 61501) {
@@ -5462,6 +7005,12 @@ private let initializationResult: InitializationResult = {
     if (uniffi_mcvector_ffi_checksum_func_list_files() != 1923) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_mcvector_ffi_checksum_func_list_managed_backups() != 36776) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mcvector_ffi_checksum_func_load_managed_backup_metadata() != 13075) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_mcvector_ffi_checksum_func_move_file_entries() != 10227) {
         return InitializationResult.apiChecksumMismatch
     }
@@ -5475,6 +7024,12 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_mcvector_ffi_checksum_func_restart_server() != 44786) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mcvector_ffi_checksum_func_restore_managed_backup() != 11493) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mcvector_ffi_checksum_func_restore_managed_backup_with_progress() != 34593) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_mcvector_ffi_checksum_func_running_server_ids() != 55894) {
@@ -5507,6 +7062,9 @@ private let initializationResult: InitializationResult = {
     if (uniffi_mcvector_ffi_checksum_func_set_locale() != 8629) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_mcvector_ffi_checksum_func_set_managed_backup_tags() != 40873) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_mcvector_ffi_checksum_func_set_update_channel() != 30965) {
         return InitializationResult.apiChecksumMismatch
     }
@@ -5528,10 +7086,16 @@ private let initializationResult: InitializationResult = {
     if (uniffi_mcvector_ffi_checksum_func_subscribe_server_events() != 5267) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_mcvector_ffi_checksum_func_tick_automatic_backups() != 36330) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_mcvector_ffi_checksum_func_update_server_settings() != 33549) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_mcvector_ffi_checksum_func_write_text_document() != 40172) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mcvector_ffi_checksum_method_backupprogressobserver_on_progress() != 4035) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_mcvector_ffi_checksum_method_creationobserver_on_stage() != 37456) {
@@ -5550,6 +7114,7 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
 
+    uniffiCallbackInitBackupProgressObserver()
     uniffiCallbackInitCreationObserver()
     uniffiCallbackInitServerEventObserver()
     return InitializationResult.ok

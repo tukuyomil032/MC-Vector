@@ -166,7 +166,7 @@ public enum CoreClient {
 
     /// UniFFI work is kept away from the caller's executor, including async
     /// bindings whose synchronous entry work can access files or locks.
-    private static func detachedCall<T: Sendable>(
+    static func detachedCall<T: Sendable>(
         _ work: @escaping @Sendable () async throws -> T
     ) async throws(CoreError) -> T {
         let result: Result<T, CoreError> = await Task.detached(priority: .userInitiated) {

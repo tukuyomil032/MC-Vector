@@ -9,9 +9,16 @@
 //! process-wide state, and every other function reads that state.
 
 use std::collections::HashMap;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Arc, LazyLock, Mutex, RwLock};
+use std::time::{SystemTime, UNIX_EPOCH};
 
+use mcvector_core::backups::{
+    self, auto as auto_backups, BackupOrigin as CoreBackupOrigin, BackupRecord as CoreBackupRecord,
+    BackupRetentionReport as CoreBackupRetentionReport,
+    CreateBackupRequest as CoreCreateBackupRequest,
+};
 use mcvector_core::console_line;
 use mcvector_core::download::CancelFlag;
 use mcvector_core::error::{CoreError, CoreErrorCode};
@@ -19,7 +26,9 @@ use mcvector_core::eula::{self, EULA_REQUIRED_ERROR};
 use mcvector_core::instance_lock::{self, InstanceLock, LockOutcome, LockOwner};
 use mcvector_core::lifecycle;
 use mcvector_core::managed_files::{self, FilesErrorKind};
-use mcvector_core::managed_path::{resolve_managed_request, ManagedPathRequest, ManagedRoot};
+use mcvector_core::managed_path::{
+    resolve_managed_request, validate_server_id, ManagedPathRequest, ManagedRoot,
+};
 use mcvector_core::metric_history::MetricHistorySnapshot;
 use mcvector_core::operations::OperationKind;
 use mcvector_core::operations::ServerOperationManager;
@@ -994,14 +1003,16 @@ pub fn cancel_server_import(token: String) {
 /// Running servers of this process.
 static SERVERS: LazyLock<ServerManager> = LazyLock::new(|| {
     let manager = ServerManager::default();
-    // The Native edition has no automation service yet (auto-restart and
-    // auto-backup arrive with backups), so nothing reads the private status
-    // channel: drop its receiver instead of letting events queue up.
+    // Native does not consume the private status channel yet, so drop its
+    // receiver instead of letting events queue up.
     drop(manager.take_status_receiver());
     manager
 });
 static LIMITER: LazyLock<CommandLimiter> = LazyLock::new(CommandLimiter::default);
+static AUTO_BACKUPS: LazyLock<auto_backups::AutoBackupManager> =
+    LazyLock::new(auto_backups::AutoBackupManager::default);
 static OBSERVER: RwLock<Option<Arc<dyn ServerEventObserver>>> = RwLock::new(None);
+static BACKUP_CANCELLATIONS: Mutex<Option<HashMap<String, Arc<AtomicBool>>>> = Mutex::new(None);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, uniffi::Enum)]
 pub enum ServerRunStatus {
@@ -1271,6 +1282,7 @@ pub async fn running_server_ids() -> Vec<String> {
 /// Stops every running server (force-killing stragglers), for quitting.
 #[uniffi::export(async_runtime = "tokio")]
 pub async fn shutdown_all_servers() -> Result<(), FfiError> {
+    AUTO_BACKUPS.shutdown().await;
     SERVERS
         .shutdown_all()
         .await
@@ -1571,6 +1583,889 @@ pub async fn mutate_player_list(
     .await
     .map(Into::into)
     .map_err(|error| player_list_error(error, &data_dir))
+}
+
+// ---------------------------------------------------------------------------
+// Backups (OP-BACK-001..005, EVT-006)
+
+/// One full backup archive and its verified manifest metadata.
+#[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
+pub struct BackupRecord {
+    /// Archive file name, for display and managed backup operations.
+    pub name: String,
+    /// User metadata joined from the shared backup sidecar.
+    pub tags: Vec<String>,
+    pub note: String,
+    pub backup_id: String,
+    pub server_id: String,
+    pub archive_path: String,
+    pub kind: String,
+    pub consistency: String,
+    pub origin: String,
+    pub created_at: String,
+    pub file_count: u64,
+    pub total_bytes: u64,
+    pub archive_sha256: String,
+    pub manifest_version: u32,
+    pub restore_eligible: bool,
+    pub duration_ms: Option<u64>,
+}
+
+impl From<CoreBackupRecord> for BackupRecord {
+    fn from(record: CoreBackupRecord) -> Self {
+        Self {
+            name: record.archive_path.clone(),
+            tags: Vec::new(),
+            note: String::new(),
+            backup_id: record.backup_id,
+            server_id: record.server_id,
+            archive_path: record.archive_path,
+            kind: record.kind,
+            consistency: record.consistency,
+            origin: record.origin,
+            created_at: record.created_at,
+            file_count: record.file_count,
+            total_bytes: record.total_bytes,
+            archive_sha256: record.archive_sha256,
+            manifest_version: record.manifest_version,
+            restore_eligible: record.restore_eligible,
+            duration_ms: record.duration_ms,
+        }
+    }
+}
+
+fn attach_backup_metadata(records: &mut [BackupRecord], metadata: &backups::BackupMetadataCatalog) {
+    for record in records {
+        if let Some(entry) = metadata.entries.get(&record.name) {
+            record.tags.clone_from(&entry.tags);
+            record.note.clone_from(&entry.note);
+        }
+    }
+}
+
+fn backup_records_with_metadata(
+    records: Vec<CoreBackupRecord>,
+    metadata: &backups::BackupMetadataCatalog,
+) -> Vec<BackupRecord> {
+    let mut records = records.into_iter().map(Into::into).collect::<Vec<_>>();
+    attach_backup_metadata(&mut records, metadata);
+    records
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
+pub struct BackupRetentionReport {
+    pub deleted_names: Vec<String>,
+    pub failed_delete_count: u32,
+    pub records: Vec<BackupRecord>,
+}
+
+impl From<CoreBackupRetentionReport> for BackupRetentionReport {
+    fn from(report: CoreBackupRetentionReport) -> Self {
+        Self {
+            deleted_names: report.deleted_names,
+            failed_delete_count: report.failed_delete_count,
+            records: report.records.into_iter().map(Into::into).collect(),
+        }
+    }
+}
+
+/// The backup list's latest managed-file snapshot, keyed by relative path.
+#[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
+pub struct BackupSnapshotEntry {
+    pub relative_path: String,
+    pub size: u64,
+    pub modified: u64,
+}
+
+/// User-maintained tags and note for a single backup.
+#[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
+pub struct BackupMetadataEntry {
+    pub backup_name: String,
+    pub tags: Vec<String>,
+    pub note: String,
+    pub created_at: String,
+}
+
+/// Shared metadata catalog used by both editions.
+#[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
+pub struct BackupMetadataCatalog {
+    pub last_backup_name: Option<String>,
+    pub latest_snapshot: Vec<BackupSnapshotEntry>,
+    pub entries: Vec<BackupMetadataEntry>,
+}
+
+impl From<backups::BackupMetadataCatalog> for BackupMetadataCatalog {
+    fn from(catalog: backups::BackupMetadataCatalog) -> Self {
+        Self {
+            last_backup_name: catalog.last_backup_name,
+            latest_snapshot: catalog
+                .latest_snapshot
+                .into_iter()
+                .map(|(relative_path, entry)| BackupSnapshotEntry {
+                    relative_path,
+                    size: entry.size,
+                    modified: entry.modified,
+                })
+                .collect(),
+            entries: catalog
+                .entries
+                .into_iter()
+                .map(|(backup_name, entry)| BackupMetadataEntry {
+                    backup_name,
+                    tags: entry.tags,
+                    note: entry.note,
+                    created_at: entry.created_at,
+                })
+                .collect(),
+        }
+    }
+}
+
+/// Structured warning that does not invalidate an already-installed archive.
+#[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
+pub struct BackupOperationWarning {
+    pub code: String,
+    pub message: String,
+    pub retryable: bool,
+}
+
+impl From<CoreError> for BackupOperationWarning {
+    fn from(error: CoreError) -> Self {
+        Self {
+            code: error.code.as_str().to_string(),
+            message: error.message,
+            retryable: error.retryable,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, uniffi::Enum)]
+pub enum BackupRestartOutcome {
+    NotNeeded,
+    Restarted,
+    Failed { error: String },
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, uniffi::Enum)]
+pub enum BackupCreateOutcome {
+    ConfirmationRequired,
+    Created {
+        backup_name: String,
+        record: Option<BackupRecord>,
+        catalog_warning: Option<BackupOperationWarning>,
+        restart: BackupRestartOutcome,
+    },
+}
+
+/// Inputs for a manual full backup. The Native edition always includes the
+/// whole managed server; `operation_id` also identifies progress and cancel.
+#[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
+pub struct BackupCreateInput {
+    pub operation_id: String,
+    pub server_id: String,
+    pub backup_name: Option<String>,
+    pub compression_level: Option<i64>,
+    pub stop_running_server: bool,
+}
+
+/// Native progress events use a normalized 0.0–1.0 fraction and include per-run
+/// ordering fields so parallel servers cannot overwrite each other's state.
+#[derive(Debug, Clone, PartialEq, uniffi::Record)]
+pub struct BackupProgressEvent {
+    pub operation_id: String,
+    pub server_id: String,
+    pub sequence: u64,
+    pub emitted_at_ms: u64,
+    pub progress: f32,
+    pub current_file: String,
+}
+
+/// Receives progress for manual and automatic backup creation.
+#[uniffi::export(with_foreign)]
+pub trait BackupProgressObserver: Send + Sync {
+    fn on_progress(&self, event: BackupProgressEvent);
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, uniffi::Enum)]
+pub enum AutomaticBackupTickStatus {
+    Created,
+    Skipped,
+    Failed,
+}
+
+/// Terminal result for one due automatic backup. Not-due servers are omitted.
+#[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
+pub struct AutomaticBackupTickResult {
+    pub operation_id: String,
+    pub server_id: String,
+    pub server_name: String,
+    pub status: AutomaticBackupTickStatus,
+    pub backup_name: Option<String>,
+    pub catalog_warning: Option<BackupOperationWarning>,
+    pub retention: Option<BackupRetentionReport>,
+    pub retention_warning: Option<BackupOperationWarning>,
+    pub error: Option<String>,
+    pub restart_error: Option<String>,
+}
+
+/// Direct estimate based on up to five recent backup-throughput samples.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, uniffi::Record)]
+pub struct BackupEstimate {
+    pub size_bytes: u64,
+    pub duration_ms: u64,
+}
+
+fn backup_core_error(error: CoreError, data_dir: &Path) -> FfiError {
+    FfiError::from(CoreError {
+        message: redact(&error.message, data_dir),
+        ..error
+    })
+}
+
+fn normalize_backup_server_id(server_id: &str, data_dir: &Path) -> Result<String, FfiError> {
+    validate_server_id(server_id)
+        .map_err(|error| core_error(CoreErrorCode::ServerInvalidName, redact(&error, data_dir)))
+}
+
+fn backup_paths_error(error: String, data_dir: &Path) -> FfiError {
+    core_error(
+        CoreErrorCode::ServerOperationFailed,
+        redact(&error, data_dir),
+    )
+}
+
+/// Confirms the registry entry still points at its canonical managed folder,
+/// then resolves both operation paths through the shared backup boundary.
+async fn registered_backup_paths(
+    data_dir: PathBuf,
+    registry: ServerRegistry,
+    server_id: String,
+    create_backup_dir: bool,
+) -> Result<backups::ManagedBackupPaths, FfiError> {
+    let server_id = validate_server_id(&server_id).map_err(|error| {
+        core_error(
+            CoreErrorCode::ServerInvalidRequest,
+            redact(&error, &data_dir),
+        )
+    })?;
+    let data_for_work = data_dir.clone();
+    tokio::task::spawn_blocking(move || {
+        let server = registry
+            .get_servers()
+            .map_err(|error| core_error(CoreErrorCode::RegistryReadFailed, error))?
+            .into_iter()
+            .find(|server| server.id == server_id)
+            .ok_or_else(|| {
+                core_error(
+                    CoreErrorCode::ServerNotFound,
+                    "The registered server could not be found.",
+                )
+            })?;
+        let paths = backups::resolve_managed_paths(&data_for_work, &server_id, create_backup_dir)
+            .map_err(|error| backup_core_error(error, &data_for_work))?;
+        let canonical_root = std::fs::canonicalize(&paths.server_dir).map_err(|_| {
+            core_error(
+                CoreErrorCode::ServerUnmanaged,
+                "The server folder is unmanaged.",
+            )
+        })?;
+        let canonical_registered = std::fs::canonicalize(&server.path).map_err(|_| {
+            core_error(
+                CoreErrorCode::ServerUnmanaged,
+                "The server folder is unmanaged.",
+            )
+        })?;
+        if canonical_root != canonical_registered {
+            return Err(core_error(
+                CoreErrorCode::ServerUnmanaged,
+                "The registered server folder is outside its managed location.",
+            ));
+        }
+        Ok(paths)
+    })
+    .await
+    .map_err(|_| {
+        core_error(
+            CoreErrorCode::InternalUnknown,
+            "Could not resolve the server folder.",
+        )
+    })?
+}
+
+fn with_backup_cancellations<T>(
+    update: impl FnOnce(&mut HashMap<String, Arc<AtomicBool>>) -> T,
+) -> T {
+    let mut cancellations = BACKUP_CANCELLATIONS
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner());
+    update(cancellations.get_or_insert_with(HashMap::new))
+}
+
+fn emitted_at_ms() -> u64 {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|duration| duration.as_millis().min(u64::MAX as u128) as u64)
+        .unwrap_or(0)
+}
+
+fn backup_progress_event(
+    operation_id: String,
+    server_id: String,
+    sequence: u64,
+    fraction: f32,
+    current_file: String,
+) -> BackupProgressEvent {
+    BackupProgressEvent {
+        operation_id,
+        server_id,
+        sequence,
+        emitted_at_ms: emitted_at_ms(),
+        progress: fraction.clamp(0.0, 1.0),
+        current_file,
+    }
+}
+
+impl From<auto_backups::AutoBackupTickResult> for AutomaticBackupTickResult {
+    fn from(result: auto_backups::AutoBackupTickResult) -> Self {
+        let status = match result.status {
+            auto_backups::AutoBackupTickStatus::Created => AutomaticBackupTickStatus::Created,
+            auto_backups::AutoBackupTickStatus::Skipped => AutomaticBackupTickStatus::Skipped,
+            auto_backups::AutoBackupTickStatus::Failed => AutomaticBackupTickStatus::Failed,
+        };
+        Self {
+            operation_id: result.operation_id,
+            server_id: result.server_id,
+            server_name: result.server_name,
+            status,
+            backup_name: result.backup_name,
+            catalog_warning: result.catalog_error.map(|message| BackupOperationWarning {
+                code: "backup.catalog_failed".to_string(),
+                message,
+                retryable: true,
+            }),
+            retention: result.retention.map(Into::into),
+            retention_warning: result
+                .retention_error
+                .map(|message| BackupOperationWarning {
+                    code: "backup.catalog_failed".to_string(),
+                    message,
+                    retryable: true,
+                }),
+            error: result.error,
+            restart_error: result.restart_error,
+        }
+    }
+}
+
+/// Reads and verifies the backup manifests for a registered managed server.
+#[uniffi::export(async_runtime = "tokio")]
+pub async fn list_managed_backups(server_id: String) -> Result<Vec<BackupRecord>, FfiError> {
+    let (data_dir, registry, operations) = session_handles()?;
+    let server_id = normalize_backup_server_id(&server_id, &data_dir)?;
+    let paths =
+        registered_backup_paths(data_dir.clone(), registry, server_id.clone(), true).await?;
+    let operation =
+        backups::acquire_operation(&operations, &server_id, OperationKind::BackupCreate)
+            .await
+            .map_err(|error| backup_core_error(error, &data_dir))?;
+    blocking(move || {
+        let _operation = operation;
+        let records = backups::list_backups(&paths.backup_dir, &server_id)
+            .map_err(|error| backup_core_error(error, &data_dir))?;
+        let metadata = backups::load_backup_metadata(&paths.backup_dir)
+            .map_err(|error| backup_core_error(error, &data_dir))?;
+        Ok(backup_records_with_metadata(records, &metadata))
+    })
+    .await
+}
+
+/// Creates a manual, full-server backup. The listener is attached before work
+/// begins; cancel by the supplied operation ID at archive checkpoints.
+#[uniffi::export(async_runtime = "tokio")]
+pub async fn create_managed_backup(
+    input: BackupCreateInput,
+    observer: Arc<dyn BackupProgressObserver>,
+) -> Result<BackupCreateOutcome, FfiError> {
+    let (data_dir, registry, operations) = session_handles()?;
+    let operation_id = server_creation::validate_operation_id(&input.operation_id)
+        .map_err(|error| backup_core_error(error, &data_dir))?;
+    let server_id = validate_server_id(&input.server_id).map_err(|error| {
+        core_error(
+            CoreErrorCode::ServerInvalidRequest,
+            redact(&error, &data_dir),
+        )
+    })?;
+    let cancellation = Arc::new(AtomicBool::new(false));
+    let registered = with_backup_cancellations(|operations| {
+        if operations.contains_key(&operation_id) {
+            false
+        } else {
+            operations.insert(operation_id.clone(), cancellation.clone());
+            true
+        }
+    });
+    if !registered {
+        return Err(core_error(
+            CoreErrorCode::ServerInvalidRequest,
+            "Backup operation ID is already in use.",
+        ));
+    }
+
+    let result = create_managed_backup_inner(
+        data_dir.clone(),
+        registry,
+        operations,
+        server_id,
+        input,
+        operation_id.clone(),
+        cancellation,
+        observer,
+    )
+    .await;
+    with_backup_cancellations(|operations| operations.remove(&operation_id));
+    result
+}
+
+#[allow(clippy::too_many_arguments)]
+async fn create_managed_backup_inner(
+    data_dir: PathBuf,
+    registry: ServerRegistry,
+    operations: ServerOperationManager,
+    server_id: String,
+    input: BackupCreateInput,
+    operation_id: String,
+    cancellation: Arc<AtomicBool>,
+    observer: Arc<dyn BackupProgressObserver>,
+) -> Result<BackupCreateOutcome, FfiError> {
+    let paths =
+        registered_backup_paths(data_dir.clone(), registry.clone(), server_id.clone(), true)
+            .await?;
+    let operation =
+        backups::acquire_operation(&operations, &server_id, OperationKind::BackupCreate)
+            .await
+            .map_err(|error| backup_core_error(error, &data_dir))?;
+    if cancellation.load(Ordering::SeqCst) {
+        return Err(CoreError::cancelled().into());
+    }
+    let server_was_running = SERVERS.is_server_running(&server_id).await;
+    if server_was_running && !input.stop_running_server {
+        drop(operation);
+        return Ok(BackupCreateOutcome::ConfirmationRequired);
+    }
+    if server_was_running {
+        if let Err(error) =
+            server_process::stop_server_with_guard_recovery(&SERVERS, &server_id, None).await
+        {
+            if error.recovery_state == server_process::StopErrorRecoveryState::Stopped {
+                if let Err(restart_error) = server_process::start_registered_server_with_guard(
+                    server_context(data_dir.clone()),
+                    &SERVERS,
+                    &LIMITER,
+                    &operations,
+                    &registry,
+                    server_id.clone(),
+                    operation,
+                )
+                .await
+                {
+                    return Err(core_error(
+                        CoreErrorCode::ServerOperationFailed,
+                        format!(
+                            "{} The server could not be restarted: {}",
+                            error.message,
+                            redact(&restart_error, &data_dir)
+                        ),
+                    ));
+                }
+            } else {
+                drop(operation);
+            }
+            return Err(core_error(
+                CoreErrorCode::ServerOperationFailed,
+                redact(&error.message, &data_dir),
+            ));
+        }
+    }
+
+    let progress_sequence = Arc::new(AtomicU64::new(0));
+    let sequence_for_work = progress_sequence.clone();
+    let operation_for_work = operation_id.clone();
+    let server_for_work = server_id.clone();
+    let server_for_request = server_for_work.clone();
+    let observer_for_work = observer.clone();
+    let cancellation_for_work = cancellation.clone();
+    let backup_name = input.backup_name;
+    let compression_level = input.compression_level;
+    let archive_result = tokio::task::spawn_blocking(move || {
+        let mut progress = |event: backups::BackupProgress| {
+            observer_for_work.on_progress(backup_progress_event(
+                operation_for_work.clone(),
+                server_for_work.clone(),
+                sequence_for_work.fetch_add(1, Ordering::SeqCst) + 1,
+                event.fraction,
+                event.current_file,
+            ));
+        };
+        backups::create_backup(
+            &paths.server_dir,
+            &paths.backup_dir,
+            CoreCreateBackupRequest {
+                server_id: server_for_request,
+                backup_name,
+                sources: None,
+                compression_level,
+                origin: CoreBackupOrigin::Manual,
+            },
+            Some(&cancellation_for_work),
+            &mut progress,
+        )
+    })
+    .await
+    .unwrap_or_else(|_| {
+        Err(CoreError::internal(
+            "The backup worker stopped unexpectedly.",
+        ))
+    });
+
+    let restart = if server_was_running {
+        match server_process::start_registered_server_with_guard(
+            server_context(data_dir.clone()),
+            &SERVERS,
+            &LIMITER,
+            &operations,
+            &registry,
+            server_id,
+            operation,
+        )
+        .await
+        {
+            Ok(()) => BackupRestartOutcome::Restarted,
+            Err(error) => BackupRestartOutcome::Failed {
+                error: redact(&error, &data_dir),
+            },
+        }
+    } else {
+        drop(operation);
+        BackupRestartOutcome::NotNeeded
+    };
+
+    match archive_result {
+        Ok(created) => Ok(BackupCreateOutcome::Created {
+            backup_name: created.backup_name,
+            record: created.record.map(Into::into),
+            catalog_warning: created.catalog_error.map(|error| BackupOperationWarning {
+                code: error.code.as_str().to_string(),
+                message: redact(&error.message, &data_dir),
+                retryable: error.retryable,
+            }),
+            restart,
+        }),
+        Err(mut error) => {
+            if let BackupRestartOutcome::Failed {
+                error: restart_error,
+            } = &restart
+            {
+                error.message = format!(
+                    "{} The server could not be restarted: {restart_error}",
+                    error.message
+                );
+            }
+            Err(backup_core_error(error, &data_dir))
+        }
+    }
+}
+
+/// Cancels an active manual or automatic backup by operation ID.
+#[uniffi::export(async_runtime = "tokio")]
+pub async fn cancel_backup(operation_id: String) -> bool {
+    let Ok(operation_id) = server_creation::validate_operation_id(&operation_id) else {
+        return false;
+    };
+    if let Some(cancellation) =
+        with_backup_cancellations(|operations| operations.get(&operation_id).cloned())
+    {
+        cancellation.store(true, Ordering::SeqCst);
+        return true;
+    }
+    AUTO_BACKUPS.cancel(&operation_id).await
+}
+
+/// Restores one validated archive into a stopped, registered server folder.
+#[uniffi::export(async_runtime = "tokio")]
+pub async fn restore_managed_backup(
+    server_id: String,
+    backup_name: String,
+) -> Result<(), FfiError> {
+    let (data_dir, registry, operations) = session_handles()?;
+    let server_id = normalize_backup_server_id(&server_id, &data_dir)?;
+    let paths =
+        registered_backup_paths(data_dir.clone(), registry, server_id.clone(), true).await?;
+    let operation =
+        backups::acquire_operation(&operations, &server_id, OperationKind::BackupRestore)
+            .await
+            .map_err(|error| backup_core_error(error, &data_dir))?;
+    if SERVERS.is_server_running(&server_id).await {
+        return Err(core_error(
+            CoreErrorCode::ServerRunning,
+            "Stop the server before restoring a backup.",
+        ));
+    }
+    let archive = resolve_managed_request(
+        &data_dir,
+        &ManagedPathRequest {
+            root: ManagedRoot::Backups,
+            server_id: Some(server_id.clone()),
+            relative_path: backup_name,
+        },
+        true,
+    )
+    .map_err(|error| backup_paths_error(error, &data_dir))?;
+    blocking(move || {
+        let _operation = operation;
+        backups::restore_backup(&archive, &paths.server_dir, &server_id)
+            .map_err(|error| backup_core_error(error, &data_dir))
+    })
+    .await
+}
+
+/// Restores one validated archive and streams progress through the Native API.
+/// Restore intentionally has no cancellation token: the shared core keeps the
+/// existing transaction and rollback boundary intact.
+#[uniffi::export(async_runtime = "tokio")]
+pub async fn restore_managed_backup_with_progress(
+    server_id: String,
+    backup_name: String,
+    operation_id: String,
+    observer: Arc<dyn BackupProgressObserver>,
+) -> Result<(), FfiError> {
+    let (data_dir, registry, operations) = session_handles()?;
+    let operation_id = server_creation::validate_operation_id(&operation_id)
+        .map_err(|error| backup_core_error(error, &data_dir))?;
+    let server_id = normalize_backup_server_id(&server_id, &data_dir)?;
+    let paths =
+        registered_backup_paths(data_dir.clone(), registry, server_id.clone(), true).await?;
+    let operation =
+        backups::acquire_operation(&operations, &server_id, OperationKind::BackupRestore)
+            .await
+            .map_err(|error| backup_core_error(error, &data_dir))?;
+    if SERVERS.is_server_running(&server_id).await {
+        return Err(core_error(
+            CoreErrorCode::ServerRunning,
+            "Stop the server before restoring a backup.",
+        ));
+    }
+    let archive = resolve_managed_request(
+        &data_dir,
+        &ManagedPathRequest {
+            root: ManagedRoot::Backups,
+            server_id: Some(server_id.clone()),
+            relative_path: backup_name,
+        },
+        true,
+    )
+    .map_err(|error| backup_paths_error(error, &data_dir))?;
+    let progress_sequence = Arc::new(AtomicU64::new(0));
+    blocking(move || {
+        let _operation = operation;
+        let mut progress = |event: backups::BackupProgress| {
+            observer.on_progress(backup_progress_event(
+                operation_id.clone(),
+                server_id.clone(),
+                progress_sequence.fetch_add(1, Ordering::SeqCst) + 1,
+                event.fraction,
+                event.current_file,
+            ));
+        };
+        backups::restore_backup_with_progress(
+            &archive,
+            &paths.server_dir,
+            &server_id,
+            &mut progress,
+        )
+        .map_err(|error| backup_core_error(error, &data_dir))
+    })
+    .await
+}
+
+/// Deletes one backup archive and returns the refreshed manifest list.
+#[uniffi::export(async_runtime = "tokio")]
+pub async fn delete_managed_backup(
+    server_id: String,
+    backup_name: String,
+) -> Result<Vec<BackupRecord>, FfiError> {
+    let (data_dir, registry, operations) = session_handles()?;
+    let server_id = normalize_backup_server_id(&server_id, &data_dir)?;
+    let paths =
+        registered_backup_paths(data_dir.clone(), registry, server_id.clone(), true).await?;
+    let operation =
+        backups::acquire_operation(&operations, &server_id, OperationKind::BackupDelete)
+            .await
+            .map_err(|error| backup_core_error(error, &data_dir))?;
+    blocking(move || {
+        let _operation = operation;
+        let records = backups::delete_backup(&paths.backup_dir, &server_id, &backup_name)
+            .map_err(|error| backup_core_error(error, &data_dir))?;
+        let metadata = backups::load_backup_metadata(&paths.backup_dir)
+            .map_err(|error| backup_core_error(error, &data_dir))?;
+        Ok(backup_records_with_metadata(records, &metadata))
+    })
+    .await
+}
+
+/// Applies count/day retention and reports each successful and failed deletion.
+#[uniffi::export(async_runtime = "tokio")]
+pub async fn apply_managed_backup_retention(
+    server_id: String,
+    retain_count: u32,
+    retain_days: u32,
+) -> Result<BackupRetentionReport, FfiError> {
+    let (data_dir, registry, operations) = session_handles()?;
+    let server_id = normalize_backup_server_id(&server_id, &data_dir)?;
+    let paths =
+        registered_backup_paths(data_dir.clone(), registry, server_id.clone(), true).await?;
+    let operation =
+        backups::acquire_operation(&operations, &server_id, OperationKind::BackupDelete)
+            .await
+            .map_err(|error| backup_core_error(error, &data_dir))?;
+    blocking(move || {
+        let _operation = operation;
+        let report = backups::apply_retention(
+            &paths.backup_dir,
+            &server_id,
+            retain_count,
+            retain_days,
+            None,
+        )
+        .map_err(|error| backup_core_error(error, &data_dir))?;
+        let metadata = backups::load_backup_metadata(&paths.backup_dir)
+            .map_err(|error| backup_core_error(error, &data_dir))?;
+        Ok(BackupRetentionReport {
+            deleted_names: report.deleted_names,
+            failed_delete_count: report.failed_delete_count,
+            records: backup_records_with_metadata(report.records, &metadata),
+        })
+    })
+    .await
+}
+
+/// Saves tags and a note while preserving the other metadata catalog entries.
+#[uniffi::export(async_runtime = "tokio")]
+pub async fn set_managed_backup_tags(
+    server_id: String,
+    backup_name: String,
+    tags: Vec<String>,
+    note: String,
+) -> Result<BackupMetadataCatalog, FfiError> {
+    let (data_dir, registry, operations) = session_handles()?;
+    let server_id = normalize_backup_server_id(&server_id, &data_dir)?;
+    let paths =
+        registered_backup_paths(data_dir.clone(), registry, server_id.clone(), true).await?;
+    let operation =
+        backups::acquire_operation(&operations, &server_id, OperationKind::BackupDelete)
+            .await
+            .map_err(|error| backup_core_error(error, &data_dir))?;
+    blocking(move || {
+        let _operation = operation;
+        backups::set_backup_tags(&paths.backup_dir, &backup_name, tags, note)
+            .map(Into::into)
+            .map_err(|error| backup_core_error(error, &data_dir))
+    })
+    .await
+}
+
+/// Loads tags and notes for the shared backup list.
+#[uniffi::export(async_runtime = "tokio")]
+pub async fn load_managed_backup_metadata(
+    server_id: String,
+) -> Result<BackupMetadataCatalog, FfiError> {
+    let (data_dir, registry, operations) = session_handles()?;
+    let server_id = normalize_backup_server_id(&server_id, &data_dir)?;
+    let paths =
+        registered_backup_paths(data_dir.clone(), registry, server_id.clone(), true).await?;
+    let operation =
+        backups::acquire_operation(&operations, &server_id, OperationKind::BackupCreate)
+            .await
+            .map_err(|error| backup_core_error(error, &data_dir))?;
+    blocking(move || {
+        let _operation = operation;
+        backups::load_backup_metadata(&paths.backup_dir)
+            .map(Into::into)
+            .map_err(|error| backup_core_error(error, &data_dir))
+    })
+    .await
+}
+
+/// Estimates duration from the newest usable backup throughput samples.
+#[uniffi::export]
+pub fn estimate_backup_duration(
+    target_bytes: u64,
+    history: Vec<BackupRecord>,
+) -> Option<BackupEstimate> {
+    let history = history
+        .into_iter()
+        .map(|record| CoreBackupRecord {
+            backup_id: record.backup_id,
+            server_id: record.server_id,
+            archive_path: record.archive_path,
+            kind: record.kind,
+            consistency: record.consistency,
+            origin: record.origin,
+            created_at: record.created_at,
+            file_count: record.file_count,
+            total_bytes: record.total_bytes,
+            archive_sha256: record.archive_sha256,
+            manifest_version: record.manifest_version,
+            restore_eligible: record.restore_eligible,
+            duration_ms: record.duration_ms,
+        })
+        .collect::<Vec<_>>();
+    backups::estimate_backup(target_bytes, &history).map(|estimate| BackupEstimate {
+        size_bytes: estimate.size_bytes,
+        duration_ms: estimate.duration_ms,
+    })
+}
+
+/// Runs one Native-owned scheduler tick. Call from the app's one-minute timer.
+#[uniffi::export(async_runtime = "tokio")]
+pub async fn tick_automatic_backups(
+    observer: Arc<dyn BackupProgressObserver>,
+) -> Result<Vec<AutomaticBackupTickResult>, FfiError> {
+    let (data_dir, registry, operations) = session_handles()?;
+    let sequences = Arc::new(Mutex::new(HashMap::<String, u64>::new()));
+    let progress = Arc::new({
+        let sequences = sequences.clone();
+        move |event: auto_backups::AutoBackupProgressEvent| {
+            let sequence = {
+                let mut sequences = sequences
+                    .lock()
+                    .unwrap_or_else(|poisoned| poisoned.into_inner());
+                let sequence = sequences.entry(event.operation_id.clone()).or_default();
+                *sequence += 1;
+                *sequence
+            };
+            observer.on_progress(backup_progress_event(
+                event.operation_id,
+                event.server_id,
+                sequence,
+                event.fraction,
+                event.current_file,
+            ));
+        }
+    });
+    let now_ms = emitted_at_ms().min(i64::MAX as u64) as i64;
+    AUTO_BACKUPS
+        .tick(
+            server_context(data_dir.clone()),
+            &SERVERS,
+            &LIMITER,
+            &registry,
+            &operations,
+            now_ms,
+            progress,
+        )
+        .await
+        .map(|results| results.into_iter().map(Into::into).collect())
+        .map_err(|error| backup_core_error(error, &data_dir))
 }
 
 // ---------------------------------------------------------------------------
