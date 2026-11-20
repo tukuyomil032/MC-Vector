@@ -120,6 +120,7 @@ struct ShellCommands: Commands {
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private var hotKeys: GlobalHotKeys?
+    private var autoBackups: AutoBackupScheduler?
     private weak var runtime: ServerRuntime?
     private weak var app: AppState?
     private var isQuitting = false
@@ -131,6 +132,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         self.app = app
         self.runtime = runtime
         runtime.subscribe()
+        let scheduler = AutoBackupScheduler(feedback: feedback)
+        scheduler.onChange = { serverID in app.backupsChanged(serverID) }
+        scheduler.start()
+        autoBackups = scheduler
         hotKeys = GlobalHotKeys { action in
             guard let serverID = app.selectedServerID else { return }
             Task { @MainActor in
