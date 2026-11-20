@@ -138,6 +138,7 @@ private final class SettingsModel {
 private struct GeneralPane: View {
     @State private var model = SettingsModel()
     @AppStorage(BackupsLayout.storageKey) private var backupsLayout: BackupsLayout = .cards
+    @AppStorage(PluginsPaging.storageKey) private var pluginsPaging: PluginsPaging = .infinite
 
     var body: some View {
         Form {
@@ -174,6 +175,16 @@ private struct GeneralPane: View {
                 Text(L10n.t("native.settings.display"))
             } footer: {
                 Text(L10n.t("native.settings.backupsLayoutFooter"))
+            }
+            Section {
+                Picker(L10n.t("native.settings.pluginsPaging"), selection: $pluginsPaging) {
+                    ForEach(PluginsPaging.allCases) { paging in
+                        Label(L10n.t(paging.titleKey), systemImage: paging.symbol).tag(paging)
+                    }
+                }
+                .pickerStyle(.inline)
+            } footer: {
+                Text(L10n.t("native.settings.pluginsPagingFooter"))
             }
         }
         .formStyle(.grouped)
