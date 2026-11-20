@@ -3,6 +3,34 @@
     "en": "Discard",
     "ja": "破棄"
   },
+  "error.backup.catalog_failed": {
+    "en": "The backup catalog or metadata could not be read or updated. Check the data folder permissions and try again.",
+    "ja": "バックアップのカタログまたはメタデータを読み取るか更新できませんでした。データフォルダーの権限を確認して、もう一度試してください。"
+  },
+  "error.backup.corrupt_archive": {
+    "en": "This backup is damaged or has an invalid manifest, so it cannot be used.",
+    "ja": "バックアップが破損しているか、マニフェストが正しくないため使用できません。"
+  },
+  "error.backup.invalid_name": {
+    "en": "Use a backup name without /, \\, :, or other special characters.",
+    "ja": "バックアップ名に /、\\、: などの特殊文字は使えません。"
+  },
+  "error.backup.invalid_source": {
+    "en": "A backup source is not a safe managed file or folder.",
+    "ja": "バックアップ対象のファイルかフォルダーを安全に読み取れません。"
+  },
+  "error.backup.io": {
+    "en": "The backup could not be read or written. Check the data folder's permissions and available space.",
+    "ja": "バックアップを読み書きできませんでした。データフォルダーの権限と空き容量を確認してください。"
+  },
+  "error.backup.not_found": {
+    "en": "The selected backup could not be found.",
+    "ja": "選択したバックアップが見つかりません。"
+  },
+  "error.backup.restore_failed": {
+    "en": "The backup could not be restored. Check the server folder and try again.",
+    "ja": "バックアップを復元できませんでした。サーバーフォルダーを確認して、もう一度試してください。"
+  },
   "error.config.write_failed": {
     "en": "The setting could not be saved. Check that the data folder can be written.",
     "ja": "設定を保存できませんでした。データフォルダーに書き込めるか確認してください。"
@@ -270,6 +298,74 @@
   "native.addServer.savePath": {
     "en": "Saved in a new folder inside MC-Vector's servers folder. The folder name is chosen automatically.",
     "ja": "MC-Vector のサーバー用フォルダーの中に、新しいフォルダーを作って保存します。フォルダー名は自動で決まります。"
+  },
+  "native.backups.ascending": {
+    "en": "Ascending",
+    "ja": "昇順"
+  },
+  "native.backups.autoCreated": {
+    "en": "Automatic backup of {name} created",
+    "ja": "{name} の自動バックアップを作成しました"
+  },
+  "native.backups.autoFailed": {
+    "en": "Automatic backup of {name} failed",
+    "ja": "{name} の自動バックアップに失敗しました"
+  },
+  "native.backups.column.date": {
+    "en": "Created",
+    "ja": "作成日時"
+  },
+  "native.backups.column.name": {
+    "en": "Name",
+    "ja": "名前"
+  },
+  "native.backups.column.size": {
+    "en": "Size",
+    "ja": "サイズ"
+  },
+  "native.backups.column.tags": {
+    "en": "Tags",
+    "ja": "タグ"
+  },
+  "native.backups.count": {
+    "en": "{count} backups",
+    "ja": "{count} 件"
+  },
+  "native.backups.countOne": {
+    "en": "{count} backup",
+    "ja": "{count} 件"
+  },
+  "native.backups.creating": {
+    "en": "Creating backup…",
+    "ja": "バックアップを作成しています…"
+  },
+  "native.backups.descending": {
+    "en": "Descending",
+    "ja": "降順"
+  },
+  "native.backups.order": {
+    "en": "Order",
+    "ja": "順番"
+  },
+  "native.backups.search": {
+    "en": "Search backups",
+    "ja": "バックアップを検索"
+  },
+  "native.backups.sort.date": {
+    "en": "Date",
+    "ja": "日時"
+  },
+  "native.backups.sort.name": {
+    "en": "Name",
+    "ja": "名前"
+  },
+  "native.backups.sort.size": {
+    "en": "Size",
+    "ja": "サイズ"
+  },
+  "native.backups.sortBy": {
+    "en": "Sort By",
+    "ja": "並べ替え"
   },
   "native.console.sendFailed": {
     "en": "The command could not be sent",
@@ -618,6 +714,26 @@
   "native.settings.author": {
     "en": "Author",
     "ja": "作成者"
+  },
+  "native.settings.backupsLayout": {
+    "en": "Backups",
+    "ja": "バックアップ"
+  },
+  "native.settings.backupsLayout.cards": {
+    "en": "Cards",
+    "ja": "カード"
+  },
+  "native.settings.backupsLayout.table": {
+    "en": "Table",
+    "ja": "表"
+  },
+  "native.settings.backupsLayoutFooter": {
+    "en": "Cards show tags and notes in each row. The table sorts by column.",
+    "ja": "カードは、各行にタグとメモを出します。表は、列ごとに並べ替えられます。"
+  },
+  "native.settings.display": {
+    "en": "Display",
+    "ja": "表示"
   },
   "native.settings.editor": {
     "en": "Editor",

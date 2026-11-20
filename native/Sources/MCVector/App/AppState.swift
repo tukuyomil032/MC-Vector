@@ -111,6 +111,13 @@ final class AppState {
     /// Set by ⌘K to move keyboard focus into the toolbar search field.
     var isSearchFocused = false
 
+    /// Bumped when automatic backups changed a server's catalog; the Backups view reloads.
+    private(set) var backupsRevision: [String: Int] = [:]
+
+    func backupsChanged(_ serverID: String) {
+        backupsRevision[serverID, default: 0] += 1
+    }
+
     /// Set to open (or bring forward) the Server Settings window; the window clears it.
     var serverSettingsRequest: ServerSettingsRequest?
 
