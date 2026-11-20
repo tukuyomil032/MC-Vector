@@ -156,6 +156,38 @@ pub enum CoreErrorCode {
     PluginSourceRejected,
     /// The installation destination failed validation.
     PluginDestinationRejected,
+    /// A Java major version or path is malformed.
+    JavaInvalidRequest,
+    /// A running server uses the Java runtime; stop it first.
+    JavaInUse,
+    /// A runtime for the same major version is already installed by MC-Vector.
+    JavaDuplicate,
+    /// No Java download exists for this operating system or CPU.
+    JavaUnsupportedPlatform,
+    /// The picked file is not an acceptable java executable.
+    JavaInvalidExecutable,
+    /// The runtime did not report its version.
+    JavaProbeFailed,
+    /// The Java archive is unsafe or malformed.
+    JavaArchiveInvalid,
+    /// The saved Java runtime list is malformed; it was left untouched.
+    JavaRegistryInvalid,
+    /// Installing or removing a Java runtime failed on disk.
+    JavaInstallFailed,
+    /// The server software cannot be upgraded automatically.
+    ServerJarUnsupported,
+    /// The provider has no downloadable build for the requested version.
+    ServerJarNotAvailable,
+    /// The provider publishes no checksum, so the jar is not installed.
+    ServerJarUnverified,
+    /// The upgrade plan expired or was already used; prepare it again.
+    ServerJarPlanExpired,
+    /// The server's software or version changed after the plan was made.
+    ServerJarProfileChanged,
+    /// The new server jar could not be installed; the previous jar was kept.
+    ServerJarInstallFailed,
+    /// The requested upgrade target is invalid (for example, not newer).
+    ServerJarInvalidRequest,
 }
 
 impl CoreErrorCode {
@@ -229,6 +261,22 @@ impl CoreErrorCode {
         CoreErrorCode::PluginUnverifiedBlocked,
         CoreErrorCode::PluginSourceRejected,
         CoreErrorCode::PluginDestinationRejected,
+        CoreErrorCode::JavaInvalidRequest,
+        CoreErrorCode::JavaInUse,
+        CoreErrorCode::JavaDuplicate,
+        CoreErrorCode::JavaUnsupportedPlatform,
+        CoreErrorCode::JavaInvalidExecutable,
+        CoreErrorCode::JavaProbeFailed,
+        CoreErrorCode::JavaArchiveInvalid,
+        CoreErrorCode::JavaRegistryInvalid,
+        CoreErrorCode::JavaInstallFailed,
+        CoreErrorCode::ServerJarUnsupported,
+        CoreErrorCode::ServerJarNotAvailable,
+        CoreErrorCode::ServerJarUnverified,
+        CoreErrorCode::ServerJarPlanExpired,
+        CoreErrorCode::ServerJarProfileChanged,
+        CoreErrorCode::ServerJarInstallFailed,
+        CoreErrorCode::ServerJarInvalidRequest,
     ];
 
     /// The stable `<domain>.<reason>` string for this code.
@@ -302,6 +350,22 @@ impl CoreErrorCode {
             Self::PluginUnverifiedBlocked => "plugin.unverified_blocked",
             Self::PluginSourceRejected => "plugin.source_rejected",
             Self::PluginDestinationRejected => "plugin.destination_rejected",
+            Self::JavaInvalidRequest => "java.invalid_request",
+            Self::JavaInUse => "java.in_use",
+            Self::JavaDuplicate => "java.duplicate",
+            Self::JavaUnsupportedPlatform => "java.unsupported_platform",
+            Self::JavaInvalidExecutable => "java.invalid_executable",
+            Self::JavaProbeFailed => "java.probe_failed",
+            Self::JavaArchiveInvalid => "java.archive_invalid",
+            Self::JavaRegistryInvalid => "java.registry_invalid",
+            Self::JavaInstallFailed => "java.install_failed",
+            Self::ServerJarUnsupported => "server_jar.unsupported",
+            Self::ServerJarNotAvailable => "server_jar.not_available",
+            Self::ServerJarUnverified => "server_jar.unverified",
+            Self::ServerJarPlanExpired => "server_jar.plan_expired",
+            Self::ServerJarProfileChanged => "server_jar.profile_changed",
+            Self::ServerJarInstallFailed => "server_jar.install_failed",
+            Self::ServerJarInvalidRequest => "server_jar.invalid_request",
         }
     }
 
@@ -328,7 +392,14 @@ impl CoreErrorCode {
             | Self::ImportSessionExpired
             | Self::ServerEulaRequired
             | Self::ServerLimitReached
-            | Self::ServerCommandRejected => true,
+            | Self::ServerCommandRejected
+            | Self::JavaInUse
+            | Self::JavaProbeFailed
+            | Self::JavaInstallFailed
+            | Self::ServerJarNotAvailable
+            | Self::ServerJarPlanExpired
+            | Self::ServerJarProfileChanged
+            | Self::ServerJarInstallFailed => true,
             Self::LockUnavailable
             | Self::PathAppDataUnavailable
             | Self::OperationCancelled
@@ -373,7 +444,16 @@ impl CoreErrorCode {
             | Self::PluginIncompatible
             | Self::PluginUnverifiedBlocked
             | Self::PluginSourceRejected
-            | Self::PluginDestinationRejected => false,
+            | Self::PluginDestinationRejected
+            | Self::JavaInvalidRequest
+            | Self::JavaDuplicate
+            | Self::JavaUnsupportedPlatform
+            | Self::JavaInvalidExecutable
+            | Self::JavaArchiveInvalid
+            | Self::JavaRegistryInvalid
+            | Self::ServerJarUnsupported
+            | Self::ServerJarUnverified
+            | Self::ServerJarInvalidRequest => false,
             Self::PropertiesIo
             | Self::PlayerIo
             | Self::ServerSettingsIo
@@ -518,10 +598,26 @@ mod tests {
             CoreErrorCode::PluginUnverifiedBlocked => 65,
             CoreErrorCode::PluginSourceRejected => 66,
             CoreErrorCode::PluginDestinationRejected => 67,
+            CoreErrorCode::JavaInvalidRequest => 68,
+            CoreErrorCode::JavaInUse => 69,
+            CoreErrorCode::JavaDuplicate => 70,
+            CoreErrorCode::JavaUnsupportedPlatform => 71,
+            CoreErrorCode::JavaInvalidExecutable => 72,
+            CoreErrorCode::JavaProbeFailed => 73,
+            CoreErrorCode::JavaArchiveInvalid => 74,
+            CoreErrorCode::JavaRegistryInvalid => 75,
+            CoreErrorCode::JavaInstallFailed => 76,
+            CoreErrorCode::ServerJarUnsupported => 77,
+            CoreErrorCode::ServerJarNotAvailable => 78,
+            CoreErrorCode::ServerJarUnverified => 79,
+            CoreErrorCode::ServerJarPlanExpired => 80,
+            CoreErrorCode::ServerJarProfileChanged => 81,
+            CoreErrorCode::ServerJarInstallFailed => 82,
+            CoreErrorCode::ServerJarInvalidRequest => 83,
         }
     }
 
-    const VARIANT_COUNT: usize = 68;
+    const VARIANT_COUNT: usize = 84;
 
     /// Checks `^[a-z]+(_[a-z]+)*\.[a-z]+(_[a-z]+)*$` without a regex crate.
     fn is_valid_code_string(s: &str) -> bool {
@@ -768,6 +864,23 @@ mod tests {
                 false,
             ),
             (CoreErrorCode::BackupIo, "backup.io", true),
+            (CoreErrorCode::JavaInUse, "java.in_use", true),
+            (CoreErrorCode::JavaDuplicate, "java.duplicate", false),
+            (
+                CoreErrorCode::JavaInstallFailed,
+                "java.install_failed",
+                true,
+            ),
+            (
+                CoreErrorCode::ServerJarUnverified,
+                "server_jar.unverified",
+                false,
+            ),
+            (
+                CoreErrorCode::ServerJarPlanExpired,
+                "server_jar.plan_expired",
+                true,
+            ),
         ];
         for (code, wire, retryable) in expected {
             assert_eq!(code.as_str(), wire);

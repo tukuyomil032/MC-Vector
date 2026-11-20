@@ -12,6 +12,7 @@ pub mod error;
 pub mod eula;
 pub mod external_copy;
 pub mod instance_lock;
+pub mod java;
 pub mod java_policy;
 pub mod lifecycle;
 pub mod managed_files;
@@ -30,4 +31,7 @@ pub mod server_jar;
 pub mod server_process;
 pub mod server_settings;
 pub mod server_stdout;
+pub mod server_upgrade;
 pub mod shutdown;
+#[cfg(test)]
+mod test_http;

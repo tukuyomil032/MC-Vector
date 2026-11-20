@@ -5,7 +5,7 @@ use super::file_utils::{
     is_link_or_reparse_point, resolve_managed_request, ManagedPathRequest, ManagedRoot,
 };
 pub(crate) use super::recovery_record::{
-    DirectoryMigrationStage, RecoveryOperation, RecoveryRecord, ServerJarReplacementStage,
+    DirectoryMigrationStage, RecoveryOperation, RecoveryRecord,
 };
 use super::server_registry::ServerRegistry;
 

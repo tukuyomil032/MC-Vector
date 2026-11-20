@@ -58,6 +58,10 @@ pub struct ResolvedArtifact {
     pub url: String,
     /// The provider-published checksum, if any.
     pub checksum: Option<ExpectedChecksum>,
+    /// The provider's file name for the jar (it is always installed as `server.jar`).
+    pub file_name: String,
+    /// The size the provider published, when it did.
+    pub size: Option<u64>,
 }
 
 impl ResolvedArtifact {
@@ -74,6 +78,12 @@ impl ResolvedArtifact {
 /// Everything else needs the user to place the jar.
 pub fn supports_automatic_install(software: &str) -> bool {
     matches!(software, "Paper" | "LeafMC" | "Vanilla")
+}
+
+/// Software [`resolve_artifact`] and [`available_versions`] know. Fabric is
+/// resolvable but publishes no checksum, so it is not installed automatically.
+pub fn has_resolver(software: &str) -> bool {
+    matches!(software, "Paper" | "LeafMC" | "Vanilla" | "Fabric")
 }
 
 /// Mojang publishes SHA-1 for server jars; prefer SHA-256 if it ever appears.
@@ -216,6 +226,16 @@ fn read_download_name(downloads: &Value) -> Option<String> {
     .map(str::to_owned)
 }
 
+fn read_download_size(downloads: &Value) -> Option<u64> {
+    [
+        downloads.get("server:default"),
+        downloads.get("application"),
+    ]
+    .into_iter()
+    .flatten()
+    .find_map(|download| download["size"].as_u64())
+}
+
 fn read_download_url(downloads: &Value) -> Option<String> {
     [
         downloads.get("server:default"),
@@ -318,6 +338,8 @@ async fn resolve_v2_style(
             version,
             url: download_url.to_string(),
             checksum: read_sha256(&build["downloads"]).map(ExpectedChecksum::sha256),
+            size: read_download_size(&build["downloads"]),
+            file_name,
         }));
     }
     Ok(None)
@@ -382,10 +404,14 @@ async fn resolve_paper_fill(
             continue;
         };
         let url = validate_artifact_url(&raw_url, &["fill.papermc.io", "fill-data.papermc.io"])?;
+        let file_name = read_download_name(&build["downloads"])
+            .unwrap_or_else(|| format!("paper-{version}.jar"));
         return Ok(Some(ResolvedArtifact {
             version,
             url,
             checksum: read_sha256(&build["downloads"]).map(ExpectedChecksum::sha256),
+            size: read_download_size(&build["downloads"]),
+            file_name,
         }));
     }
     Ok(None)
@@ -489,9 +515,11 @@ pub async fn resolve_artifact(
             };
             let url = validate_artifact_url(raw_url, &["piston-data.mojang.com"])?;
             Ok(Some(ResolvedArtifact {
+                file_name: format!("minecraft_server.{version}.jar"),
                 version,
                 url,
                 checksum: read_mojang_checksum(&detail["downloads"]["server"]),
+                size: detail["downloads"]["server"]["size"].as_u64(),
             }))
         }
         "Fabric" => {
@@ -526,10 +554,84 @@ pub async fn resolve_artifact(
                 url: url.to_string(),
                 // Fabric publishes no checksum for its server launcher jar.
                 checksum: None,
+                size: None,
+                file_name: format!(
+                    "fabric-server-mc.{version}-loader.{loader}-launcher.{installer}.jar"
+                ),
             }))
         }
         _ => Ok(None),
     }
+}
+
+/// Every version the provider lists for `software` (unordered, may include
+/// snapshots or pre-releases). `Ok(None)` when MC-Vector has no resolver for
+/// that software.
+pub async fn available_versions(software: &str) -> Result<Option<Vec<String>>, String> {
+    let client = metadata_client()?;
+    available_versions_with(software, |url| {
+        let client = client.clone();
+        async move { fetch_json(&client, url).await }
+    })
+    .await
+}
+
+/// [`available_versions`] with the metadata fetch supplied by the caller, so
+/// tests can serve the provider responses from a loopback server.
+pub(crate) async fn available_versions_with<F, Fut>(
+    software: &str,
+    fetch: F,
+) -> Result<Option<Vec<String>>, String>
+where
+    F: Fn(Url) -> Fut,
+    Fut: std::future::Future<Output = Result<Value, String>>,
+{
+    match software {
+        "Paper" => match fetch(endpoint(PAPER_FILL_API, &["projects", "paper"])?).await {
+            Ok(project) => Ok(Some(read_paper_fill_versions(&project))),
+            Err(error) => {
+                log::warn!("Paper Fill API version list failed; trying official v2: {error}");
+                let project = fetch(endpoint(PAPER_V2_API, &["projects", "paper"])?).await?;
+                Ok(Some(strings(&project["versions"])))
+            }
+        },
+        "LeafMC" => {
+            let project = fetch(endpoint(LEAF_API, &["projects", "leaf"])?).await?;
+            Ok(Some(strings(&project["versions"])))
+        }
+        "Vanilla" => {
+            let manifest =
+                fetch(Url::parse(MOJANG_MANIFEST_URL).map_err(|e| e.to_string())?).await?;
+            Ok(Some(read_vanilla_releases(&manifest)))
+        }
+        "Fabric" => {
+            let games = fetch(endpoint(FABRIC_META_API, &["versions", "game"])?).await?;
+            Ok(Some(read_fabric_stable_games(&games)))
+        }
+        _ => Ok(None),
+    }
+}
+
+fn read_vanilla_releases(manifest: &Value) -> Vec<String> {
+    manifest["versions"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .filter(|entry| entry["type"].as_str() == Some("release"))
+        .filter_map(|entry| entry["id"].as_str())
+        .map(str::to_owned)
+        .collect()
+}
+
+fn read_fabric_stable_games(games: &Value) -> Vec<String> {
+    games
+        .as_array()
+        .into_iter()
+        .flatten()
+        .filter(|entry| entry["stable"].as_bool() == Some(true))
+        .filter_map(|entry| entry["version"].as_str())
+        .map(str::to_owned)
+        .collect()
 }
 
 /// `servers/<serverId>/server.jar` and the canonical `servers` root.
