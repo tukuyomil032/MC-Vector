@@ -137,6 +137,7 @@ private final class SettingsModel {
 
 private struct GeneralPane: View {
     @State private var model = SettingsModel()
+    @AppStorage(BackupsLayout.storageKey) private var backupsLayout: BackupsLayout = .cards
 
     var body: some View {
         Form {
@@ -161,6 +162,18 @@ private struct GeneralPane: View {
                 }
             } footer: {
                 Text(L10n.t("settings.language.description"))
+            }
+            Section {
+                Picker(L10n.t("native.settings.backupsLayout"), selection: $backupsLayout) {
+                    ForEach(BackupsLayout.allCases) { layout in
+                        Label(L10n.t(layout.titleKey), systemImage: layout.symbol).tag(layout)
+                    }
+                }
+                .pickerStyle(.inline)
+            } header: {
+                Text(L10n.t("native.settings.display"))
+            } footer: {
+                Text(L10n.t("native.settings.backupsLayoutFooter"))
             }
         }
         .formStyle(.grouped)
