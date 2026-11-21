@@ -24,14 +24,23 @@ private struct ServerToolbar: ViewModifier {
                     // crashed, restart and stop when running, nothing while changing.
                     let status = runtime.status(of: server.id)
                     ToolbarItemGroup(placement: .primaryAction) {
-                        Button {
-                            Task { await runtime.start(server.id) }
-                        } label: {
-                            Label(L10n.t("server.actions.start"), systemImage: "play.fill")
-                                .symbolEffect(.bounce, value: status == "online")
+                        if let download = runtime.javaDownload, download.serverID == server.id {
+                            // The Java a waiting start needs is downloading.
+                            ProgressView(value: download.fraction ?? 0)
+                                .progressViewStyle(.circular)
+                                .controlSize(.small)
+                                .help(L10n.t("native.java.downloading", ["major": download.major]))
+                                .animation(Motion.value, value: download.fraction)
+                        } else {
+                            Button {
+                                Task { await runtime.start(server.id) }
+                            } label: {
+                                Label(L10n.t("server.actions.start"), systemImage: "play.fill")
+                                    .symbolEffect(.bounce, value: status == "online")
+                            }
+                            .help(L10n.t("server.actions.start"))
+                            .disabled(!ServerStatusStyle.canStart(status))
                         }
-                        .help(L10n.t("server.actions.start"))
-                        .disabled(!ServerStatusStyle.canStart(status))
                         Button {
                             Task { await runtime.restart(server.id) }
                         } label: {

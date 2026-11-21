@@ -52,8 +52,9 @@ final class ServerRuntime {
     }
 
     var pendingJava: PendingJava?
-    /// Java being downloaded for a waiting start (major and 0...1, or nil while unknown).
-    private(set) var javaDownload: (major: UInt32, fraction: Double?)?
+    /// Java being downloaded for a waiting start: the server, the major and
+    /// 0...1 (nil while the size is unknown). The toolbar shows it.
+    private(set) var javaDownload: (serverID: String, major: UInt32, fraction: Double?)?
     /// Starts that already passed the Java check (the user chose system Java).
     private var javaCheckPassed: Set<String> = []
     private var nextEntryID = 0
@@ -94,8 +95,13 @@ final class ServerRuntime {
     func start(_ serverID: String) async {
         guard ServerStatusStyle.canStart(status(of: serverID)) else { return }
         guard ensureEula(serverID, then: .start) else { return }
-        guard await ensureJava(serverID, then: .start) else { return }
+        // Starting from here: the Java check awaits, and a second click must
+        // not slip past the status guard meanwhile.
         transitional[serverID] = "starting"
+        guard await ensureJava(serverID, then: .start) else {
+            transitional[serverID] = nil
+            return
+        }
         do throws(CoreError) {
             try await CoreClient.startServer(id: serverID)
         } catch {
@@ -187,11 +193,11 @@ final class ServerRuntime {
         guard let pending = pendingJava else { return }
         pendingJava = nil
         let operation = CoreClient.installJava(major: pending.required)
-        javaDownload = (pending.required, nil)
-        feedback.toast(.info, L10n.t("javaManager.downloadStatus", ["version": pending.required]))
+        javaDownload = (pending.serverID, pending.required, nil)
+        feedback.toast(.info, L10n.t("native.java.downloading", ["major": pending.required]))
         let watcher = Task {
             for await event in operation.progress where event.total > 0 {
-                javaDownload = (pending.required, Double(event.downloaded) / Double(event.total))
+                javaDownload = (pending.serverID, pending.required, Double(event.downloaded) / Double(event.total))
             }
         }
         defer {

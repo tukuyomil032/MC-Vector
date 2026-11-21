@@ -9331,6 +9331,24 @@
         }
       }
     },
+    "native.java.downloading": {
+      "comment": "Placeholders: {major}",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Downloading Java {major}…"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Java {major} をダウンロード中…"
+          }
+        }
+      }
+    },
     "native.java.lts": {
       "extractionState": "manual",
       "localizations": {

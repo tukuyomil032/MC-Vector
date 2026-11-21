@@ -957,6 +957,7 @@
   "native.java.downloadAndStart": { "en": "Download Java {major} and Start", "ja": "Java {major} を入れて起動" },
   "native.java.startWithSystem": { "en": "Start with System Java", "ja": "システムの Java で起動" },
   "native.upgrade.javaDownload": { "en": "Download Java {major}", "ja": "Java {major} をダウンロード" },
+  "native.java.downloading": { "en": "Downloading Java {major}…", "ja": "Java {major} をダウンロード中…" },
   "native.java.lts": { "en": "Long-term support · Eclipse Temurin", "ja": "長期サポート版 · Eclipse Temurin" },
   "native.java.offline": {
     "en": "Adoptium could not be reached; showing the usual LTS versions.",
