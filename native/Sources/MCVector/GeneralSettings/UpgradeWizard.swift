@@ -23,6 +23,8 @@ final class UpgradeWizardModel {
     private(set) var check: Check = .loading
     var target: String?
     private(set) var java: ServerJavaCompatibility?
+    /// The server picks its Java automatically (no java_path saved).
+    private(set) var javaAutomatic = true
     private(set) var javaFixing: Double??
     private(set) var plan: ServerJarUpgradePlan?
     var skipBackup = false
@@ -57,6 +59,9 @@ final class UpgradeWizardModel {
         do {
             let list = try await CoreClient.serverJarUpgradeCandidates(serverID: serverID)
             java = try? await CoreClient.javaCompatibility(serverID: serverID)
+            if let settings = try? await CoreClient.serverSettings(serverID: serverID) {
+                javaAutomatic = settings.javaPath?.isEmpty ?? true
+            }
             withAnimation(Motion.standard) {
                 check = .loaded(list)
                 target = list.candidates.first(where: \.latest)?.version ?? list.candidates.first?.version
@@ -85,11 +90,19 @@ final class UpgradeWizardModel {
                 defer { watcher.cancel() }
                 path = try await operation.value().path
             }
-            var update = GeneralSettingsModel.update(from: try await CoreClient.serverSettings(serverID: serverID))
-            update.javaPath = path
-            _ = try await CoreClient.updateServerSettings(serverID: serverID, settings: update)
+            // Automatic servers pick the new runtime by themselves; others are
+            // switched to it explicitly.
+            if !javaAutomatic {
+                var update = GeneralSettingsModel.update(from: try await CoreClient.serverSettings(serverID: serverID))
+                update.javaPath = path
+                _ = try await CoreClient.updateServerSettings(serverID: serverID, settings: update)
+            }
             java = try? await CoreClient.javaCompatibility(serverID: serverID)
-            feedback.toast(.success, L10n.t("native.upgrade.javaSet", ["major": major]))
+            feedback.toast(
+                .success,
+                javaAutomatic
+                    ? L10n.t("javaManager.toast.downloadSuccess", ["version": major])
+                    : L10n.t("native.upgrade.javaSet", ["major": major]))
         } catch {
             feedback.showError(L10n.t("javaManager.toast.downloadFailed"), message: error.uiText)
         }
@@ -369,7 +382,11 @@ struct UpgradeWizard: View {
                 Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.orange)
             }
             HStack {
-                Button(L10n.t("native.upgrade.javaFix", ["major": required])) {
+                Button(
+                    L10n.t(
+                        model.javaAutomatic ? "native.upgrade.javaDownload" : "native.upgrade.javaFix",
+                        ["major": required])
+                ) {
                     Task { await model.fixJava(required, feedback: feedback) }
                 }
                 .disabled(model.isBusy)
