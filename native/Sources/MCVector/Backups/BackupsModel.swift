@@ -136,13 +136,14 @@ final class BackupsModel {
         case done
         /// The server runs: ask before stopping it, then call again with `stopServer`.
         case needsStop
-        case failed
+        /// The caller shows the error (the create sheet shows it inline).
+        case failed(CoreError?)
     }
 
     func create(
         name: String?, compression: Int, stopServer: Bool, feedback: FeedbackCenter
     ) async -> CreateOutcome {
-        guard activity == nil else { return .failed }
+        guard activity == nil else { return .failed(nil) }
         let trimmed = name?.trimmingCharacters(in: .whitespaces)
         let operation = CoreClient.createBackup(
             serverID: serverID, backupName: trimmed?.isEmpty == false ? trimmed : nil,
@@ -176,8 +177,7 @@ final class BackupsModel {
                 return .done
             }
         } catch {
-            feedback.showError(L10n.t("backups.toast.createFailed"), message: error.uiText)
-            return .failed
+            return .failed(error)
         }
     }
 
@@ -217,16 +217,16 @@ final class BackupsModel {
         }
     }
 
-    func saveTags(_ item: BackupItem, tags: [String], note: String, feedback: FeedbackCenter) async -> Bool {
+    /// Nil when saved; otherwise the error for the tag sheet to show inline.
+    func saveTags(_ item: BackupItem, tags: [String], note: String, feedback: FeedbackCenter) async -> CoreError? {
         do {
             _ = try await CoreClient.setBackupMetadata(
                 serverID: serverID, backupName: item.name, tags: tags, note: note)
             await reload()
             feedback.toast(.success, L10n.t("backups.toast.tagSaved"))
-            return true
+            return nil
         } catch {
-            feedback.showError(L10n.t("backups.toast.tagSaveFailed"), message: error.uiText)
-            return false
+            return error
         }
     }
 

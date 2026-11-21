@@ -102,6 +102,8 @@ private struct PromptSheet: View {
             Section {
                 TextField(request.label, text: $value, prompt: request.placeholder.map(Text.init))
                     .onSubmit(submit)
+                    // The error is about the submitted value; editing starts over.
+                    .onChange(of: value) { error = nil }
                 if let error {
                     Text(error).foregroundStyle(.red)
                 }

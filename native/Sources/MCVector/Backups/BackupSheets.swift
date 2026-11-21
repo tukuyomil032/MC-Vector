@@ -19,6 +19,7 @@ struct CreateBackupSheet: View {
     @State private var isMeasuring = true
     @State private var isCreating = false
     @State private var asksToStop = false
+    @State private var failure: CoreError?
 
     private var defaultName: String {
         let stamp = Date.now.formatted(.iso8601.year().month().day().dateSeparator(.dash))
@@ -55,7 +56,7 @@ struct CreateBackupSheet: View {
                 Section {
                     LabeledContent(L10n.t("backups.modal.targetSize")) {
                         if let targetBytes {
-                            Text(ByteCountFormatter.string(fromByteCount: Int64(targetBytes), countStyle: .file))
+                            Text(Int64(targetBytes), format: .byteCount(style: .file))
                                 .monospacedDigit()
                                 .contentTransition(.numericText(value: Double(targetBytes)))
                         } else if isMeasuring {
@@ -70,17 +71,21 @@ struct CreateBackupSheet: View {
                                 .monospacedDigit()
                         }
                     }
-                } footer: {
-                    Text(L10n.t("backups.modal.wholeServerNote"))
                 }
             }
             .formStyle(.grouped)
+            .disabled(isCreating)
             .animation(Motion.standard, value: targetBytes)
 
+            if let failure {
+                InlineErrorBanner(title: L10n.t("backups.toast.createFailed"), message: failure.uiText)
+                    .padding(.horizontal, 16)
+            }
             HStack {
                 Spacer()
                 Button(L10n.t("common.cancel")) { dismiss() }
                     .keyboardShortcut(.cancelAction)
+                    .disabled(isCreating)
                 Button {
                     Task { await create(stopServer: false) }
                 } label: {
@@ -97,6 +102,7 @@ struct CreateBackupSheet: View {
             .padding(16)
         }
         .frame(width: 480)
+        .interactiveDismissDisabled(isCreating)
         .navigationTitle(L10n.t("backups.modal.createTitle"))
         .task {
             let measured = await model.estimate()
@@ -147,6 +153,7 @@ struct CreateBackupSheet: View {
     }
 
     private func create(stopServer: Bool) async {
+        withAnimation(Motion.standard) { failure = nil }
         isCreating = true
         defer { isCreating = false }
         // The sheet stays up with a spinner while the backup runs (the view
@@ -156,7 +163,7 @@ struct CreateBackupSheet: View {
         switch outcome {
         case .needsStop: asksToStop = true
         case .done: dismiss()
-        case .failed: break
+        case let .failed(error): withAnimation(Motion.standard) { failure = error }
         }
     }
 
@@ -177,6 +184,7 @@ struct BackupTagsSheet: View {
     @State private var newTag = ""
     @State private var note = ""
     @State private var isSaving = false
+    @State private var saveError: CoreError?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -206,8 +214,6 @@ struct BackupTagsSheet: View {
                     }
                 } header: {
                     Text(item.name)
-                } footer: {
-                    Text(L10n.t("backups.tagEditor.removeHint"))
                 }
                 Section(L10n.t("backups.tagEditor.noteLabel")) {
                     TextEditor(text: $note)
@@ -224,15 +230,25 @@ struct BackupTagsSheet: View {
             }
             .formStyle(.grouped)
 
+            if let saveError {
+                InlineErrorBanner(title: L10n.t("backups.toast.tagSaveFailed"), message: saveError.uiText)
+                    .padding(.horizontal, 16)
+            }
             HStack {
                 Spacer()
                 Button(L10n.t("common.cancel")) { dismiss() }
                     .keyboardShortcut(.cancelAction)
+                    .disabled(isSaving)
                 Button(L10n.t("common.save")) {
                     Task {
                         isSaving = true
                         defer { isSaving = false }
-                        if await model.saveTags(item, tags: tags, note: note, feedback: feedback) { dismiss() }
+                        let error = await model.saveTags(item, tags: tags, note: note, feedback: feedback)
+                        if let error {
+                            withAnimation(Motion.standard) { saveError = error }
+                        } else {
+                            dismiss()
+                        }
                     }
                 }
                 .buttonStyle(.borderedProminent)
@@ -243,6 +259,10 @@ struct BackupTagsSheet: View {
             .padding(16)
         }
         .frame(width: 460)
+        .interactiveDismissDisabled(isSaving)
+        // A failed save is about the old input; editing starts over.
+        .onChange(of: tags) { saveError = nil }
+        .onChange(of: note) { saveError = nil }
         .navigationTitle(L10n.t("backups.tagEditor.title"))
         .onAppear {
             tags = item.tags

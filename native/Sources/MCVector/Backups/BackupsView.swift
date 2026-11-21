@@ -336,7 +336,7 @@ struct BackupsView: View {
             }
             .width(min: 140, ideal: 170)
             TableColumn(L10n.t("native.backups.column.size"), value: \.size) { item in
-                Text(ByteCountFormatter.string(fromByteCount: Int64(item.size), countStyle: .file))
+                Text(Int64(item.size), format: .byteCount(style: .file))
                     .monospacedDigit()
             }
             .width(min: 70, ideal: 90)
@@ -414,7 +414,7 @@ private struct BackupCard: View {
                 HStack(spacing: 6) {
                     Text(item.date.map(BackupItem.display) ?? item.record.createdAt)
                     Text("·")
-                    Text(ByteCountFormatter.string(fromByteCount: Int64(item.size), countStyle: .file))
+                    Text(Int64(item.size), format: .byteCount(style: .file))
                         .monospacedDigit()
                         .contentTransition(.numericText(value: Double(item.size)))
                 }
@@ -489,21 +489,12 @@ private struct ActivityBar: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            HStack {
-                Text(
-                    activity.kind == .restore
-                        ? L10n.t("backups.restoring", ["name": activity.name])
-                        : L10n.t("native.backups.creating")
-                )
-                .font(.callout.weight(.medium))
-                Spacer()
-                Text("\(Int((activity.progress * 100).rounded()))%")
-                    .font(.callout.monospacedDigit())
-                    .contentTransition(.numericText(value: activity.progress))
-                    .animation(Motion.value, value: activity.progress)
-            }
-            ProgressView(value: activity.progress)
-                .animation(Motion.value, value: activity.progress)
+            RollingPercent(
+                label: activity.kind == .restore
+                    ? L10n.t("backups.restoring", ["name": activity.name])
+                    : L10n.t("native.backups.creating"),
+                fraction: activity.progress
+            )
             if !activity.currentFile.isEmpty {
                 Text(activity.currentFile)
                     .font(.caption.monospaced())
