@@ -241,17 +241,24 @@ struct ServerSettingsWindow: View {
                     Button(L10n.t("common.discard")) { discardAll() }
                         .disabled(isSaving)
                 }
-                Button {
-                    Task { await save() }
-                } label: {
-                    ZStack {
-                        Text(L10n.t("properties.saveChanges")).opacity(isSaving ? 0 : 1)
-                        if isSaving { ProgressView().controlSize(.small) }
+                if justSaved && !isDirty {
+                    // Briefly confirms the save instead of a disabled button.
+                    Label(L10n.t("native.properties.saved"), systemImage: "checkmark.circle.fill")
+                        .foregroundStyle(.green)
+                        .transition(.opacity)
+                } else {
+                    Button {
+                        Task { await save() }
+                    } label: {
+                        ZStack {
+                            Text(L10n.t("properties.saveChanges")).opacity(isSaving ? 0 : 1)
+                            if isSaving { ProgressView().controlSize(.small) }
+                        }
                     }
+                    .buttonStyle(.borderedProminent)
+                    .keyboardShortcut("s", modifiers: .command)
+                    .disabled(!isDirty || isSaving)
                 }
-                .buttonStyle(.borderedProminent)
-                .keyboardShortcut("s", modifiers: .command)
-                .disabled(!isDirty || isSaving)
             }
             .controlSize(.large)
             .padding(.horizontal, 20)

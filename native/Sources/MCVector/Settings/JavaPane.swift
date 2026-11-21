@@ -259,10 +259,7 @@ struct JavaPane: View {
         panel.allowsMultipleSelection = false
         panel.treatsFilePackagesAsDirectories = true
         panel.directoryURL = URL(fileURLWithPath: "/Library/Java/JavaVirtualMachines", isDirectory: true)
-        guard panel.runModal() == .OK, let url = panel.url else {
-            feedback.toast(.info, L10n.t("javaManager.toast.selectionCancelled"))
-            return
-        }
+        guard panel.runModal() == .OK, let url = panel.url else { return }
         Task { await model.addExisting(path: url.path, feedback: feedback) }
     }
 }
@@ -273,27 +270,14 @@ private struct DownloadProgress: View {
     let cancel: () -> Void
 
     var body: some View {
-        HStack(spacing: 8) {
-            VStack(alignment: .trailing, spacing: 3) {
-                HStack(spacing: 4) {
-                    Text(L10n.t(phaseKey))
-                    if let fraction = download.fraction, download.phase == .download {
-                        Text(fraction, format: .percent.precision(.fractionLength(0)))
-                            .monospacedDigit()
-                            .contentTransition(.numericText(value: fraction))
-                    }
-                }
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                if let fraction = download.fraction, download.phase == .download {
-                    ProgressView(value: fraction).frame(width: 140)
-                } else {
-                    ProgressView().progressViewStyle(.linear).frame(width: 140)
-                }
-            }
+        HStack(spacing: 10) {
+            RollingPercent(
+                label: L10n.t(phaseKey),
+                fraction: download.phase == .download ? download.fraction : nil
+            )
+            .frame(width: 180)
             Button(L10n.t("common.cancel"), action: cancel).controlSize(.small)
         }
-        .animation(Motion.value, value: download.fraction)
     }
 
     private var phaseKey: String {
