@@ -160,7 +160,7 @@ final class ServerRuntime {
     private func ensureJava(_ serverID: String, then action: PendingEula.Action) async -> Bool {
         if javaCheckPassed.remove(serverID) != nil { return true }
         guard let resolution = try? await CoreClient.resolveJava(serverID: serverID),
-            case let .missing(required, systemMajor) = resolution.choice
+            case .missing(let required, let systemMajor) = resolution.choice
         else { return true }
         pendingJava = PendingJava(serverID: serverID, action: action, required: required, systemMajor: systemMajor)
         return false
@@ -284,7 +284,8 @@ final class ServerRuntime {
         let serverID = snapshot.serverId
         guard liveStatus[serverID] == "online" else { return }
         if let shown = metrics[serverID],
-           shown.generation == snapshot.generation, shown.sequence >= snapshot.sequence {
+            shown.generation == snapshot.generation, shown.sequence >= snapshot.sequence
+        {
             return
         }
         metrics[serverID] = snapshot
@@ -318,20 +319,20 @@ final class ServerRuntime {
             body: "\(profile.name): \(Int(sample.cpu.rounded()))%"
         )
         #if DEBUG
-        CaptureState.note("[capture] high cpu notice: \(profile.name) \(Int(sample.cpu.rounded()))%")
+            CaptureState.note("[capture] high cpu notice: \(profile.name) \(Int(sample.cpu.rounded()))%")
         #endif
     }
 
     #if DEBUG
-    /// Capture tooling: fills a server's console and status without a process.
-    func setForCapture(serverID: String, status: String, lines: [(String, LogLevel)], memory: UInt64?) {
-        liveStatus[serverID] = status
-        memoryBytes[serverID] = memory
-        logs[serverID] = []
-        for (text, level) in lines {
-            receive(ConsoleLine(serverId: serverID, generation: 1, text: text, level: level, isStderr: false))
+        /// Capture tooling: fills a server's console and status without a process.
+        func setForCapture(serverID: String, status: String, lines: [(String, LogLevel)], memory: UInt64?) {
+            liveStatus[serverID] = status
+            memoryBytes[serverID] = memory
+            logs[serverID] = []
+            for (text, level) in lines {
+                receive(ConsoleLine(serverId: serverID, generation: 1, text: text, level: level, isStderr: false))
+            }
         }
-    }
     #endif
 }
 
