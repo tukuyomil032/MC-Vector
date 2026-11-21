@@ -217,7 +217,7 @@ private struct UsersCard: View {
                             entry: entry, isIP: list.isIP,
                             isRemoving: model.pendingRemoves.contains("\(list.kind)-\(identifier)")
                         ) { requestRemove(identifier) }
-                            .transition(.motionFade.combined(with: .move(edge: .top)))
+                        .transition(.motionFade.combined(with: .move(edge: .top)))
                     }
                 }
             }

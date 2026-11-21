@@ -17,7 +17,7 @@ struct FeedbackHost: ViewModifier {
                 )
             ) {
                 switch feedback.modal {
-                case let .confirm(request):
+                case .confirm(let request):
                     Button(request.cancelLabel, role: .cancel) { feedback.finishConfirm(false) }
                     Button(request.confirmLabel, role: request.isDanger ? .destructive : nil) {
                         feedback.finishConfirm(true)
@@ -29,18 +29,20 @@ struct FeedbackHost: ViewModifier {
                 }
             } message: {
                 switch feedback.modal {
-                case let .confirm(request):
+                case .confirm(let request):
                     if let description = request.description { Text(description) }
-                case let .error(request):
+                case .error(let request):
                     if let message = request.message { Text(message) }
                 default:
                     EmptyView()
                 }
             }
-            .sheet(item: Binding(
-                get: { promptRequest },
-                set: { if $0 == nil, promptRequest != nil { feedback.finishPrompt(nil) } }
-            )) { request in
+            .sheet(
+                item: Binding(
+                    get: { promptRequest },
+                    set: { if $0 == nil, promptRequest != nil { feedback.finishPrompt(nil) } }
+                )
+            ) { request in
                 PromptSheet(request: request) { feedback.finishPrompt($0) }
             }
     }
@@ -54,14 +56,14 @@ struct FeedbackHost: ViewModifier {
 
     private var alertTitle: String {
         switch feedback.modal {
-        case let .confirm(request): request.title
-        case let .error(request): request.title
+        case .confirm(let request): request.title
+        case .error(let request): request.title
         default: ""
         }
     }
 
     private var promptRequest: FeedbackCenter.PromptRequest? {
-        if case let .prompt(request) = feedback.modal { return request }
+        if case .prompt(let request) = feedback.modal { return request }
         return nil
     }
 

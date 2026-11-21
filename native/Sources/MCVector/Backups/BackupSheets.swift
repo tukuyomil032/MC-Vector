@@ -163,7 +163,7 @@ struct CreateBackupSheet: View {
         switch outcome {
         case .needsStop: asksToStop = true
         case .done: dismiss()
-        case let .failed(error): withAnimation(Motion.standard) { failure = error }
+        case .failed(let error): withAnimation(Motion.standard) { failure = error }
         }
     }
 
