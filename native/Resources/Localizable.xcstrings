@@ -10534,23 +10534,6 @@
         }
       }
     },
-    "native.serverSettings.softwareFooter": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Changing the software or version here only updates the record. Use Upgrade Version to download a new server jar."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ここでソフトウェアやバージョンを変えても、記録が変わるだけです。新しいサーバーの jar を取得するには、「バージョンを更新」を使ってください。"
-          }
-        }
-      }
-    },
     "native.serverSettings.tile.general": {
       "extractionState": "manual",
       "localizations": {
@@ -11197,6 +11180,23 @@
         }
       }
     },
+    "native.upgrade.changeButton": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Change Version…"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "バージョンを変更…"
+          }
+        }
+      }
+    },
     "native.upgrade.checkFailed": {
       "extractionState": "manual",
       "localizations": {
@@ -11334,6 +11334,24 @@
           "stringUnit": {
             "state": "translated",
             "value": "{version}（最新）"
+          }
+        }
+      }
+    },
+    "native.upgrade.mismatch": {
+      "comment": "Placeholders: {version}",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The server JAR is {version}."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "サーバーの JAR は {version} です。"
           }
         }
       }
@@ -11521,6 +11539,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "入れる"
+          }
+        }
+      }
+    },
+    "native.upgrade.syncFromJar": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Match the JAR"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "JAR に合わせる"
           }
         }
       }

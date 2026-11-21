@@ -95,9 +95,8 @@ Typed saves reject invalid values rather than silently clamping them:
 | auto_backup_retain_days | 0–365 |
 | notify_high_cpu_threshold | 1–100 percent |
 
-Software must be a supported software identifier. Version may be empty for an
-imported server whose version is unknown; it is limited to 128 bytes without
-control characters. Profile and group names are
+Software and version are read-only in General Settings. Version may be empty
+for an imported server whose version is unknown. Profile and group names are
 trimmed, at most 128 bytes, and cannot contain control characters. JVM arguments
 use the existing Java policy, including the tuning flags in React's presets;
 unsafe executable-loading and command arguments remain refused. An unset or
@@ -107,19 +106,19 @@ policy.
 
 Failures use `invalid_name`, `invalid_memory`, `invalid_port`,
 `invalid_request`, `not_found`, `unmanaged`, `io`, or `registry`, each prefixed
-with `server_settings.`. English and Japanese translations live in
+with `server_settings.`. A software or version change returns
+`server.version_locked`. English and Japanese translations live in
 `Resources/native-strings.json` and the generated string catalog.
 
 ## Restart and artifact behavior
 
-Changes to Java, memory, port, JVM arguments, software, or version set
+Changes to Java, memory, port, or JVM arguments set
 `restart_required`. Other settings do not require a restart. This is a comparison
 of saved settings, independent of whether a process is currently running.
 
-React exposes editable software and version controls alongside an optional
-upgrade wizard. General Settings therefore saves these metadata fields in both
-editions. It does not download or replace a server jar; artifact upgrades remain
-a separate operation.
+React displays the saved software and version alongside the upgrade wizard.
+Both editions change the installed software or version through the server JAR
+workflow.
 
 When port changes, the core patches `server-port` in an existing
 `server.properties`, preserving comments, whitespace, BOM, and line endings via

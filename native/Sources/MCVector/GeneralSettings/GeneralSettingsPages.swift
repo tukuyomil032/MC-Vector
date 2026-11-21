@@ -144,6 +144,7 @@ private struct GeneralRows: View {
     let model: GeneralSettingsModel
     @Environment(\.openSettings) private var openSettings
     @State private var showsUpgrade = false
+    @State private var versionStatus: ServerJarVersionStatus?
     @State private var javaRuntimes: [JavaRuntimeRecord] = []
     @State private var javaResolution: JavaResolution?
 
@@ -212,28 +213,49 @@ private struct GeneralRows: View {
             }
         }
         Section {
-            SoftwarePicker(
-                options: CoreClient.softwareOptions(), extra: draft.software, selection: field(\.software, ""))
-            VersionMenu(
-                title: L10n.t("serverSettings.version"),
-                versions: Self.versions(including: draft.version), selection: field(\.version, ""))
-            SettingsRow(title: L10n.t("serverSettings.versionUpgrade.buttonLabel")) {
-                Button(L10n.t("serverSettings.versionUpgrade.buttonLabel")) { showsUpgrade = true }
-                    .sheet(isPresented: $showsUpgrade) {
-                        UpgradeWizard(serverID: model.serverID) { Task { await model.reload() } }
-                    }
-                    #if DEBUG
-                        .task {
-                            if CaptureState.requestedID == "SERVERSETTINGS-upgrade" {
-                                try? await Task.sleep(for: .milliseconds(300))
-                                showsUpgrade = true
+            // Software and version change only through the wizard, which
+            // replaces the server JAR; here they are read-only.
+            SettingsRow(title: L10n.t("serverSettings.serverSoftware")) {
+                Text(draft.software).foregroundStyle(.secondary)
+            }
+            SettingsRow(title: L10n.t("serverSettings.version")) {
+                HStack(spacing: 10) {
+                    Text(draft.version).monospacedDigit().foregroundStyle(.secondary)
+                    Button(L10n.t("native.upgrade.changeButton")) { showsUpgrade = true }
+                        .sheet(isPresented: $showsUpgrade) {
+                            UpgradeWizard(serverID: model.serverID) {
+                                Task {
+                                    await model.reload()
+                                    await loadVersionStatus()
+                                }
                             }
                         }
-                    #endif
+                        #if DEBUG
+                            .task {
+                                if CaptureState.requestedID == "SERVERSETTINGS-upgrade" {
+                                    try? await Task.sleep(for: .milliseconds(300))
+                                    showsUpgrade = true
+                                }
+                            }
+                        #endif
+                }
             }
-        } footer: {
-            Text(L10n.t("native.serverSettings.softwareFooter"))
+            if let status = versionStatus, status.mismatch, let detected = status.detectedVersion {
+                SettingsRow(title: "") {
+                    HStack(spacing: 10) {
+                        Label(
+                            L10n.t("native.upgrade.mismatch", ["version": detected]),
+                            systemImage: "exclamationmark.triangle.fill"
+                        )
+                        .foregroundStyle(.orange)
+                        Button(L10n.t("native.upgrade.syncFromJar")) { Task { await syncVersion() } }
+                    }
+                }
+                .transition(.opacity)
+            }
         }
+        .task(id: model.serverID) { await loadVersionStatus() }
+
         Section {
             SettingsRow(title: L10n.t("serverSettings.savePath")) {
                 HStack(spacing: 8) {
@@ -490,11 +512,6 @@ extension GeneralRows {
 
     private static let weekdays = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"]
 
-    private static func versions(including current: String) -> [String] {
-        let bundled = CreateServerModel.loadBundledVersions()
-        return bundled.contains(current) || current.isEmpty ? bundled : [current] + bundled
-    }
-
     private var preset: Binding<JvmPreset?> {
         Binding(
             get: { JvmPreset.allCases.first { $0.args == draft.jvmArgs } },
@@ -520,6 +537,19 @@ extension GeneralRows {
                 let parts = Calendar.current.dateComponents([.hour, .minute], from: date)
                 model.draft?.autoBackupTime = String(format: "%02d:%02d", parts.hour ?? 0, parts.minute ?? 0)
             })
+    }
+
+    private func loadVersionStatus() async {
+        let status = try? await CoreClient.serverJarVersionStatus(serverID: model.serverID)
+        withAnimation(Motion.standard) { versionStatus = status }
+    }
+
+    /// Writes the version found in the JAR to the registry.
+    private func syncVersion() async {
+        if let status = try? await CoreClient.syncVersionFromJar(serverID: model.serverID) {
+            withAnimation(Motion.standard) { versionStatus = status }
+            await model.reload()
+        }
     }
 
     /// The draft's java_path; nil (Automatic) and empty both mean Automatic.

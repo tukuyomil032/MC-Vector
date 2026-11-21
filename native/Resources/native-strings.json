@@ -793,10 +793,6 @@
     "en": "Show in Finder",
     "ja": "Finder で表示"
   },
-  "native.serverSettings.softwareFooter": {
-    "en": "Changing the software or version here only updates the record. Use Upgrade Version to download a new server jar.",
-    "ja": "ここでソフトウェアやバージョンを変えても、記録が変わるだけです。新しいサーバーの jar を取得するには、「バージョンを更新」を使ってください。"
-  },
   "native.serverSettings.tile.general": {
     "en": "General",
     "ja": "全般"
@@ -906,6 +902,9 @@
   },
   "native.plugins.bulkFailed": { "en": "Update All failed", "ja": "すべて更新に失敗しました" },
   "native.settings.java": { "en": "Java", "ja": "Java" },
+  "native.upgrade.changeButton": { "en": "Change Version…", "ja": "バージョンを変更…" },
+  "native.upgrade.mismatch": { "en": "The server JAR is {version}.", "ja": "サーバーの JAR は {version} です。" },
+  "native.upgrade.syncFromJar": { "en": "Match the JAR", "ja": "JAR に合わせる" },
   "native.upgrade.title": { "en": "Change Version", "ja": "バージョンの変更" },
   "native.upgrade.stepChoose": { "en": "Choose", "ja": "選ぶ" },
   "native.upgrade.stepInstall": { "en": "Install", "ja": "入れる" },
@@ -927,6 +926,11 @@
     "en": "Going back to an older version can make worlds saved by the newer one unreadable. A backup is taken first.",
     "ja": "古い版に戻すと、新しい版で保存したワールドが読めなくなることがあります。先にバックアップを取ります。"
   },
+  "native.upgrade.skipBackup": { "en": "Continue Without Backup", "ja": "取らずに次へ" },
+  "native.upgrade.backupAndContinue": { "en": "Back Up and Continue", "ja": "バックアップを取って次へ" },
+  "native.upgrade.replace": { "en": "Replace", "ja": "入れ替える" },
+  "native.upgrade.replacing": { "en": "Replacing the server JAR…", "ja": "サーバーの JAR を入れ替えています…" },
+  "native.upgrade.done": { "en": "Done", "ja": "完了" },
   "native.upgrade.targetVersion": { "en": "Change To", "ja": "変更先" },
   "native.upgrade.latestTag": { "en": "{version} (latest)", "ja": "{version}（最新）" },
   "native.upgrade.releaseNotes": { "en": "Release Notes", "ja": "変更内容" },
@@ -940,11 +944,6 @@
     "ja": "{target} には Java {required} がいります。このサーバーの Java のバージョンは読み取れませんでした。"
   },
   "native.upgrade.javaFix": { "en": "Use Java {major} for This Server", "ja": "このサーバーで Java {major} を使う" },
-  "native.upgrade.skipBackup": { "en": "Continue Without Backup", "ja": "取らずに次へ" },
-  "native.upgrade.backupAndContinue": { "en": "Back Up and Continue", "ja": "バックアップを取って次へ" },
-  "native.upgrade.replace": { "en": "Replace", "ja": "入れ替える" },
-  "native.upgrade.replacing": { "en": "Replacing the server JAR…", "ja": "サーバーの JAR を入れ替えています…" },
-  "native.upgrade.done": { "en": "Done", "ja": "完了" },
   "native.serverSettings.javaAutomatic": { "en": "Automatic (Recommended)", "ja": "自動（推奨）" },
   "native.serverSettings.javaAutoInstalled": {
     "en": "Starts with Java {major} installed by MC-Vector.",
