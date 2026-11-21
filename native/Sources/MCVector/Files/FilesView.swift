@@ -276,17 +276,16 @@ struct FilesView: View {
     }
 
     private func sizeText(_ row: FileRow) -> String {
-        guard row.isDirectory else { return Self.byteFormatter.string(fromByteCount: Int64(row.size)) }
+        guard row.isDirectory else { return Self.bytes(row.size) }
         guard let size = folderSizes[relative(row.name)] else { return "…" }
-        let text = Self.byteFormatter.string(fromByteCount: Int64(size.bytes))
+        let text = Self.bytes(size.bytes)
         return size.complete ? text : "\(text)+"
     }
 
-    private static let byteFormatter: ByteCountFormatter = {
-        let formatter = ByteCountFormatter()
-        formatter.countStyle = .file
-        return formatter
-    }()
+    /// File sizes in the app language (no animation: this is a Table).
+    private static func bytes(_ count: UInt64) -> String {
+        Int64(count).formatted(.byteCount(style: .file).locale(Locale(identifier: L10n.language)))
+    }
 
 }
 

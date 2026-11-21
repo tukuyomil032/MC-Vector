@@ -71,6 +71,8 @@ struct MCVectorApp: App {
                 .environment(feedback)
                 .environment(runtime)
                 .frame(minWidth: 720, minHeight: 520)
+                // Numbers and dates follow the app language, not the system's.
+                .environment(\.locale, Locale(identifier: L10n.language))
                 .onAppear { appDelegate.attach(app: app, feedback: feedback, runtime: runtime) }
         }
         .defaultSize(width: 1200, height: 800)
@@ -84,6 +86,7 @@ struct MCVectorApp: App {
             ServerSettingsWindow()
                 .environment(app)
                 .environment(runtime)
+                .environment(\.locale, Locale(identifier: L10n.language))
         }
         .defaultSize(width: 980, height: 700)
         .windowToolbarStyle(.unified)
@@ -92,6 +95,7 @@ struct MCVectorApp: App {
         Settings {
             SettingsView()
                 .environment(feedback)
+                .environment(\.locale, Locale(identifier: L10n.language))
         }
         // Without these the window opened at a few hundred points, ignoring the
         // view's minimum size.

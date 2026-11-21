@@ -126,9 +126,13 @@ struct ConsoleView: View {
             .foregroundStyle(.secondary)
 
             if status == "online", let memory = memoryText {
-                LabeledContent(L10n.t("console.status.memory"), value: memory)
-                    .foregroundStyle(.secondary)
-                    .monospacedDigit()
+                LabeledContent(L10n.t("console.status.memory")) {
+                    Text(memory)
+                        .contentTransition(.numericText())
+                        .animation(Motion.value, value: memory)
+                }
+                .foregroundStyle(.secondary)
+                .monospacedDigit()
             }
 
             Spacer()
@@ -241,6 +245,8 @@ struct ConsoleView: View {
                 Text(L10n.t("console.search.count", ["current": currentMatch + 1, "total": matches.count]))
                     .monospacedDigit()
                     .foregroundStyle(.secondary)
+                    .contentTransition(.numericText(value: Double(currentMatch)))
+                    .animation(Motion.value, value: currentMatch)
             }
             Toggle(L10n.t("console.search.regex"), isOn: $useRegex)
                 .toggleStyle(.button)
