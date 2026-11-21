@@ -213,7 +213,10 @@ private struct UsersCard: View {
                 LazyVStack(alignment: .leading, spacing: 2) {
                     ForEach(entries, id: \.self) { entry in
                         let identifier = list.isIP ? (entry.ip ?? "") : entry.name
-                        UserRow(entry: entry, isIP: list.isIP) { requestRemove(identifier) }
+                        UserRow(
+                            entry: entry, isIP: list.isIP,
+                            isRemoving: model.pendingRemoves.contains("\(list.kind)-\(identifier)")
+                        ) { requestRemove(identifier) }
                             .transition(.motionFade.combined(with: .move(edge: .top)))
                     }
                 }
@@ -314,6 +317,7 @@ private struct UsersCard: View {
 private struct UserRow: View {
     let entry: PlayerEntry
     let isIP: Bool
+    var isRemoving = false
     let remove: () -> Void
 
     @State private var isHovered = false
@@ -332,9 +336,13 @@ private struct UserRow: View {
                 }
             }
             Spacer(minLength: 8)
-            Button(L10n.t("users.actions.remove"), action: remove)
-                .buttonStyle(.borderless)
-                .foregroundStyle(isHovered ? Color.red : Color.secondary)
+            if isRemoving {
+                ProgressView().controlSize(.small)
+            } else {
+                Button(L10n.t("users.actions.remove"), action: remove)
+                    .buttonStyle(.borderless)
+                    .foregroundStyle(isHovered ? Color.red : Color.secondary)
+            }
         }
         .padding(.horizontal, 8)
         .padding(.vertical, 6)

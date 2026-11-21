@@ -19,6 +19,8 @@ final class UsersModel {
     private(set) var lists = PlayerListSnapshot(whitelist: [], ops: [], bannedPlayers: [], bannedIps: [])
     /// Lists with an add in flight (the Add button shows a spinner).
     private(set) var pendingAdds: Set<PlayerListKind> = []
+    /// Entries being removed ("list-identifier"), so their row cannot be removed twice.
+    private(set) var pendingRemoves: Set<String> = []
     /// True once a load succeeded; a later failure keeps the lists on screen.
     private(set) var hasLoaded = false
     #if DEBUG
@@ -102,6 +104,10 @@ final class UsersModel {
     func remove(
         _ identifier: String, from list: PlayerListKind, runtime: ServerRuntime, feedback: FeedbackCenter
     ) async {
+        let key = "\(list)-\(identifier)"
+        guard !pendingRemoves.contains(key) else { return }
+        pendingRemoves.insert(key)
+        defer { pendingRemoves.remove(key) }
         do {
             let result = try await CoreClient.mutatePlayerList(
                 serverID: serverID, list: list, action: .remove, value: identifier)
