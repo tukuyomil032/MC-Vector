@@ -9296,6 +9296,24 @@
         }
       }
     },
+    "native.java.downloadAndStart": {
+      "comment": "Placeholders: {major}",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Download Java {major} and Start"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Java {major} を入れて起動"
+          }
+        }
+      }
+    },
     "native.java.lts": {
       "extractionState": "manual",
       "localizations": {
@@ -9343,6 +9361,76 @@
           "stringUnit": {
             "state": "translated",
             "value": "実行ファイルが見つかりません。"
+          }
+        }
+      }
+    },
+    "native.java.missingMessage": {
+      "comment": "Placeholders: {name}, {version}, {major}",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "{name} ({version}) needs Java {major}."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "{name}（{version}）には Java {major} がいります。"
+          }
+        }
+      }
+    },
+    "native.java.missingNoSystem": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No system Java was found."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "システムの Java が見つかりませんでした。"
+          }
+        }
+      }
+    },
+    "native.java.missingSystem": {
+      "comment": "Placeholders: {major}",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The system Java is {major}, which may not start this server."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "システムの Java は {major} で、このサーバーは起動できないかもしれません。"
+          }
+        }
+      }
+    },
+    "native.java.missingTitle": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A Newer Java Is Needed"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "新しい Java がいります"
           }
         }
       }
@@ -9411,6 +9499,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "確認中…"
+          }
+        }
+      }
+    },
+    "native.java.startWithSystem": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Start with System Java"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "システムの Java で起動"
           }
         }
       }
@@ -10064,6 +10169,94 @@
           "stringUnit": {
             "state": "translated",
             "value": "このサーバーの名前、ソフトウェア、Java とメモリ、自動再起動と自動バックアップ、通知を設定します。"
+          }
+        }
+      }
+    },
+    "native.serverSettings.javaAutoInstalled": {
+      "comment": "Placeholders: {major}",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Starts with Java {major} installed by MC-Vector."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MC-Vector が入れた Java {major} で起動します。"
+          }
+        }
+      }
+    },
+    "native.serverSettings.javaAutoMissing": {
+      "comment": "Placeholders: {major}",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Needs Java {major}, which is not installed yet."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Java {major} がいりますが、まだ入っていません。"
+          }
+        }
+      }
+    },
+    "native.serverSettings.javaAutoSystem": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Starts with the system Java."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "システムの Java で起動します。"
+          }
+        }
+      }
+    },
+    "native.serverSettings.javaAutoSystemMajor": {
+      "comment": "Placeholders: {major}",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Starts with the system Java {major}."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "システムの Java {major} で起動します。"
+          }
+        }
+      }
+    },
+    "native.serverSettings.javaAutomatic": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Automatic (Recommended)"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自動（推奨）"
           }
         }
       }
@@ -10982,6 +11175,24 @@
           "stringUnit": {
             "state": "translated",
             "value": "次へ"
+          }
+        }
+      }
+    },
+    "native.upgrade.javaDownload": {
+      "comment": "Placeholders: {major}",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Download Java {major}"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Java {major} をダウンロード"
           }
         }
       }
@@ -17695,6 +17906,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "例: 本番"
+          }
+        }
+      }
+    },
+    "serverSettings.javaAutomatic": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Automatic"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自動"
           }
         }
       }

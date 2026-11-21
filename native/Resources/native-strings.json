@@ -923,6 +923,36 @@
   },
   "native.upgrade.continue": { "en": "Continue", "ja": "次へ" },
   "native.upgrade.upgradedFrom": { "en": "Upgraded from {from} to {to}.", "ja": "{from} から {to} に更新しました。" },
+  "native.serverSettings.javaAutomatic": { "en": "Automatic (Recommended)", "ja": "自動（推奨）" },
+  "native.serverSettings.javaAutoInstalled": {
+    "en": "Starts with Java {major} installed by MC-Vector.",
+    "ja": "MC-Vector が入れた Java {major} で起動します。"
+  },
+  "native.serverSettings.javaAutoSystem": { "en": "Starts with the system Java.", "ja": "システムの Java で起動します。" },
+  "native.serverSettings.javaAutoSystemMajor": {
+    "en": "Starts with the system Java {major}.",
+    "ja": "システムの Java {major} で起動します。"
+  },
+  "native.serverSettings.javaAutoMissing": {
+    "en": "Needs Java {major}, which is not installed yet.",
+    "ja": "Java {major} がいりますが、まだ入っていません。"
+  },
+  "native.java.missingTitle": { "en": "A Newer Java Is Needed", "ja": "新しい Java がいります" },
+  "native.java.missingMessage": {
+    "en": "{name} ({version}) needs Java {major}.",
+    "ja": "{name}（{version}）には Java {major} がいります。"
+  },
+  "native.java.missingSystem": {
+    "en": "The system Java is {major}, which may not start this server.",
+    "ja": "システムの Java は {major} で、このサーバーは起動できないかもしれません。"
+  },
+  "native.java.missingNoSystem": {
+    "en": "No system Java was found.",
+    "ja": "システムの Java が見つかりませんでした。"
+  },
+  "native.java.downloadAndStart": { "en": "Download Java {major} and Start", "ja": "Java {major} を入れて起動" },
+  "native.java.startWithSystem": { "en": "Start with System Java", "ja": "システムの Java で起動" },
+  "native.upgrade.javaDownload": { "en": "Download Java {major}", "ja": "Java {major} をダウンロード" },
   "native.java.lts": { "en": "Long-term support · Eclipse Temurin", "ja": "長期サポート版 · Eclipse Temurin" },
   "native.java.offline": {
     "en": "Adoptium could not be reached; showing the usual LTS versions.",

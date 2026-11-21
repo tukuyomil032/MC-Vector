@@ -144,6 +144,8 @@ private struct GeneralRows: View {
     let model: GeneralSettingsModel
     @Environment(\.openSettings) private var openSettings
     @State private var showsUpgrade = false
+    @State private var javaRuntimes: [JavaRuntimeRecord] = []
+    @State private var javaResolution: JavaResolution?
 
     var body: some View {
         if model.draft != nil {
@@ -251,21 +253,45 @@ private struct GeneralRows: View {
         }
     }
 
+}
+
+// The remaining sections and the Java runtime choice, apart so the struct
+// body stays within the lint limit.
+extension GeneralRows {
     @ViewBuilder
     private var runtime: some View {
         Section {
             SettingsRow(title: L10n.t("serverSettings.javaRuntime")) {
-                HStack(spacing: 8) {
-                    Picker(L10n.t("serverSettings.javaRuntime"), selection: field(\.javaPath, nil)) {
-                        Text(L10n.t("serverSettings.javaSystemDefault")).tag(String?.none)
-                        if let path = draft.javaPath {
-                            Text(path).tag(String?.some(path))
+                VStack(alignment: .trailing, spacing: 4) {
+                    HStack(spacing: 8) {
+                        Picker(L10n.t("serverSettings.javaRuntime"), selection: javaSelection) {
+                            Text(L10n.t("native.serverSettings.javaAutomatic")).tag(String?.none)
+                            if !javaRuntimes.isEmpty { Divider() }
+                            ForEach(javaRuntimes, id: \.path) { runtime in
+                                Text(Self.runtimeLabel(runtime)).tag(String?.some(runtime.path))
+                            }
+                            Divider()
+                            Text(L10n.t("serverSettings.javaSystemDefault"))
+                                .tag(String?.some(CoreClient.systemJavaSentinel))
+                            if let path = draft.javaPath, path != CoreClient.systemJavaSentinel,
+                                !javaRuntimes.contains(where: { $0.path == path })
+                            {
+                                Text(path).tag(String?.some(path))
+                            }
                         }
+                        .labelsHidden()
+                        .fixedSize()
+                        Button(L10n.t("native.serverSettings.chooseJava")) { chooseJava() }
                     }
-                    .labelsHidden()
-                    .fixedSize()
-                    Button(L10n.t("native.serverSettings.chooseJava")) { chooseJava() }
+                    if let caption = javaCaption {
+                        Text(caption)
+                            .font(.caption)
+                            .foregroundStyle(javaMissing ? AnyShapeStyle(.orange) : AnyShapeStyle(.secondary))
+                            .contentTransition(.opacity)
+                    }
                 }
+                .animation(Motion.standard, value: javaCaption)
+                .task(id: "\(draft.javaPath ?? "auto")-\(draft.version)-\(draft.software)") { await loadJava() }
             }
             SettingsRow(title: L10n.t("serverSettings.manageJava")) {
                 Button(L10n.t("serverSettings.manageJava")) {
@@ -494,6 +520,51 @@ private struct GeneralRows: View {
                 let parts = Calendar.current.dateComponents([.hour, .minute], from: date)
                 model.draft?.autoBackupTime = String(format: "%02d:%02d", parts.hour ?? 0, parts.minute ?? 0)
             })
+    }
+
+    /// The draft's java_path; nil (Automatic) and empty both mean Automatic.
+    private var javaSelection: Binding<String?> {
+        Binding(
+            get: {
+                guard let path = model.draft?.javaPath, !path.isEmpty else { return nil }
+                return path
+            },
+            set: { model.draft?.javaPath = $0 })
+    }
+
+    private static func runtimeLabel(_ runtime: JavaRuntimeRecord) -> String {
+        var parts = [L10n.t("javaManager.versionTitle", ["version": runtime.major])]
+        if let version = runtime.version { parts.append(version) }
+        parts.append(L10n.t(runtime.origin == .managed ? "native.java.managed" : "native.java.custom"))
+        return parts.joined(separator: " · ")
+    }
+
+    private func loadJava() async {
+        javaRuntimes = ((try? await CoreClient.javaRuntimes()) ?? []).filter(\.available).sorted { $0.major > $1.major }
+        // The resolution reflects the saved settings, so show it for Automatic only
+        // while the draft still says Automatic.
+        javaResolution = try? await CoreClient.resolveJava(serverID: model.serverID)
+    }
+
+    private var javaMissing: Bool {
+        if case .missing = javaResolution?.choice { return true }
+        return false
+    }
+
+    /// Under Automatic: which Java the next start will use, or what is missing.
+    private var javaCaption: String? {
+        guard javaSelection.wrappedValue == nil, let resolution = javaResolution else { return nil }
+        switch resolution.choice {
+        case .installed(_, let major, _, _, _):
+            return L10n.t("native.serverSettings.javaAutoInstalled", ["major": major])
+        case .system(let major):
+            return major.map { L10n.t("native.serverSettings.javaAutoSystemMajor", ["major": $0]) }
+                ?? L10n.t("native.serverSettings.javaAutoSystem")
+        case .missing(let required, _):
+            return L10n.t("native.serverSettings.javaAutoMissing", ["major": required])
+        case .explicit, .systemDefault:
+            return nil
+        }
     }
 
     private func chooseJava() {
