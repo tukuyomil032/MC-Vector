@@ -118,15 +118,7 @@ struct CreationProgressView: View {
             case .resolving:
                 ProgressView { Text(workingLabel) }
             case .downloading(let percent):
-                if let percent {
-                    ProgressView(value: Double(percent), total: 100) {
-                        Text(downloadingLabel)
-                    } currentValueLabel: {
-                        Text("\(percent)%").monospacedDigit()
-                    }
-                } else {
-                    ProgressView { Text(downloadingLabel) }
-                }
+                RollingPercent(label: downloadingLabel, fraction: percent.map { Double($0) / 100 })
             case .finishing:
                 ProgressView { Text(L10n.t("native.addServer.finishing")) }
             }
