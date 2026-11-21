@@ -81,14 +81,28 @@ async fn validate_prepare_request(
 /// automatic download for this server.
 #[tauri::command]
 pub async fn prepare_server_jar_install(
+    app: AppHandle,
     registry: State<'_, ServerRegistry>,
     installer: State<'_, ServerJarInstaller>,
     servers: State<'_, ServerManager>,
     request: PrepareServerJarRequest,
 ) -> Result<Option<PreparedServerJarInstall>, String> {
     validate_prepare_request(&registry, &request).await?;
+    let app_data_dir = app
+        .path()
+        .app_data_dir()
+        .map_err(|error| error.to_string())?;
     match installer
-        .prepare(&registry, &servers, &request.server_id, None)
+        .prepare(
+            &app_data_dir,
+            &registry,
+            &servers,
+            &request.server_id,
+            None,
+            None,
+            false,
+            false,
+        )
         .await
     {
         Ok(plan) => Ok(Some(PreparedServerJarInstall {

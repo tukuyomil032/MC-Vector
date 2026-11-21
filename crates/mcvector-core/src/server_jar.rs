@@ -62,6 +62,15 @@ pub struct ResolvedArtifact {
     pub file_name: String,
     /// The size the provider published, when it did.
     pub size: Option<u64>,
+    /// Normalized provider channel (for example, `stable`, `beta` or `alpha`).
+    pub channel: String,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum VersionAvailability {
+    Stable,
+    Unstable { channel: String },
+    None { reason: String },
 }
 
 impl ResolvedArtifact {
@@ -77,13 +86,35 @@ impl ResolvedArtifact {
 /// Software MC-Vector can download and verify by itself when creating a server.
 /// Everything else needs the user to place the jar.
 pub fn supports_automatic_install(software: &str) -> bool {
-    matches!(software, "Paper" | "LeafMC" | "Vanilla")
+    matches!(software, "Paper" | "LeafMC" | "Leaf" | "Vanilla")
 }
 
 /// Software [`resolve_artifact`] and [`available_versions`] know. Fabric is
 /// resolvable but publishes no checksum, so it is not installed automatically.
 pub fn has_resolver(software: &str) -> bool {
-    matches!(software, "Paper" | "LeafMC" | "Vanilla" | "Fabric")
+    supports_automatic_install(software) || software == "Fabric"
+}
+
+/// The installed software first, followed by automatically installable
+/// alternatives within its server family. Proxies and vanilla stand alone.
+pub fn target_software_candidates(software: &str) -> Vec<String> {
+    let mut targets = vec![software.to_owned()];
+    let (current, family) = match software {
+        "Leaf" | "LeafMC" => ("LeafMC", &["Paper", "LeafMC"][..]),
+        "Paper" | "Purpur" | "Folia" | "Spigot" | "CraftBukkit" | "Pufferfish" | "Bukkit" => {
+            (software, &["Paper", "LeafMC"][..])
+        }
+        "Fabric" | "Forge" | "NeoForge" => (software, &["Fabric", "Forge", "NeoForge"][..]),
+        _ => return targets,
+    };
+    targets.extend(
+        family
+            .iter()
+            .copied()
+            .filter(|target| *target != current && supports_automatic_install(target))
+            .map(str::to_owned),
+    );
+    targets
 }
 
 /// Mojang publishes SHA-1 for server jars; prefer SHA-256 if it ever appears.
@@ -127,6 +158,12 @@ fn metadata_client() -> Result<Client, String> {
 }
 
 async fn fetch_json(client: &Client, url: Url) -> Result<Value, String> {
+    fetch_json_if_present(client, url)
+        .await?
+        .ok_or_else(|| "Server metadata endpoint was not found (HTTP 404)".into())
+}
+
+async fn fetch_json_if_present(client: &Client, url: Url) -> Result<Option<Value>, String> {
     if !approved_url(&url, METADATA_HOSTS) {
         return Err("Server metadata endpoint is not approved".into());
     }
@@ -135,7 +172,11 @@ async fn fetch_json(client: &Client, url: Url) -> Result<Value, String> {
         .header("Accept", "application/json")
         .send()
         .await
-        .map_err(|error| format!("Server metadata request failed: {error}"))?
+        .map_err(|error| format!("Server metadata request failed: {error}"))?;
+    if response.status() == reqwest::StatusCode::NOT_FOUND {
+        return Ok(None);
+    }
+    let response = response
         .error_for_status()
         .map_err(|error| format!("Server metadata request failed: {error}"))?;
     if response
@@ -155,6 +196,7 @@ async fn fetch_json(client: &Client, url: Url) -> Result<Value, String> {
         body.extend_from_slice(&chunk);
     }
     serde_json::from_slice(&body)
+        .map(Some)
         .map_err(|error| format!("Server metadata response is invalid JSON: {error}"))
 }
 
@@ -206,8 +248,7 @@ fn read_sha256(downloads: &Value) -> Option<String> {
     ]
     .into_iter()
     .flatten()
-    .filter_map(|candidate| candidate.get("checksums"))
-    .filter_map(|checksums| checksums.get("sha256"))
+    .flat_map(|candidate| [&candidate["checksums"]["sha256"], &candidate["sha256"]])
     .filter_map(Value::as_str)
     .map(str::trim)
     .find(|hash| !hash.is_empty())
@@ -248,22 +289,56 @@ fn read_download_url(downloads: &Value) -> Option<String> {
     .map(str::to_owned)
 }
 
-fn select_v2_build(builds: &Value, stable_only: bool) -> Option<&Value> {
-    let builds = builds.as_array()?;
-    builds.iter().rev().find(|build| {
-        if !stable_only {
-            return true;
-        }
-        match build.get("promoted").and_then(Value::as_bool) {
-            Some(true) => true,
-            _ => match build.get("channel").and_then(Value::as_str) {
-                Some(channel) => {
-                    matches!(channel.to_ascii_lowercase().as_str(), "stable" | "default")
-                }
-                None => true,
-            },
-        }
-    })
+#[derive(Clone, Copy)]
+enum BuildPolicy {
+    StableOnly,
+    PreferStable,
+    /// The existing Leaf creation resolver accepts the newest build.
+    Latest,
+}
+
+fn v2_channel(build: &Value) -> String {
+    let channel = build["channel"]
+        .as_str()
+        .unwrap_or("default")
+        .to_ascii_lowercase();
+    if build["promoted"].as_bool() == Some(true) || matches!(channel.as_str(), "default" | "stable")
+    {
+        "stable".into()
+    } else {
+        channel
+    }
+}
+
+fn select_build<'a>(
+    builds: impl Iterator<Item = &'a Value>,
+    policy: BuildPolicy,
+    channel_for: impl Fn(&Value) -> String,
+) -> Option<(&'a Value, String)> {
+    builds
+        .filter_map(|build| {
+            let channel = channel_for(build);
+            let stable = channel == "stable";
+            if channel.is_empty() || (!stable && matches!(policy, BuildPolicy::StableOnly)) {
+                return None;
+            }
+            let stable_rank = stable && matches!(policy, BuildPolicy::PreferStable);
+            let number = read_build_number(build).and_then(|number| number.parse::<u64>().ok());
+            Some(((stable_rank, number), (build, channel)))
+        })
+        .max_by_key(|(rank, _)| *rank)
+        .map(|(_, selected)| selected)
+}
+
+fn select_v2_build(builds: &Value, policy: BuildPolicy) -> Option<(&Value, String)> {
+    let builds = builds.as_array().or_else(|| builds["builds"].as_array())?;
+    select_build(
+        builds
+            .iter()
+            .filter(|build| read_build_number(build).is_some()),
+        policy,
+        v2_channel,
+    )
 }
 
 fn read_build_number(build: &Value) -> Option<String> {
@@ -278,15 +353,19 @@ fn read_build_number(build: &Value) -> Option<String> {
         })
 }
 
-async fn resolve_v2_style(
-    client: &Client,
+async fn resolve_v2_style<F, Fut>(
+    fetch: &F,
     api_base: &str,
     project: &str,
     version: &str,
     latest: bool,
     file_prefix: &str,
-    stable_only: bool,
-) -> Result<Option<ResolvedArtifact>, String> {
+    policy: BuildPolicy,
+) -> Result<Option<ResolvedArtifact>, String>
+where
+    F: Fn(Url) -> Fut,
+    Fut: std::future::Future<Output = Result<Option<Value>, String>>,
+{
     let requested = version.trim();
     let mut versions = if requested.is_empty() {
         Vec::new()
@@ -294,10 +373,12 @@ async fn resolve_v2_style(
         vec![requested.to_owned()]
     };
     if latest || versions.is_empty() {
-        let project_data = fetch_json(client, endpoint(api_base, &["projects", project])?).await?;
+        let project_data = fetch(endpoint(api_base, &["projects", project])?)
+            .await?
+            .ok_or("Server project metadata was not found")?;
         versions = strings(&project_data["versions"]);
         if latest {
-            versions.reverse();
+            versions = crate::server_upgrade::newer_releases("", &versions);
         }
     }
 
@@ -306,14 +387,10 @@ async fn resolve_v2_style(
             api_base,
             &["projects", project, "versions", &version, "builds"],
         )?;
-        let build_data = fetch_json(client, build_url).await?;
-        let builds = build_data
-            .as_array()
-            .cloned()
-            .or_else(|| build_data.get("builds").and_then(Value::as_array).cloned())
-            .unwrap_or_default();
-        let builds = Value::Array(builds);
-        let Some(build) = select_v2_build(&builds, stable_only) else {
+        let Some(builds) = fetch(build_url).await? else {
+            continue;
+        };
+        let Some((build, channel)) = select_v2_build(&builds, policy) else {
             continue;
         };
         let Some(build_number) = read_build_number(build) else {
@@ -340,6 +417,7 @@ async fn resolve_v2_style(
             checksum: read_sha256(&build["downloads"]).map(ExpectedChecksum::sha256),
             size: read_download_size(&build["downloads"]),
             file_name,
+            channel,
         }));
     }
     Ok(None)
@@ -357,11 +435,16 @@ fn read_paper_fill_versions(project: &Value) -> Vec<String> {
         .collect()
 }
 
-fn select_paper_fill_build(builds: &Value) -> Option<&Value> {
+fn select_paper_fill_build(builds: &Value, policy: BuildPolicy) -> Option<(&Value, String)> {
     let builds = builds.as_array().or_else(|| builds["builds"].as_array())?;
-    builds
-        .iter()
-        .find(|build| build["channel"].as_str() == Some("STABLE"))
+    select_build(
+        builds
+            .iter()
+            .rev()
+            .filter(|build| read_download_url(&build["downloads"]).is_some()),
+        policy,
+        |build| string(&build["channel"]).to_ascii_lowercase(),
+    )
 }
 
 fn validate_artifact_url(url: &str, hosts: &[&str]) -> Result<String, String> {
@@ -372,11 +455,16 @@ fn validate_artifact_url(url: &str, hosts: &[&str]) -> Result<String, String> {
     Ok(parsed.to_string())
 }
 
-async fn resolve_paper_fill(
-    client: &Client,
+async fn resolve_paper_fill<F, Fut>(
+    fetch: &F,
     version: &str,
     latest: bool,
-) -> Result<Option<ResolvedArtifact>, String> {
+    policy: BuildPolicy,
+) -> Result<Option<ResolvedArtifact>, String>
+where
+    F: Fn(Url) -> Fut,
+    Fut: std::future::Future<Output = Result<Option<Value>, String>>,
+{
     let requested = version.trim();
     let mut versions = if requested.is_empty() {
         Vec::new()
@@ -384,20 +472,25 @@ async fn resolve_paper_fill(
         vec![requested.to_owned()]
     };
     if latest || versions.is_empty() {
-        let project = fetch_json(client, endpoint(PAPER_FILL_API, &["projects", "paper"])?).await?;
+        let project = fetch(endpoint(PAPER_FILL_API, &["projects", "paper"])?)
+            .await?
+            .ok_or("Paper Fill project metadata was not found")?;
         versions = read_paper_fill_versions(&project);
+        if latest {
+            versions = crate::server_upgrade::newer_releases("", &versions);
+        }
     }
 
     for version in versions {
-        let builds = fetch_json(
-            client,
-            endpoint(
-                PAPER_FILL_API,
-                &["projects", "paper", "versions", &version, "builds"],
-            )?,
-        )
-        .await?;
-        let Some(build) = select_paper_fill_build(&builds) else {
+        let Some(builds) = fetch(endpoint(
+            PAPER_FILL_API,
+            &["projects", "paper", "versions", &version, "builds"],
+        )?)
+        .await?
+        else {
+            continue;
+        };
+        let Some((build, channel)) = select_paper_fill_build(&builds, policy) else {
             continue;
         };
         let Some(raw_url) = read_download_url(&build["downloads"]) else {
@@ -412,28 +505,34 @@ async fn resolve_paper_fill(
             checksum: read_sha256(&build["downloads"]).map(ExpectedChecksum::sha256),
             size: read_download_size(&build["downloads"]),
             file_name,
+            channel,
         }));
     }
     Ok(None)
 }
 
-async fn resolve_paper(
-    client: &Client,
+async fn resolve_paper<F, Fut>(
+    fetch: &F,
     version: &str,
     latest: bool,
-) -> Result<Option<ResolvedArtifact>, String> {
-    match resolve_paper_fill(client, version, latest).await {
+    policy: BuildPolicy,
+) -> Result<Option<ResolvedArtifact>, String>
+where
+    F: Fn(Url) -> Fut,
+    Fut: std::future::Future<Output = Result<Option<Value>, String>>,
+{
+    match resolve_paper_fill(fetch, version, latest, policy).await {
         Ok(result) => Ok(result),
         Err(error) => {
             log::warn!("Paper Fill API resolution failed; trying official v2 fallback: {error}");
             resolve_v2_style(
-                client,
+                fetch,
                 PAPER_V2_API,
                 "paper",
                 version,
                 latest,
                 "paper",
-                true,
+                policy,
             )
             .await
         }
@@ -468,24 +567,19 @@ fn select_vanilla_version(
         })
 }
 
-fn select_fabric_loader(loaders: &Value) -> Option<String> {
-    let entries = loaders.as_array()?;
-    entries
-        .iter()
-        .find(|entry| entry["loader"]["stable"].as_bool() == Some(true))
-        .or_else(|| entries.first())
-        .and_then(|entry| entry["loader"]["version"].as_str())
-        .map(str::to_owned)
-}
-
-fn select_fabric_installer(installers: &Value) -> Option<String> {
-    let entries = installers.as_array()?;
-    entries
-        .iter()
-        .find(|entry| entry["stable"].as_bool() == Some(true))
-        .or_else(|| entries.first())
-        .and_then(|entry| entry["version"].as_str())
-        .map(str::to_owned)
+fn select_fabric_component<'a>(
+    entries: impl Iterator<Item = &'a Value>,
+) -> Option<(&'a str, bool)> {
+    let mut fallback = None;
+    for entry in entries {
+        if let Some(version) = entry["version"].as_str() {
+            if entry["stable"].as_bool() == Some(true) {
+                return Some((version, true));
+            }
+            fallback.get_or_insert((version, false));
+        }
+    }
+    fallback
 }
 
 /// Finds the official download for `software` at `version` (or the newest
@@ -496,20 +590,72 @@ pub async fn resolve_artifact(
     version: &str,
     latest: bool,
 ) -> Result<Option<ResolvedArtifact>, String> {
+    let policy = match software {
+        "Leaf" | "LeafMC" => BuildPolicy::Latest,
+        "Fabric" => BuildPolicy::PreferStable,
+        _ => BuildPolicy::StableOnly,
+    };
+    resolve_artifact_with_metadata(software, version, latest, policy).await
+}
+
+/// Resolves a version for an in-place change. A stable build takes precedence
+/// over newer unstable builds for the same version.
+pub async fn resolve_artifact_with_policy(
+    software: &str,
+    version: &str,
+    latest: bool,
+    allow_unstable: bool,
+) -> Result<Option<ResolvedArtifact>, String> {
+    let policy = if allow_unstable {
+        BuildPolicy::PreferStable
+    } else {
+        BuildPolicy::StableOnly
+    };
+    resolve_artifact_with_metadata(software, version, latest, policy).await
+}
+
+async fn resolve_artifact_with_metadata(
+    software: &str,
+    version: &str,
+    latest: bool,
+    policy: BuildPolicy,
+) -> Result<Option<ResolvedArtifact>, String> {
     let client = metadata_client()?;
+    resolve_artifact_with(software, version, latest, policy, &|url| {
+        let client = client.clone();
+        async move { fetch_json_if_present(&client, url).await }
+    })
+    .await
+}
+
+async fn resolve_artifact_with<F, Fut>(
+    software: &str,
+    version: &str,
+    latest: bool,
+    policy: BuildPolicy,
+    fetch: &F,
+) -> Result<Option<ResolvedArtifact>, String>
+where
+    F: Fn(Url) -> Fut,
+    Fut: std::future::Future<Output = Result<Option<Value>, String>>,
+{
     match software {
-        "Paper" => resolve_paper(&client, version, latest).await,
-        "LeafMC" => {
-            resolve_v2_style(&client, LEAF_API, "leaf", version, latest, "leaf", false).await
+        "Paper" => resolve_paper(fetch, version, latest, policy).await,
+        "Leaf" | "LeafMC" => {
+            resolve_v2_style(fetch, LEAF_API, "leaf", version, latest, "leaf", policy).await
         }
         "Vanilla" => {
-            let manifest = fetch_json(&client, Url::parse(MOJANG_MANIFEST_URL).unwrap()).await?;
+            let manifest = fetch(Url::parse(MOJANG_MANIFEST_URL).unwrap())
+                .await?
+                .ok_or("Minecraft version manifest was not found")?;
             let Some((version, detail_url)) = select_vanilla_version(&manifest, version, latest)
             else {
                 return Ok(None);
             };
             let detail_url = validate_artifact_url(&detail_url, &["piston-meta.mojang.com"])?;
-            let detail = fetch_json(&client, Url::parse(&detail_url).unwrap()).await?;
+            let Some(detail) = fetch(Url::parse(&detail_url).unwrap()).await? else {
+                return Ok(None);
+            };
             let Some(raw_url) = detail["downloads"]["server"]["url"].as_str() else {
                 return Ok(None);
             };
@@ -520,6 +666,7 @@ pub async fn resolve_artifact(
                 url,
                 checksum: read_mojang_checksum(&detail["downloads"]["server"]),
                 size: detail["downloads"]["server"]["size"].as_u64(),
+                channel: "stable".into(),
             }))
         }
         "Fabric" => {
@@ -527,26 +674,37 @@ pub async fn resolve_artifact(
             if version.is_empty() {
                 return Ok(None);
             }
-            let loaders = fetch_json(
-                &client,
-                endpoint(FABRIC_META_API, &["versions", "loader", version])?,
-            )
-            .await?;
-            let Some(loader) = select_fabric_loader(&loaders) else {
+            let loaders = fetch(endpoint(FABRIC_META_API, &["versions", "loader", version])?)
+                .await?
+                .unwrap_or_default();
+            let Some((loader, loader_stable)) = select_fabric_component(
+                loaders
+                    .as_array()
+                    .into_iter()
+                    .flatten()
+                    .map(|entry| &entry["loader"]),
+            ) else {
                 return Ok(None);
             };
-            let installers = fetch_json(
-                &client,
-                endpoint(FABRIC_META_API, &["versions", "installer"])?,
-            )
-            .await?;
-            let Some(installer) = select_fabric_installer(&installers) else {
+            let installers = fetch(endpoint(FABRIC_META_API, &["versions", "installer"])?)
+                .await?
+                .unwrap_or_default();
+            let Some((installer, installer_stable)) =
+                select_fabric_component(installers.as_array().into_iter().flatten())
+            else {
                 return Ok(None);
+            };
+            let channel = if loader_stable && installer_stable {
+                "stable"
+            } else if matches!(policy, BuildPolicy::StableOnly) {
+                return Ok(None);
+            } else {
+                "experimental"
             };
             let url = endpoint(
                 FABRIC_META_API,
                 &[
-                    "versions", "loader", version, &loader, &installer, "server", "jar",
+                    "versions", "loader", version, loader, installer, "server", "jar",
                 ],
             )?;
             Ok(Some(ResolvedArtifact {
@@ -558,10 +716,72 @@ pub async fn resolve_artifact(
                 file_name: format!(
                     "fabric-server-mc.{version}-loader.{loader}-launcher.{installer}.jar"
                 ),
+                channel: channel.into(),
             }))
         }
         _ => Ok(None),
     }
+}
+
+/// Reports the provider channel for a version without downloading its JAR.
+/// Missing versions are distinguished from provider and transport failures.
+pub async fn version_availability(
+    software: &str,
+    version: &str,
+) -> Result<VersionAvailability, String> {
+    let client = metadata_client()?;
+    version_availability_with(software, version, &|url| {
+        let client = client.clone();
+        async move { fetch_json_if_present(&client, url).await }
+    })
+    .await
+}
+
+async fn version_availability_with<F, Fut>(
+    software: &str,
+    version: &str,
+    fetch: &F,
+) -> Result<VersionAvailability, String>
+where
+    F: Fn(Url) -> Fut,
+    Fut: std::future::Future<Output = Result<Option<Value>, String>>,
+{
+    let version = version.trim();
+    let missing = || VersionAvailability::None {
+        reason: format!("No server build is available for {software} {version}"),
+    };
+    if !has_resolver(software) {
+        return Ok(VersionAvailability::None {
+            reason: format!("No official JAR source is supported for {software}"),
+        });
+    }
+    if version.is_empty() {
+        return Ok(missing());
+    }
+    if software == "Vanilla" {
+        let manifest = fetch(Url::parse(MOJANG_MANIFEST_URL).unwrap())
+            .await?
+            .ok_or("Minecraft version manifest was not found")?;
+        return Ok(
+            if read_vanilla_releases(&manifest)
+                .iter()
+                .any(|id| id == version)
+            {
+                VersionAvailability::Stable
+            } else {
+                missing()
+            },
+        );
+    }
+    let artifact =
+        resolve_artifact_with(software, version, false, BuildPolicy::PreferStable, fetch).await?;
+    Ok(match artifact {
+        Some(artifact) if artifact.channel == "stable" => VersionAvailability::Stable,
+        Some(artifact) => VersionAvailability::Unstable {
+            channel: artifact.channel,
+        },
+        None => missing(),
+    })
 }
 
 /// Every version the provider lists for `software` (unordered, may include
@@ -595,7 +815,7 @@ where
                 Ok(Some(strings(&project["versions"])))
             }
         },
-        "LeafMC" => {
+        "Leaf" | "LeafMC" => {
             let project = fetch(endpoint(LEAF_API, &["projects", "leaf"])?).await?;
             Ok(Some(strings(&project["versions"])))
         }
@@ -878,10 +1098,20 @@ mod tests {
             ["1.20.6", "1.21.1", "1.21.2"]
         );
         let builds = serde_json::json!([
-            {"channel":"EXPERIMENTAL", "id": 1},
-            {"channel":"STABLE", "id": 2}
+            {"channel":"EXPERIMENTAL", "id": 1, "downloads": {
+                "server:default": {"url": "https://fill-data.papermc.io/experimental.jar"}
+            }},
+            {"channel":"STABLE", "id": 2, "downloads": {
+                "server:default": {"url": "https://fill-data.papermc.io/stable.jar"}
+            }},
+            {"channel":"STABLE", "id": 3, "downloads": {}}
         ]);
-        assert_eq!(select_paper_fill_build(&builds).unwrap()["id"], 2);
+        assert_eq!(
+            select_paper_fill_build(&builds, BuildPolicy::StableOnly)
+                .unwrap()
+                .0["id"],
+            2
+        );
     }
 
     #[test]
@@ -893,13 +1123,153 @@ mod tests {
             {"build": 4, "channel": "stable", "promoted": false}
         ]);
         assert_eq!(
-            read_build_number(select_v2_build(&builds, false).unwrap()).as_deref(),
+            read_build_number(select_v2_build(&builds, BuildPolicy::Latest).unwrap().0).as_deref(),
             Some("4")
         );
         assert_eq!(
-            read_build_number(select_v2_build(&builds, true).unwrap()).as_deref(),
+            read_build_number(select_v2_build(&builds, BuildPolicy::StableOnly).unwrap().0)
+                .as_deref(),
             Some("4")
         );
+    }
+
+    #[tokio::test]
+    async fn availability_and_policy_share_provider_build_selection() {
+        use serde_json::json;
+
+        let paper_build = |id: u64, channel: &str| {
+            json!({
+                "id": id,
+                "channel": channel,
+                "downloads": {
+                    "server:default": {
+                        "url": format!("https://fill-data.papermc.io/paper-{id}.jar"),
+                        "checksums": {"sha256": "a".repeat(64)}
+                    }
+                }
+            })
+        };
+        let stable = json!([paper_build(6, "BETA"), paper_build(2, "STABLE")]);
+        let unstable = json!([paper_build(1, "BETA"), paper_build(3, "ALPHA")]);
+        let leaf = json!({"builds": [
+            {"build": 8, "channel": "experimental"},
+            {"build": 4, "channel": "default", "downloads": {
+                "application": {"sha256": "a".repeat(64)}
+            }}
+        ]});
+        let leaf_unstable = json!([{"build": 3, "channel": "experimental"}]);
+        let manifest = json!({"versions": [
+            {"id": "1.21.1", "type": "release"},
+            {"id": "24w12a", "type": "snapshot"}
+        ]});
+        let fetch = |url: Url| {
+            let response = match (url.host_str().unwrap(), url.path()) {
+                ("fill.papermc.io", "/v3/projects/paper") => {
+                    Some(json!({"versions": {"1.21": ["1.21.1"], "26.1": ["26.1.1"]}}))
+                }
+                ("fill.papermc.io", "/v3/projects/paper/versions/1.21.1/builds") => {
+                    Some(stable.clone())
+                }
+                ("fill.papermc.io", "/v3/projects/paper/versions/26.1.1/builds") => {
+                    Some(unstable.clone())
+                }
+                ("api.leafmc.one", "/v2/projects/leaf/versions/1.21.1/builds") => {
+                    Some(leaf.clone())
+                }
+                ("api.leafmc.one", "/v2/projects/leaf/versions/1.21.2/builds") => {
+                    Some(leaf_unstable.clone())
+                }
+                ("piston-meta.mojang.com", _) => Some(manifest.clone()),
+                _ => None,
+            };
+            std::future::ready(Ok(response))
+        };
+        for software in ["Paper", "LeafMC", "Vanilla"] {
+            assert_eq!(
+                version_availability_with(software, "1.21.1", &fetch)
+                    .await
+                    .unwrap(),
+                VersionAvailability::Stable
+            );
+        }
+        assert_eq!(
+            version_availability_with("Paper", "26.1.1", &fetch)
+                .await
+                .unwrap(),
+            VersionAvailability::Unstable {
+                channel: "alpha".into()
+            }
+        );
+        assert_eq!(
+            version_availability_with("LeafMC", "1.21.2", &fetch)
+                .await
+                .unwrap(),
+            VersionAvailability::Unstable {
+                channel: "experimental".into()
+            }
+        );
+        for (software, version) in [
+            ("Paper", "1.99"),
+            ("Vanilla", "24w12a"),
+            ("Forge", "1.21.1"),
+        ] {
+            assert!(matches!(
+                version_availability_with(software, version, &fetch)
+                    .await
+                    .unwrap(),
+                VersionAvailability::None { .. }
+            ));
+        }
+        assert!(
+            resolve_artifact_with("Paper", "26.1.1", false, BuildPolicy::StableOnly, &fetch)
+                .await
+                .unwrap()
+                .is_none()
+        );
+        for (version, file, channel) in [
+            ("26.1.1", "paper-3.jar", "alpha"),
+            ("1.21.1", "paper-2.jar", "stable"),
+        ] {
+            let artifact =
+                resolve_artifact_with("Paper", version, false, BuildPolicy::PreferStable, &fetch)
+                    .await
+                    .unwrap()
+                    .unwrap();
+            assert!(artifact.url.ends_with(file));
+            assert_eq!(artifact.channel, channel);
+        }
+        let leaf_stable =
+            resolve_artifact_with("LeafMC", "1.21.1", false, BuildPolicy::PreferStable, &fetch)
+                .await
+                .unwrap()
+                .unwrap();
+        assert_eq!(leaf_stable.sha256(), Some("a".repeat(64).as_str()));
+
+        for (policy, expected) in [
+            (BuildPolicy::StableOnly, "1.21.1"),
+            (BuildPolicy::PreferStable, "26.1.1"),
+        ] {
+            let latest = resolve_artifact_with("Paper", "", true, policy, &fetch)
+                .await
+                .unwrap()
+                .unwrap();
+            assert_eq!(latest.version, expected);
+        }
+    }
+
+    #[test]
+    fn software_targets_keep_current_and_only_installable_family_alternatives() {
+        assert_eq!(target_software_candidates("Paper"), ["Paper", "LeafMC"]);
+        assert_eq!(target_software_candidates("Leaf"), ["Leaf", "Paper"]);
+        for software in ["Folia", "Purpur", "Spigot"] {
+            assert_eq!(
+                target_software_candidates(software),
+                [software, "Paper", "LeafMC"]
+            );
+        }
+        for software in ["Vanilla", "Fabric", "Forge", "NeoForge", "Velocity"] {
+            assert_eq!(target_software_candidates(software), [software]);
+        }
     }
 
     #[test]
@@ -952,15 +1322,23 @@ mod tests {
             {"version":"1.0.0", "stable":false},
             {"version":"1.0.1", "stable":true}
         ]);
-        assert_eq!(select_fabric_loader(&loaders).as_deref(), Some("0.16.5"));
         assert_eq!(
-            select_fabric_installer(&installers).as_deref(),
-            Some("1.0.1")
+            select_fabric_component(
+                loaders
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .map(|entry| &entry["loader"])
+            ),
+            Some(("0.16.5", true))
         );
         assert_eq!(
-            select_fabric_loader(&serde_json::json!([{"loader":{"version":"fallback"}}]))
-                .as_deref(),
-            Some("fallback")
+            select_fabric_component(installers.as_array().unwrap().iter()),
+            Some(("1.0.1", true))
+        );
+        assert_eq!(
+            select_fabric_component([serde_json::json!({"version":"fallback"})].iter()),
+            Some(("fallback", false))
         );
     }
 

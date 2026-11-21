@@ -1,18 +1,21 @@
-//! Upgrading a server to a newer Minecraft (or proxy) version by replacing
+//! Changing a server version or software by replacing
 //! its `server.jar`.
 //!
-//! [`candidates`] lists the newer versions the provider offers. [`ServerJarUpgrader::prepare`]
+//! [`candidates`] lists the release versions the provider offers. [`ServerJarUpgrader::prepare`]
 //! resolves one version into a short-lived plan (file, size, checksum, the
 //! Java it needs, whether the server runs). [`ServerJarUpgrader::execute`]
 //! consumes the plan: it refuses running servers and jars without a published
 //! checksum, downloads and verifies the jar, and swaps it in through the
-//! recovery journal (see [`journal`]), updating the registry version.
+//! recovery journal (see [`journal`]), updating the registry profile.
 
+mod detection;
 pub mod journal;
 pub mod versions;
 
+use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::fmt;
+use std::fs;
 use std::path::Path;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
@@ -24,12 +27,16 @@ use crate::download::{
 };
 use crate::error::{CoreError, CoreErrorCode};
 use crate::java::{self, JavaRequirement};
-use crate::managed_path::validate_server_id;
-use crate::operations::{OperationKind, ServerOperationManager};
+use crate::managed_path::{
+    is_link_or_reparse_point, resolve_managed_request, validate_server_id, ManagedPathRequest,
+    ManagedRoot,
+};
+use crate::operations::{OperationGuard, OperationKind, ServerOperationManager};
 use crate::registry::{MinecraftServer, ServerRegistry};
 use crate::server_jar::{self, MAX_JAR_BYTES, SERVER_JAR_HOSTS};
 use crate::server_process::ServerManager;
 
+pub use detection::{detected_version, sync_version_from_jar, version_status, VersionStatus};
 pub use journal::{recover_replacement, recover_startup, JarRecoveryFailure};
 pub use versions::{newer_releases, release_notes_url};
 
@@ -130,6 +137,7 @@ pub struct UpgradeCandidate {
     pub version: String,
     /// The newest version the provider lists.
     pub latest: bool,
+    pub newer: bool,
     pub release_notes_url: Option<String>,
     /// From the built-in table (no network per candidate); the plan carries
     /// Mojang's value.
@@ -145,8 +153,15 @@ pub struct UpgradeCandidates {
     /// (no resolver, or the provider publishes no checksum). Candidates may
     /// still be listed for information.
     pub supported: bool,
-    /// Newest first; empty when already on the newest version.
+    pub target_software_candidates: Vec<String>,
+    /// Newest first, excluding the current version.
     pub candidates: Vec<UpgradeCandidate>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct SoftwareChange {
+    pub from: String,
+    pub to: String,
 }
 
 /// A prepared upgrade. Pass `plan_id` to [`ServerJarUpgrader::execute`].
@@ -157,6 +172,9 @@ pub struct UpgradePlan {
     pub software: String,
     pub current_version: String,
     pub target_version: String,
+    pub downgrade: bool,
+    pub channel: String,
+    pub software_change: Option<SoftwareChange>,
     /// The provider's file name (installed as `server.jar`).
     pub file_name: String,
     pub size: Option<u64>,
@@ -191,6 +209,8 @@ pub struct UpgradeProgress {
 pub struct UpgradeResult {
     pub server_id: String,
     pub previous_version: String,
+    pub previous_software: String,
+    pub software: String,
     pub version: String,
 }
 
@@ -199,6 +219,8 @@ struct StoredPlan {
     server_id: String,
     software: String,
     source_version: String,
+    detected_source_version: Option<String>,
+    target_software: String,
     target_version: String,
     url: String,
     checksum: Option<ExpectedChecksum>,
@@ -231,42 +253,97 @@ fn normalized_server_id(server_id: &str) -> Result<String, UpgradeError> {
         .map_err(|error| UpgradeError::new(UpgradeErrorKind::InvalidRequest, error))
 }
 
-/// Newer versions the provider offers for a registered server.
-pub async fn candidates(
-    registry: &ServerRegistry,
-    server_id: &str,
-) -> Result<UpgradeCandidates, UpgradeError> {
-    let server = load_server(registry, &normalized_server_id(server_id)?).await?;
-    let versions = server_jar::available_versions(&server.software)
-        .await
-        .map_err(|error| UpgradeError::new(UpgradeErrorKind::Unavailable, error))?;
-    Ok(candidates_from(&server, versions))
+fn select_software<'a>(
+    server: &'a MinecraftServer,
+    target: Option<&'a str>,
+) -> Result<&'a str, UpgradeError> {
+    let target = target.unwrap_or(&server.software);
+    if !server_jar::target_software_candidates(&server.software)
+        .iter()
+        .any(|name| name == target)
+    {
+        return Err(UpgradeError::new(
+            UpgradeErrorKind::InvalidRequest,
+            "Target software is outside the server's supported software family",
+        ));
+    }
+    Ok(target)
 }
 
-pub(crate) fn candidates_from(
+/// Release versions offered by the selected compatible provider.
+pub async fn candidates(
+    data_dir: &Path,
+    registry: &ServerRegistry,
+    server_id: &str,
+    target_software: Option<&str>,
+) -> Result<UpgradeCandidates, UpgradeError> {
+    let server = load_server(registry, &normalized_server_id(server_id)?).await?;
+    let software = select_software(&server, target_software)?;
+    let versions = server_jar::available_versions(software)
+        .await
+        .map_err(|error| UpgradeError::new(UpgradeErrorKind::Unavailable, error))?;
+    let detected = detect_source_version(data_dir, &server.id).await?;
+    Ok(candidates_from(
+        &server,
+        software,
+        detected.as_deref().unwrap_or(&server.version),
+        versions,
+    ))
+}
+
+fn candidates_from(
     server: &MinecraftServer,
+    software: &str,
+    current_version: &str,
     versions: Option<Vec<String>>,
 ) -> UpgradeCandidates {
-    let supported = versions.is_some() && server_jar::supports_automatic_install(&server.software);
-    let newer = versions
-        .map(|versions| newer_releases(&server.version, &versions))
+    let supported = versions.is_some() && server_jar::supports_automatic_install(software);
+    let releases = versions
+        .map(|versions| versions::sorted_releases(&versions))
         .unwrap_or_default();
     UpgradeCandidates {
         server_id: server.id.clone(),
-        software: server.software.clone(),
-        current_version: server.version.clone(),
+        software: software.to_owned(),
+        current_version: current_version.to_owned(),
         supported,
-        candidates: newer
+        target_software_candidates: server_jar::target_software_candidates(&server.software),
+        candidates: releases
             .into_iter()
             .enumerate()
-            .map(|(index, version)| UpgradeCandidate {
-                latest: index == 0,
-                release_notes_url: release_notes_url(&server.software, &version),
-                required_java: java::table_requirement(&version),
-                version,
+            .filter_map(|(index, version)| {
+                let direction = versions::release_direction(current_version, &version);
+                (direction != Ordering::Equal).then(|| UpgradeCandidate {
+                    latest: index == 0,
+                    newer: direction == Ordering::Greater,
+                    release_notes_url: release_notes_url(software, &version),
+                    required_java: java::table_requirement(&version),
+                    version,
+                })
             })
             .collect(),
     }
+}
+
+async fn detect_source_version(
+    data_dir: &Path,
+    server_id: &str,
+) -> Result<Option<String>, UpgradeError> {
+    let data_dir = data_dir.to_owned();
+    let server_id = server_id.to_owned();
+    tokio::task::spawn_blocking(move || detection::detect_managed(&data_dir, &server_id))
+        .await
+        .map_err(|error| UpgradeError::new(UpgradeErrorKind::InstallFailed, error.to_string()))
+}
+
+fn check_downgrade(current: &str, target: &str, allowed: bool) -> Result<bool, UpgradeError> {
+    let downgrade = versions::release_direction(current, target) == Ordering::Less;
+    if downgrade && !allowed {
+        return Err(UpgradeError::new(
+            UpgradeErrorKind::InvalidRequest,
+            "Allow downgrades before preparing an older server version",
+        ));
+    }
+    Ok(downgrade)
 }
 
 /// Validates the published checksum the plan will be verified against.
@@ -300,16 +377,61 @@ impl ServerJarUpgrader {
     }
 
     /// Resolves `target_version` (or the newest version when None) into a
-    /// plan. A target older than the current version is refused.
+    /// plan using the requested software and opt-in policies.
+    #[allow(clippy::too_many_arguments)]
     pub async fn prepare(
         &self,
+        data_dir: &Path,
         registry: &ServerRegistry,
         servers: &ServerManager,
         server_id: &str,
         target_version: Option<&str>,
+        target_software: Option<&str>,
+        allow_unstable: bool,
+        allow_downgrade: bool,
     ) -> Result<UpgradePlan, UpgradeError> {
+        self.prepare_with(
+            data_dir,
+            registry,
+            servers,
+            server_id,
+            target_version,
+            target_software,
+            allow_unstable,
+            allow_downgrade,
+            |software, version, latest, unstable| async move {
+                server_jar::resolve_artifact_with_policy(&software, &version, latest, unstable)
+                    .await
+            },
+        )
+        .await
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    async fn prepare_with<R, Fut>(
+        &self,
+        data_dir: &Path,
+        registry: &ServerRegistry,
+        servers: &ServerManager,
+        server_id: &str,
+        target_version: Option<&str>,
+        target_software: Option<&str>,
+        allow_unstable: bool,
+        allow_downgrade: bool,
+        resolve: R,
+    ) -> Result<UpgradePlan, UpgradeError>
+    where
+        R: FnOnce(String, String, bool, bool) -> Fut,
+        Fut: std::future::Future<Output = Result<Option<server_jar::ResolvedArtifact>, String>>,
+    {
         let server_id = normalized_server_id(server_id)?;
         let server = load_server(registry, &server_id).await?;
+        let software = select_software(&server, target_software)?;
+        let detected_source_version = detect_source_version(data_dir, &server.id).await?;
+        let current_version = detected_source_version
+            .as_deref()
+            .unwrap_or(&server.version)
+            .to_owned();
         let target = target_version
             .map(str::trim)
             .filter(|value| !value.is_empty());
@@ -320,27 +442,18 @@ impl ServerJarUpgrader {
                     "Target version is invalid",
                 ));
             }
-            if let (Some(current), Some(requested)) = (
-                java::requirement::release_components(&server.version),
-                java::requirement::release_components(target),
-            ) {
-                if versions::is_release(&server.version)
-                    && versions::compare_releases(&requested, &current) == std::cmp::Ordering::Less
-                {
-                    return Err(UpgradeError::new(
-                        UpgradeErrorKind::InvalidRequest,
-                        "Downgrading a server is not supported",
-                    ));
-                }
-            }
+            check_downgrade(&current_version, target, allow_downgrade)?;
         }
-        let resolved = match target {
-            Some(target) => server_jar::resolve_artifact(&server.software, target, false).await,
-            None => server_jar::resolve_artifact(&server.software, &server.version, true).await,
-        }
+        let resolved = resolve(
+            software.to_owned(),
+            target.unwrap_or(&current_version).to_owned(),
+            target.is_none(),
+            allow_unstable,
+        )
+        .await
         .map_err(|error| UpgradeError::new(UpgradeErrorKind::Unavailable, error))?;
         let Some(resolved) = resolved else {
-            return Err(if server_jar::has_resolver(&server.software) {
+            return Err(if server_jar::has_resolver(software) {
                 UpgradeError::new(
                     UpgradeErrorKind::NotAvailable,
                     "The provider has no downloadable build for this version",
@@ -352,8 +465,9 @@ impl ServerJarUpgrader {
                 )
             });
         };
+        let downgrade = check_downgrade(&current_version, &resolved.version, allow_downgrade)?;
         let checksum = usable_checksum(resolved.checksum.as_ref());
-        let required_java = java::required_java(&server.software, &resolved.version).await;
+        let required_java = java::required_java(software, &resolved.version).await;
         let server_running = servers.is_server_running(&server.id).await;
         let plan_id = Uuid::new_v4().to_string();
         {
@@ -371,6 +485,8 @@ impl ServerJarUpgrader {
                     server_id: server.id.clone(),
                     software: server.software.clone(),
                     source_version: server.version.clone(),
+                    detected_source_version,
+                    target_software: software.to_owned(),
                     target_version: resolved.version.clone(),
                     url: resolved.url.clone(),
                     checksum: checksum.clone(),
@@ -380,10 +496,16 @@ impl ServerJarUpgrader {
         }
         Ok(UpgradePlan {
             plan_id,
-            server_id: server.id,
-            release_notes_url: release_notes_url(&server.software, &resolved.version),
-            software: server.software,
-            current_version: server.version,
+            server_id: server.id.clone(),
+            release_notes_url: release_notes_url(software, &resolved.version),
+            software: software.to_owned(),
+            downgrade,
+            channel: resolved.channel,
+            software_change: (software != server.software).then(|| SoftwareChange {
+                from: server.software.clone(),
+                to: software.to_owned(),
+            }),
+            current_version,
             target_version: resolved.version,
             file_name: resolved.file_name,
             size: resolved.size,
@@ -429,7 +551,7 @@ impl ServerJarUpgrader {
                 "The provider publishes no checksum for this server jar, so it is not installed automatically",
             )
         })?;
-        let _operation = operations
+        let operation = operations
             .acquire(&plan.server_id, OperationKind::ArtifactInstall)
             .await
             .map_err(|error| UpgradeError::new(UpgradeErrorKind::InvalidRequest, error))?;
@@ -440,7 +562,7 @@ impl ServerJarUpgrader {
             ));
         }
         install_plan_locked(
-            data_dir, registry, servers, &plan, &checksum, cancel, progress,
+            data_dir, registry, servers, &plan, &checksum, cancel, progress, operation,
         )
         .await
     }
@@ -448,6 +570,7 @@ impl ServerJarUpgrader {
 
 /// Downloads, verifies and swaps in the plan's jar. The caller holds the
 /// server's `ArtifactInstall` lock.
+#[allow(clippy::too_many_arguments)]
 async fn install_plan_locked<F>(
     data_dir: &Path,
     registry: &ServerRegistry,
@@ -456,6 +579,7 @@ async fn install_plan_locked<F>(
     checksum: &ExpectedChecksum,
     cancel: Option<&CancelFlag>,
     mut progress: F,
+    operation: OperationGuard,
 ) -> Result<UpgradeResult, UpgradeError>
 where
     F: FnMut(UpgradeProgress) + Send,
@@ -518,6 +642,7 @@ where
         managed_root,
         cancel,
         progress,
+        Some(operation),
     )
     .await
 }
@@ -532,6 +657,7 @@ async fn commit_verified<F>(
     managed_root: std::path::PathBuf,
     cancel: Option<&CancelFlag>,
     mut progress: F,
+    operation: Option<OperationGuard>,
 ) -> Result<UpgradeResult, UpgradeError>
 where
     F: FnMut(UpgradeProgress) + Send,
@@ -544,50 +670,132 @@ where
         total: size,
     });
     let staging = verified.path.clone();
-    let mut staging_guard = crate::java::install::FileGuard::new(staging.clone());
-    if cancel.is_some_and(CancelFlag::is_cancelled) {
-        return Err(UpgradeError::new(
-            UpgradeErrorKind::Cancelled,
-            "Server jar upgrade was cancelled",
-        ));
-    }
+    let staging_guard = crate::java::install::FileGuard::new(staging.clone());
+    let check_cancel = |cancel: Option<&CancelFlag>| {
+        if cancel.is_some_and(CancelFlag::is_cancelled) {
+            return Err(UpgradeError::new(
+                UpgradeErrorKind::Cancelled,
+                "Server jar upgrade was cancelled",
+            ));
+        }
+        Ok(())
+    };
+    check_cancel(cancel)?;
+    // The recovery journal identifies the new jar by SHA-256 even when the
+    // provider uses SHA-1. Keep cancellation open through this extra pass.
+    let sha256 = if verified.checksum.len() == 64 {
+        verified.checksum
+    } else {
+        let path = staging.clone();
+        tokio::task::spawn_blocking(move || journal::file_sha256(&path))
+            .await
+            .map_err(|error| failed(error.to_string()))?
+            .map_err(failed)?
+    };
+    check_cancel(cancel)?;
+    let registry = registry.clone();
+    let mut profile = server.clone();
+    let plan = plan.clone();
+    let cancel = cancel.cloned();
     progress(UpgradeProgress {
         phase: UpgradePhase::Install,
         downloaded: size,
         total: size,
     });
-    let registry = registry.clone();
-    let mut profile = server.clone();
-    let target_version = plan.target_version.clone();
-    let verified_sha256 = (verified.checksum.len() == 64).then_some(verified.checksum);
-    let installed = tokio::task::spawn_blocking(move || {
-        // The journal identifies the new jar by SHA-256; Mojang publishes SHA-1.
-        let sha256 = match verified_sha256 {
-            Some(sha256) => sha256,
-            None => journal::file_sha256(&staging)?,
-        };
-        journal::install_replacement_with_journal(
-            &staging,
-            &destination,
-            &managed_root,
-            &registry,
-            &mut profile,
-            &target_version,
-            &sha256,
-            |_| Ok(()),
-        )
-        .map(|()| profile)
-    })
-    .await
-    .map_err(|error| failed(format!("Server jar installation task failed: {error}")))?
-    .map_err(failed)?;
-    staging_guard.disarm();
+    let installed = {
+        let plan = plan.clone();
+        tokio::task::spawn_blocking(move || {
+            // These guards live until the worker exits, even if the caller drops its future.
+            let _operation = operation;
+            let _staging = staging_guard;
+            let detected = detection::detect_at(&destination);
+            if detected != plan.detected_source_version {
+                return Err(UpgradeError::new(
+                    UpgradeErrorKind::ProfileChanged,
+                    "Installed server jar version changed after preparation",
+                ));
+            }
+            let old_version = detected.as_deref().unwrap_or(&plan.source_version);
+            let mut cancellation = None;
+            let result = journal::install_replacement_with_journal(
+                &staging,
+                &destination,
+                &managed_root,
+                &registry,
+                &mut profile,
+                &plan.target_version,
+                &plan.target_software,
+                &sha256,
+                || {
+                    if let Err(error) = check_cancel(cancel.as_ref()) {
+                        cancellation = Some(error.clone());
+                        return Err(error.message);
+                    }
+                    Ok(())
+                },
+                |_| Ok(()),
+            );
+            result.map_err(|error| cancellation.unwrap_or_else(|| failed(error)))?;
+            if let Some(data_dir) = managed_root.parent() {
+                clean_bootstrap_leftovers(data_dir, &plan, old_version);
+            }
+            Ok::<_, UpgradeError>(profile)
+        })
+    };
+    let installed = installed
+        .await
+        .map_err(|error| failed(format!("Server jar installation task failed: {error}")))??;
     *server = installed;
     Ok(UpgradeResult {
         server_id: plan.server_id.clone(),
-        previous_version: plan.source_version.clone(),
-        version: plan.target_version.clone(),
+        previous_version: plan.detected_source_version.unwrap_or(plan.source_version),
+        version: plan.target_version,
+        previous_software: plan.software,
+        software: plan.target_software,
     })
+}
+
+fn clean_bootstrap_leftovers(data_dir: &Path, plan: &StoredPlan, old_version: &str) {
+    if (old_version == plan.target_version && plan.software == plan.target_software)
+        || !matches!(
+            plan.software.as_str(),
+            "Paper" | "Purpur" | "Leaf" | "LeafMC" | "Folia"
+        )
+        || !versions::is_release(old_version)
+        || old_version.len() > 128
+    {
+        return;
+    }
+    for (relative_path, directory) in [
+        (format!("versions/{old_version}"), true),
+        (format!("cache/mojang_{old_version}.jar"), false),
+    ] {
+        let request = ManagedPathRequest {
+            root: ManagedRoot::Servers,
+            server_id: Some(plan.server_id.clone()),
+            relative_path,
+        };
+        let Ok(path) = resolve_managed_request(data_dir, &request, false) else {
+            continue;
+        };
+        let Ok(metadata) = fs::symlink_metadata(&path) else {
+            continue;
+        };
+        if is_link_or_reparse_point(&metadata) {
+            continue;
+        }
+        let result = match directory {
+            true if metadata.is_dir() => fs::remove_dir_all(&path),
+            false if metadata.is_file() => fs::remove_file(&path),
+            _ => continue,
+        };
+        if let Err(error) = result {
+            log::warn!(
+                "Could not clean server bootstrap path {:?}: {error}",
+                request.relative_path
+            );
+        }
+    }
 }
 
 #[cfg(test)]

@@ -20,7 +20,6 @@ use crate::managed_path::{
 use crate::operations::{OperationKind, ServerOperationManager};
 use crate::properties::{parse_properties, patch_properties, MAX_PROPERTIES_BYTES};
 use crate::registry::{MinecraftServer, ServerRegistry};
-use crate::server_creation::AVAILABLE_SOFTWARE;
 
 /// Java's auto-backup scheduling mode. The wire values match React's form.
 #[derive(Clone, Copy, Debug, Deserialize, Serialize, PartialEq, Eq)]
@@ -68,6 +67,7 @@ pub struct ServerSettings {
 }
 
 /// Complete replacement for the editable General Settings fields.
+/// The software and version must match the read model.
 ///
 /// `backup_restart_after_safe_backup` is optional because the React form does
 /// not edit it; `None` preserves the stored value (defaulting to `true`).
@@ -178,6 +178,9 @@ pub async fn update_server_profile(
             Err(error) => return Err(error),
         };
         validate_managed_profile(&app_data_dir, &current)?;
+        if server.software != current.software || server.version != current.version {
+            return Err(version_locked());
+        }
         let settings = legacy_update(&server, &current)?;
         update_server_settings_sync(&app_data_dir, &registry, &server_id, settings)?;
         Ok(true)
@@ -354,12 +357,6 @@ fn validate_settings(
     if settings.port == 0 {
         return Err(invalid_port("Server port must be between 1 and 65535."));
     }
-    if !AVAILABLE_SOFTWARE.contains(&settings.software.trim()) {
-        return Err(invalid_request("Server software is invalid."));
-    }
-    if settings.version.trim().len() > 128 || settings.version.chars().any(char::is_control) {
-        return Err(invalid_request("Server version is invalid."));
-    }
     if !valid_optional_text(&settings.profile_name, 128)
         || !valid_optional_text(&settings.group_name, 128)
     {
@@ -400,6 +397,12 @@ fn update_server_settings_sync(
     let (_, properties_path) = validate_managed_profile(app_data_dir, &original_server)?;
     let mut updated_server = original_server.clone();
     let original_settings = settings_from_profile(&original_server)?;
+    if (settings.software != original_settings.software
+        && settings.software != original_server.software)
+        || settings.version != original_settings.version
+    {
+        return Err(version_locked());
+    }
     settings.java_path = settings.java_path.as_deref().and_then(non_empty_trimmed);
     validate_settings(&settings, original_settings.memory_mb)?;
     if settings.java_path != original_settings.java_path {
@@ -481,8 +484,6 @@ fn apply_update(
     server.name = settings.name.trim().to_string();
     server.profile_name = non_empty_trimmed(&settings.profile_name);
     server.group_name = non_empty_trimmed(&settings.group_name);
-    server.software = settings.software.trim().to_string();
-    server.version = settings.version.trim().to_string();
     server.memory = Number::from(settings.memory_mb);
     server.port = Number::from(settings.port);
     server.java_path.clone_from(&settings.java_path);
@@ -618,9 +619,7 @@ fn read_optional_properties(path: &Path) -> Result<Option<Vec<u8>>, CoreError> {
 }
 
 fn restart_affecting_fields_changed(before: &ServerSettings, after: &ServerSettings) -> bool {
-    before.software != after.software
-        || before.version != after.version
-        || before.memory_mb != after.memory_mb
+    before.memory_mb != after.memory_mb
         || before.port != after.port
         || before.java_path != after.java_path
         || before.jvm_args != after.jvm_args
@@ -678,6 +677,13 @@ fn unmanaged_profile() -> CoreError {
 
 fn settings_io(message: &str) -> CoreError {
     CoreError::new(CoreErrorCode::ServerSettingsIo, message)
+}
+
+fn version_locked() -> CoreError {
+    CoreError::new(
+        CoreErrorCode::ServerVersionLocked,
+        "Use the server JAR change workflow to change software or version.",
+    )
 }
 
 #[cfg(test)]
@@ -891,6 +897,7 @@ mod tests {
         assert_eq!(saved.settings.name, "Imported server");
         assert_eq!(saved.settings.version, "");
         assert_eq!(saved.settings.memory_mb, 512);
+        assert_eq!(registry.get_servers().unwrap()[0].software, "");
 
         let mut repaired = update_from(&saved.settings);
         repaired.memory_mb = 1024;
@@ -1050,7 +1057,7 @@ mod tests {
                     value.software = "not-real".into();
                     value
                 },
-                CoreErrorCode::ServerSettingsInvalidRequest,
+                CoreErrorCode::ServerVersionLocked,
             ),
             (
                 {
@@ -1058,7 +1065,7 @@ mod tests {
                     value.version = "1.21\n".into();
                     value
                 },
-                CoreErrorCode::ServerSettingsInvalidRequest,
+                CoreErrorCode::ServerVersionLocked,
             ),
             (
                 {
@@ -1086,19 +1093,61 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn software_and_version_changes_are_locked_in_both_settings_apis() {
+        let properties = b"server-port=25565\n";
+        let (app_data, registry, operations) = setup(Some(properties));
+        let before = registry.get_servers().unwrap().remove(0);
+        let current = load(&app_data, &registry, &operations).await;
+        for (software, version) in [("Vanilla", "1.21.4"), ("Paper", "1.21.5")] {
+            let mut typed = update_from(&current);
+            typed.software = software.into();
+            typed.version = version.into();
+            typed.port = 25566;
+            let error = update_server_settings(
+                &operations,
+                app_data.path().to_path_buf(),
+                registry.clone(),
+                before.id.clone(),
+                typed,
+            )
+            .await
+            .expect_err("typed settings must not change the installed JAR identity");
+            assert_eq!(error.code, CoreErrorCode::ServerVersionLocked);
+
+            let mut profile = before.clone();
+            profile.software = software.into();
+            profile.version = version.into();
+            profile.port = Number::from(25566);
+            let error = update_server_profile(
+                &operations,
+                app_data.path().to_path_buf(),
+                registry.clone(),
+                profile,
+            )
+            .await
+            .expect_err("legacy settings must not change the installed JAR identity");
+            assert_eq!(error.code, CoreErrorCode::ServerVersionLocked);
+        }
+        let saved = registry.get_servers().unwrap().remove(0);
+        assert_eq!(saved.software, before.software);
+        assert_eq!(saved.version, before.version);
+        assert_eq!(saved.port, before.port);
+        assert_eq!(
+            fs::read(app_data.path().join("servers/server-1/server.properties")).unwrap(),
+            properties
+        );
+    }
+
+    #[tokio::test]
     async fn restart_requirement_only_tracks_process_configuration_fields() {
         #[derive(Clone, Copy)]
         enum ProcessField {
-            Software,
-            Version,
             Memory,
             Port,
             Java,
             JvmArgs,
         }
         for field in [
-            ProcessField::Software,
-            ProcessField::Version,
             ProcessField::Memory,
             ProcessField::Port,
             ProcessField::Java,
@@ -1108,8 +1157,6 @@ mod tests {
             let current = load(&app_data, &registry, &operations).await;
             let mut update = update_from(&current);
             match field {
-                ProcessField::Software => update.software = "Vanilla".into(),
-                ProcessField::Version => update.version = "1.20.4".into(),
                 ProcessField::Memory => update.memory_mb = 3072,
                 ProcessField::Port => update.port = 25566,
                 ProcessField::Java => update.java_path = Some("java".into()),

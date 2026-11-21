@@ -5438,6 +5438,7 @@ public func FfiConverterTypeSavePropertiesResult_lower(_ value: SavePropertiesRe
 
 public struct ServerJarCandidate: Equatable, Hashable {
     public var version: String
+    public var newer: Bool
     /**
      * The newest version the provider lists.
      */
@@ -5450,7 +5451,7 @@ public struct ServerJarCandidate: Equatable, Hashable {
 
     // Default memberwise initializers are never public by default, so we
     // declare one manually.
-    public init(version: String, 
+    public init(version: String, newer: Bool, 
         /**
          * The newest version the provider lists.
          */latest: Bool, releaseNotesUrl: String?, 
@@ -5458,6 +5459,7 @@ public struct ServerJarCandidate: Equatable, Hashable {
          * From the built-in table; the prepared plan carries Mojang's value.
          */requiredJavaMajor: UInt32?) {
         self.version = version
+        self.newer = newer
         self.latest = latest
         self.releaseNotesUrl = releaseNotesUrl
         self.requiredJavaMajor = requiredJavaMajor
@@ -5480,6 +5482,7 @@ public struct FfiConverterTypeServerJarCandidate: FfiConverterRustBuffer {
         return
             try ServerJarCandidate(
                 version: FfiConverterString.read(from: &buf), 
+                newer: FfiConverterBool.read(from: &buf), 
                 latest: FfiConverterBool.read(from: &buf), 
                 releaseNotesUrl: FfiConverterOptionString.read(from: &buf), 
                 requiredJavaMajor: FfiConverterOptionUInt32.read(from: &buf)
@@ -5488,6 +5491,7 @@ public struct FfiConverterTypeServerJarCandidate: FfiConverterRustBuffer {
 
     public static func write(_ value: ServerJarCandidate, into buf: inout [UInt8]) {
         FfiConverterString.write(value.version, into: &buf)
+        FfiConverterBool.write(value.newer, into: &buf)
         FfiConverterBool.write(value.latest, into: &buf)
         FfiConverterOptionString.write(value.releaseNotesUrl, into: &buf)
         FfiConverterOptionUInt32.write(value.requiredJavaMajor, into: &buf)
@@ -5514,27 +5518,29 @@ public struct ServerJarCandidates: Equatable, Hashable {
     public var serverId: String
     public var software: String
     public var currentVersion: String
+    public var targetSoftwareCandidates: [String]
     /**
      * False when MC-Vector cannot install this software's jar by itself.
      */
     public var supported: Bool
     /**
-     * Newer versions, newest first.
+     * Different release versions, newest first.
      */
     public var candidates: [ServerJarCandidate]
 
     // Default memberwise initializers are never public by default, so we
     // declare one manually.
-    public init(serverId: String, software: String, currentVersion: String, 
+    public init(serverId: String, software: String, currentVersion: String, targetSoftwareCandidates: [String], 
         /**
          * False when MC-Vector cannot install this software's jar by itself.
          */supported: Bool, 
         /**
-         * Newer versions, newest first.
+         * Different release versions, newest first.
          */candidates: [ServerJarCandidate]) {
         self.serverId = serverId
         self.software = software
         self.currentVersion = currentVersion
+        self.targetSoftwareCandidates = targetSoftwareCandidates
         self.supported = supported
         self.candidates = candidates
     }
@@ -5558,6 +5564,7 @@ public struct FfiConverterTypeServerJarCandidates: FfiConverterRustBuffer {
                 serverId: FfiConverterString.read(from: &buf), 
                 software: FfiConverterString.read(from: &buf), 
                 currentVersion: FfiConverterString.read(from: &buf), 
+                targetSoftwareCandidates: FfiConverterSequenceString.read(from: &buf), 
                 supported: FfiConverterBool.read(from: &buf), 
                 candidates: FfiConverterSequenceTypeServerJarCandidate.read(from: &buf)
         )
@@ -5567,6 +5574,7 @@ public struct FfiConverterTypeServerJarCandidates: FfiConverterRustBuffer {
         FfiConverterString.write(value.serverId, into: &buf)
         FfiConverterString.write(value.software, into: &buf)
         FfiConverterString.write(value.currentVersion, into: &buf)
+        FfiConverterSequenceString.write(value.targetSoftwareCandidates, into: &buf)
         FfiConverterBool.write(value.supported, into: &buf)
         FfiConverterSequenceTypeServerJarCandidate.write(value.candidates, into: &buf)
     }
@@ -5654,6 +5662,60 @@ public func FfiConverterTypeServerJarChecksum_lower(_ value: ServerJarChecksum) 
 }
 
 
+public struct ServerJarSoftwareChange: Equatable, Hashable {
+    public var from: String
+    public var to: String
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(from: String, to: String) {
+        self.from = from
+        self.to = to
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension ServerJarSoftwareChange: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeServerJarSoftwareChange: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> ServerJarSoftwareChange {
+        return
+            try ServerJarSoftwareChange(
+                from: FfiConverterString.read(from: &buf), 
+                to: FfiConverterString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: ServerJarSoftwareChange, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.from, into: &buf)
+        FfiConverterString.write(value.to, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeServerJarSoftwareChange_lift(_ buf: RustBuffer) throws -> ServerJarSoftwareChange {
+    return try FfiConverterTypeServerJarSoftwareChange.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeServerJarSoftwareChange_lower(_ value: ServerJarSoftwareChange) -> RustBuffer {
+    return FfiConverterTypeServerJarSoftwareChange.lower(value)
+}
+
+
 public struct ServerJarUpgradePlan: Equatable, Hashable {
     /**
      * Pass to `execute_server_jar_upgrade` within `expires_in_seconds`.
@@ -5663,6 +5725,9 @@ public struct ServerJarUpgradePlan: Equatable, Hashable {
     public var software: String
     public var currentVersion: String
     public var targetVersion: String
+    public var downgrade: Bool
+    public var channel: String
+    public var softwareChange: ServerJarSoftwareChange?
     public var fileName: String
     public var size: UInt64?
     public var checksum: ServerJarChecksum?
@@ -5683,7 +5748,7 @@ public struct ServerJarUpgradePlan: Equatable, Hashable {
     public init(
         /**
          * Pass to `execute_server_jar_upgrade` within `expires_in_seconds`.
-         */planId: String, serverId: String, software: String, currentVersion: String, targetVersion: String, fileName: String, size: UInt64?, checksum: ServerJarChecksum?, 
+         */planId: String, serverId: String, software: String, currentVersion: String, targetVersion: String, downgrade: Bool, channel: String, softwareChange: ServerJarSoftwareChange?, fileName: String, size: UInt64?, checksum: ServerJarChecksum?, 
         /**
          * False when the provider publishes no checksum; execute refuses such plans.
          */verified: Bool, requiredJava: JavaRequirementRecord?, 
@@ -5695,6 +5760,9 @@ public struct ServerJarUpgradePlan: Equatable, Hashable {
         self.software = software
         self.currentVersion = currentVersion
         self.targetVersion = targetVersion
+        self.downgrade = downgrade
+        self.channel = channel
+        self.softwareChange = softwareChange
         self.fileName = fileName
         self.size = size
         self.checksum = checksum
@@ -5726,6 +5794,9 @@ public struct FfiConverterTypeServerJarUpgradePlan: FfiConverterRustBuffer {
                 software: FfiConverterString.read(from: &buf), 
                 currentVersion: FfiConverterString.read(from: &buf), 
                 targetVersion: FfiConverterString.read(from: &buf), 
+                downgrade: FfiConverterBool.read(from: &buf), 
+                channel: FfiConverterString.read(from: &buf), 
+                softwareChange: FfiConverterOptionTypeServerJarSoftwareChange.read(from: &buf), 
                 fileName: FfiConverterString.read(from: &buf), 
                 size: FfiConverterOptionUInt64.read(from: &buf), 
                 checksum: FfiConverterOptionTypeServerJarChecksum.read(from: &buf), 
@@ -5743,6 +5814,9 @@ public struct FfiConverterTypeServerJarUpgradePlan: FfiConverterRustBuffer {
         FfiConverterString.write(value.software, into: &buf)
         FfiConverterString.write(value.currentVersion, into: &buf)
         FfiConverterString.write(value.targetVersion, into: &buf)
+        FfiConverterBool.write(value.downgrade, into: &buf)
+        FfiConverterString.write(value.channel, into: &buf)
+        FfiConverterOptionTypeServerJarSoftwareChange.write(value.softwareChange, into: &buf)
         FfiConverterString.write(value.fileName, into: &buf)
         FfiConverterOptionUInt64.write(value.size, into: &buf)
         FfiConverterOptionTypeServerJarChecksum.write(value.checksum, into: &buf)
@@ -5842,13 +5916,17 @@ public struct ServerJarUpgradeResult: Equatable, Hashable {
     public var serverId: String
     public var previousVersion: String
     public var version: String
+    public var previousSoftware: String
+    public var software: String
 
     // Default memberwise initializers are never public by default, so we
     // declare one manually.
-    public init(serverId: String, previousVersion: String, version: String) {
+    public init(serverId: String, previousVersion: String, version: String, previousSoftware: String, software: String) {
         self.serverId = serverId
         self.previousVersion = previousVersion
         self.version = version
+        self.previousSoftware = previousSoftware
+        self.software = software
     }
 
     
@@ -5869,7 +5947,9 @@ public struct FfiConverterTypeServerJarUpgradeResult: FfiConverterRustBuffer {
             try ServerJarUpgradeResult(
                 serverId: FfiConverterString.read(from: &buf), 
                 previousVersion: FfiConverterString.read(from: &buf), 
-                version: FfiConverterString.read(from: &buf)
+                version: FfiConverterString.read(from: &buf), 
+                previousSoftware: FfiConverterString.read(from: &buf), 
+                software: FfiConverterString.read(from: &buf)
         )
     }
 
@@ -5877,6 +5957,8 @@ public struct FfiConverterTypeServerJarUpgradeResult: FfiConverterRustBuffer {
         FfiConverterString.write(value.serverId, into: &buf)
         FfiConverterString.write(value.previousVersion, into: &buf)
         FfiConverterString.write(value.version, into: &buf)
+        FfiConverterString.write(value.previousSoftware, into: &buf)
+        FfiConverterString.write(value.software, into: &buf)
     }
 }
 
@@ -5893,6 +5975,64 @@ public func FfiConverterTypeServerJarUpgradeResult_lift(_ buf: RustBuffer) throw
 #endif
 public func FfiConverterTypeServerJarUpgradeResult_lower(_ value: ServerJarUpgradeResult) -> RustBuffer {
     return FfiConverterTypeServerJarUpgradeResult.lower(value)
+}
+
+
+public struct ServerJarVersionStatus: Equatable, Hashable {
+    public var registeredVersion: String
+    public var detectedVersion: String?
+    public var mismatch: Bool
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(registeredVersion: String, detectedVersion: String?, mismatch: Bool) {
+        self.registeredVersion = registeredVersion
+        self.detectedVersion = detectedVersion
+        self.mismatch = mismatch
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension ServerJarVersionStatus: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeServerJarVersionStatus: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> ServerJarVersionStatus {
+        return
+            try ServerJarVersionStatus(
+                registeredVersion: FfiConverterString.read(from: &buf), 
+                detectedVersion: FfiConverterOptionString.read(from: &buf), 
+                mismatch: FfiConverterBool.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: ServerJarVersionStatus, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.registeredVersion, into: &buf)
+        FfiConverterOptionString.write(value.detectedVersion, into: &buf)
+        FfiConverterBool.write(value.mismatch, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeServerJarVersionStatus_lift(_ buf: RustBuffer) throws -> ServerJarVersionStatus {
+    return try FfiConverterTypeServerJarVersionStatus.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeServerJarVersionStatus_lower(_ value: ServerJarVersionStatus) -> RustBuffer {
+    return FfiConverterTypeServerJarVersionStatus.lower(value)
 }
 
 
@@ -8987,6 +9127,85 @@ public func FfiConverterTypeServerJarUpgradePhase_lower(_ value: ServerJarUpgrad
 
 
 
+public enum ServerJarVersionAvailability: Equatable, Hashable {
+    
+    case stable
+    case unstable(channel: String
+    )
+    case none(reason: String
+    )
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension ServerJarVersionAvailability: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeServerJarVersionAvailability: FfiConverterRustBuffer {
+    typealias SwiftType = ServerJarVersionAvailability
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> ServerJarVersionAvailability {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .stable
+        
+        case 2: return .unstable(channel: try FfiConverterString.read(from: &buf)
+        )
+        
+        case 3: return .none(reason: try FfiConverterString.read(from: &buf)
+        )
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: ServerJarVersionAvailability, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case .stable:
+            writeInt(&buf, Int32(1))
+        
+        
+        case let .unstable(channel):
+            writeInt(&buf, Int32(2))
+            FfiConverterString.write(channel, into: &buf)
+            
+        
+        case let .none(reason):
+            writeInt(&buf, Int32(3))
+            FfiConverterString.write(reason, into: &buf)
+            
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeServerJarVersionAvailability_lift(_ buf: RustBuffer) throws -> ServerJarVersionAvailability {
+    return try FfiConverterTypeServerJarVersionAvailability.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeServerJarVersionAvailability_lower(_ value: ServerJarVersionAvailability) -> RustBuffer {
+    return FfiConverterTypeServerJarVersionAvailability.lower(value)
+}
+
+
+
+
 public enum ServerRunStatus: Equatable, Hashable {
     
     case online
@@ -9613,6 +9832,30 @@ fileprivate struct FfiConverterOptionTypeServerJarChecksum: FfiConverterRustBuff
         switch try readInt(&buf) as Int8 {
         case 0: return nil
         case 1: return try FfiConverterTypeServerJarChecksum.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterOptionTypeServerJarSoftwareChange: FfiConverterRustBuffer {
+    typealias SwiftType = ServerJarSoftwareChange?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterTypeServerJarSoftwareChange.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterTypeServerJarSoftwareChange.read(from: &buf)
         default: throw UniffiInternalError.unexpectedOptionalTag
         }
     }
@@ -11139,13 +11382,13 @@ public func executeServerJarUpgrade(operationId: String, planId: String, observe
         )
 }
 /**
- * Resolves `target_version` (the newest when None) into a short-lived plan.
+ * Resolves `target_version` (the newest with an eligible build when None) into a short-lived plan.
  */
-public func prepareServerJarUpgrade(serverId: String, targetVersion: String?)async throws  -> ServerJarUpgradePlan  {
+public func prepareServerJarUpgrade(serverId: String, targetVersion: String?, targetSoftware: String?, allowUnstable: Bool, allowDowngrade: Bool)async throws  -> ServerJarUpgradePlan  {
     return
         try  await uniffiRustCallAsync(
             rustFutureFunc: {
-                uniffi_mcvector_ffi_fn_func_prepare_server_jar_upgrade(FfiConverterString.lower(serverId),FfiConverterOptionString.lower(targetVersion)
+                uniffi_mcvector_ffi_fn_func_prepare_server_jar_upgrade(FfiConverterString.lower(serverId),FfiConverterOptionString.lower(targetVersion),FfiConverterOptionString.lower(targetSoftware),FfiConverterBool.lower(allowUnstable),FfiConverterBool.lower(allowDowngrade)
                 )
             },
             pollFunc: ffi_mcvector_ffi_rust_future_poll_rust_buffer,
@@ -11156,19 +11399,61 @@ public func prepareServerJarUpgrade(serverId: String, targetVersion: String?)asy
         )
 }
 /**
- * Newer versions the provider offers for the server.
+ * Release versions the selected provider offers for the server.
  */
-public func serverJarUpgradeCandidates(serverId: String)async throws  -> ServerJarCandidates  {
+public func serverJarUpgradeCandidates(serverId: String, targetSoftware: String?)async throws  -> ServerJarCandidates  {
     return
         try  await uniffiRustCallAsync(
             rustFutureFunc: {
-                uniffi_mcvector_ffi_fn_func_server_jar_upgrade_candidates(FfiConverterString.lower(serverId)
+                uniffi_mcvector_ffi_fn_func_server_jar_upgrade_candidates(FfiConverterString.lower(serverId),FfiConverterOptionString.lower(targetSoftware)
                 )
             },
             pollFunc: ffi_mcvector_ffi_rust_future_poll_rust_buffer,
             completeFunc: ffi_mcvector_ffi_rust_future_complete_rust_buffer,
             freeFunc: ffi_mcvector_ffi_rust_future_free_rust_buffer,
             liftFunc: FfiConverterTypeServerJarCandidates_lift,
+            errorHandler: FfiConverterTypeFfiError_lift
+        )
+}
+public func serverJarVersionAvailability(software: String, version: String)async throws  -> ServerJarVersionAvailability  {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_mcvector_ffi_fn_func_server_jar_version_availability(FfiConverterString.lower(software),FfiConverterString.lower(version)
+                )
+            },
+            pollFunc: ffi_mcvector_ffi_rust_future_poll_rust_buffer,
+            completeFunc: ffi_mcvector_ffi_rust_future_complete_rust_buffer,
+            freeFunc: ffi_mcvector_ffi_rust_future_free_rust_buffer,
+            liftFunc: FfiConverterTypeServerJarVersionAvailability_lift,
+            errorHandler: FfiConverterTypeFfiError_lift
+        )
+}
+public func serverJarVersionStatus(serverId: String)async throws  -> ServerJarVersionStatus  {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_mcvector_ffi_fn_func_server_jar_version_status(FfiConverterString.lower(serverId)
+                )
+            },
+            pollFunc: ffi_mcvector_ffi_rust_future_poll_rust_buffer,
+            completeFunc: ffi_mcvector_ffi_rust_future_complete_rust_buffer,
+            freeFunc: ffi_mcvector_ffi_rust_future_free_rust_buffer,
+            liftFunc: FfiConverterTypeServerJarVersionStatus_lift,
+            errorHandler: FfiConverterTypeFfiError_lift
+        )
+}
+public func syncVersionFromJar(serverId: String)async throws  -> ServerJarVersionStatus  {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_mcvector_ffi_fn_func_sync_version_from_jar(FfiConverterString.lower(serverId)
+                )
+            },
+            pollFunc: ffi_mcvector_ffi_rust_future_poll_rust_buffer,
+            completeFunc: ffi_mcvector_ffi_rust_future_complete_rust_buffer,
+            freeFunc: ffi_mcvector_ffi_rust_future_free_rust_buffer,
+            liftFunc: FfiConverterTypeServerJarVersionStatus_lift,
             errorHandler: FfiConverterTypeFfiError_lift
         )
 }
@@ -11701,10 +11986,19 @@ private let initializationResult: InitializationResult = {
     if (uniffi_mcvector_ffi_checksum_func_execute_server_jar_upgrade() != 771) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_mcvector_ffi_checksum_func_prepare_server_jar_upgrade() != 43790) {
+    if (uniffi_mcvector_ffi_checksum_func_prepare_server_jar_upgrade() != 11773) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_mcvector_ffi_checksum_func_server_jar_upgrade_candidates() != 15193) {
+    if (uniffi_mcvector_ffi_checksum_func_server_jar_upgrade_candidates() != 55926) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mcvector_ffi_checksum_func_server_jar_version_availability() != 7489) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mcvector_ffi_checksum_func_server_jar_version_status() != 3962) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mcvector_ffi_checksum_func_sync_version_from_jar() != 65247) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_mcvector_ffi_checksum_func_add_custom_java_runtime() != 18357) {

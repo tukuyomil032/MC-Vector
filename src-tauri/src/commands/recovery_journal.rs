@@ -81,27 +81,9 @@ fn recover_record(
             legacy_directory_name,
             *stage,
         ),
-        RecoveryOperation::ServerJarReplacement {
-            server_id,
-            source_version,
-            target_version,
-            rollback_file_name,
-            staging_file_name,
-            had_previous,
-            sha256,
-            ..
-        } => super::server_jar::recover_replacement(
-            app_data_dir,
-            registry,
-            &record.id,
-            server_id,
-            source_version,
-            target_version,
-            rollback_file_name,
-            staging_file_name,
-            *had_previous,
-            sha256,
-        ),
+        RecoveryOperation::ServerJarReplacement { .. } => {
+            super::server_jar::recover_replacement(app_data_dir, registry, record)
+        }
     }
 }
 

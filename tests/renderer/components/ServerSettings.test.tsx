@@ -109,6 +109,32 @@ describe('ServerSettings ngrok token', () => {
 });
 
 describe('ServerSettings edits across server updates', () => {
+  it('displays the current JAR identity and saves only the latest profile values', async () => {
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    const { rerender } = render(settingsElement(server, onSave));
+    const software = screen.getByLabelText('serverSettings.serverSoftware');
+    const version = screen.getByLabelText('serverSettings.version');
+    const save = screen.getByTestId('server-settings-save-button');
+
+    expect(software).toHaveAttribute('readonly');
+    expect(version).toHaveAttribute('readonly');
+
+    rerender(settingsElement({ ...server, software: 'Purpur', version: '1.21.4' }, onSave));
+    expect(software).toHaveValue('Purpur');
+    expect(version).toHaveValue('1.21.4');
+    expect(save).toBeDisabled();
+
+    fireEvent.change(screen.getByTestId('server-settings-name-input'), {
+      target: { value: 'Renamed' },
+    });
+    fireEvent.click(save);
+    await waitFor(() =>
+      expect(onSave).toHaveBeenCalledWith(
+        expect.objectContaining({ name: 'Renamed', software: 'Purpur', version: '1.21.4' }),
+      ),
+    );
+  });
+
   it('keeps an unsaved name when the server status changes', () => {
     const { rerender } = render(settingsElement(server));
     const nameInput = screen.getByTestId('server-settings-name-input') as HTMLInputElement;

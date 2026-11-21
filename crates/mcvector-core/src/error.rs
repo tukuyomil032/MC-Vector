@@ -188,6 +188,8 @@ pub enum CoreErrorCode {
     ServerJarInstallFailed,
     /// The requested upgrade target is invalid (for example, not newer).
     ServerJarInvalidRequest,
+    /// Server software and version can only be changed through the JAR workflow.
+    ServerVersionLocked,
 }
 
 impl CoreErrorCode {
@@ -277,6 +279,7 @@ impl CoreErrorCode {
         CoreErrorCode::ServerJarProfileChanged,
         CoreErrorCode::ServerJarInstallFailed,
         CoreErrorCode::ServerJarInvalidRequest,
+        CoreErrorCode::ServerVersionLocked,
     ];
 
     /// The stable `<domain>.<reason>` string for this code.
@@ -366,6 +369,7 @@ impl CoreErrorCode {
             Self::ServerJarProfileChanged => "server_jar.profile_changed",
             Self::ServerJarInstallFailed => "server_jar.install_failed",
             Self::ServerJarInvalidRequest => "server_jar.invalid_request",
+            Self::ServerVersionLocked => "server.version_locked",
         }
     }
 
@@ -453,7 +457,8 @@ impl CoreErrorCode {
             | Self::JavaRegistryInvalid
             | Self::ServerJarUnsupported
             | Self::ServerJarUnverified
-            | Self::ServerJarInvalidRequest => false,
+            | Self::ServerJarInvalidRequest
+            | Self::ServerVersionLocked => false,
             Self::PropertiesIo
             | Self::PlayerIo
             | Self::ServerSettingsIo
@@ -614,10 +619,11 @@ mod tests {
             CoreErrorCode::ServerJarProfileChanged => 81,
             CoreErrorCode::ServerJarInstallFailed => 82,
             CoreErrorCode::ServerJarInvalidRequest => 83,
+            CoreErrorCode::ServerVersionLocked => 84,
         }
     }
 
-    const VARIANT_COUNT: usize = 84;
+    const VARIANT_COUNT: usize = 85;
 
     /// Checks `^[a-z]+(_[a-z]+)*\.[a-z]+(_[a-z]+)*$` without a regex crate.
     fn is_valid_code_string(s: &str) -> bool {
@@ -880,6 +886,11 @@ mod tests {
                 CoreErrorCode::ServerJarPlanExpired,
                 "server_jar.plan_expired",
                 true,
+            ),
+            (
+                CoreErrorCode::ServerVersionLocked,
+                "server.version_locked",
+                false,
             ),
         ];
         for (code, wire, retryable) in expected {

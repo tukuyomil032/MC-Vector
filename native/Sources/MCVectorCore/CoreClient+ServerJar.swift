@@ -31,21 +31,55 @@ public struct ServerJarUpgradeOperation: Sendable {
 }
 
 extension CoreClient {
-    // MARK: Server version upgrade
+    // MARK: Server version and software change
 
-    /// Newer versions the provider offers for the server, newest first.
-    public static func serverJarUpgradeCandidates(serverID: String) async throws(CoreError) -> ServerJarCandidates {
-        try await detachedCall { try await MCVectorCore.serverJarUpgradeCandidates(serverId: serverID) }
+    /// Release versions the selected provider offers for the server, newest first.
+    public static func serverJarUpgradeCandidates(
+        serverID: String,
+        targetSoftware: String? = nil
+    ) async throws(CoreError) -> ServerJarCandidates {
+        try await detachedCall {
+            try await MCVectorCore.serverJarUpgradeCandidates(serverId: serverID, targetSoftware: targetSoftware)
+        }
     }
 
-    /// Resolves `targetVersion` (the newest when nil) into a short-lived plan.
+    /// Compares the version recorded in the registry with metadata in server.jar.
+    public static func serverJarVersionStatus(serverID: String) async throws(CoreError) -> ServerJarVersionStatus {
+        try await detachedCall { try await MCVectorCore.serverJarVersionStatus(serverId: serverID) }
+    }
+
+    /// Writes the version detected in server.jar to the registry.
+    public static func syncVersionFromJar(serverID: String) async throws(CoreError) -> ServerJarVersionStatus {
+        try await detachedCall { try await MCVectorCore.syncVersionFromJar(serverId: serverID) }
+    }
+
+    /// Checks the channel of the best available build for a release.
+    public static func serverJarVersionAvailability(
+        software: String,
+        version: String
+    ) async throws(CoreError) -> ServerJarVersionAvailability {
+        try await detachedCall {
+            try await MCVectorCore.serverJarVersionAvailability(software: software, version: version)
+        }
+    }
+
+    /// Resolves `targetVersion` (the newest with an eligible build when nil) into a short-lived plan.
     /// Show `verified`, `serverRunning` and `requiredJava` before executing.
     public static func prepareServerJarUpgrade(
         serverID: String,
-        targetVersion: String? = nil
+        targetVersion: String? = nil,
+        targetSoftware: String? = nil,
+        allowUnstable: Bool = false,
+        allowDowngrade: Bool = false
     ) async throws(CoreError) -> ServerJarUpgradePlan {
         try await detachedCall {
-            try await MCVectorCore.prepareServerJarUpgrade(serverId: serverID, targetVersion: targetVersion)
+            try await MCVectorCore.prepareServerJarUpgrade(
+                serverId: serverID,
+                targetVersion: targetVersion,
+                targetSoftware: targetSoftware,
+                allowUnstable: allowUnstable,
+                allowDowngrade: allowDowngrade
+            )
         }
     }
 

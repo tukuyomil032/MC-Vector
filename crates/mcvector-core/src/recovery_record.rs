@@ -19,6 +19,10 @@ pub enum RecoveryOperation {
         server_id: String,
         source_version: String,
         target_version: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        source_software: Option<String>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        target_software: Option<String>,
         stage: ServerJarReplacementStage,
         rollback_file_name: String,
         staging_file_name: String,

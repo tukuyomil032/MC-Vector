@@ -1,7 +1,6 @@
 import { Badge } from '@/components/arc/badge/badge';
 import { Button } from '@/components/arc/button/button';
 import { ChipGroup } from '@/components/arc/chip-group/chip-group';
-import { Combobox } from '@/components/arc/combobox/combobox';
 import { CopyButton } from '@/components/arc/copy-button/copy-button';
 import { Dialog, DialogContent } from '@/components/arc/dialog/dialog';
 import { Input } from '@/components/arc/input/input';
@@ -25,7 +24,6 @@ import {
   startNgrok,
   stopNgrok,
 } from '../../../lib/ngrok-commands';
-import { VERSION_OPTIONS } from '../../constants/versionOptions';
 import { JVM_PRESETS } from '../../shared/jvm-presets';
 import { type MinecraftServer, SYSTEM_JAVA_SENTINEL } from '../../shared/server declaration';
 import JavaManagerModal from '../JavaManagerModal';
@@ -49,8 +47,6 @@ interface GeneralForm {
   name: string;
   profileName: string;
   groupName: string;
-  software: string;
-  version: string;
   memory: number;
   port: number;
   javaPath: string;
@@ -76,8 +72,6 @@ function toForm(server: MinecraftServer): GeneralForm {
     name: server.name,
     profileName: server.profileName || '',
     groupName: server.groupName || '',
-    software: server.software || 'Paper',
-    version: server.version,
     memory: server.memory,
     port: server.port,
     javaPath: server.javaPath?.trim() || AUTOMATIC_JAVA,
@@ -239,38 +233,6 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({
     { value: '6', label: t('serverSettings.weekdays.saturday') },
   ];
 
-  const standardGroup = t('serverSettings.softwareGroups.standard');
-  const moddedGroup = t('serverSettings.softwareGroups.modded');
-  const proxyGroup = t('serverSettings.softwareGroups.proxy');
-  const softwareOptions: SelectOption[] = [
-    {
-      value: 'Vanilla',
-      label: t('serverSettings.softwareOptions.vanilla'),
-      group: standardGroup,
-    },
-    { value: 'Paper', label: t('serverSettings.softwareOptions.paper'), group: standardGroup },
-    { value: 'LeafMC', label: t('serverSettings.softwareOptions.leafmc'), group: standardGroup },
-    { value: 'Spigot', label: t('serverSettings.softwareOptions.spigot'), group: standardGroup },
-    { value: 'Fabric', label: t('serverSettings.softwareOptions.fabric'), group: moddedGroup },
-    { value: 'Forge', label: t('serverSettings.softwareOptions.forge'), group: moddedGroup },
-    {
-      value: 'NeoForge',
-      label: t('serverSettings.softwareOptions.neoforge'),
-      group: moddedGroup,
-    },
-    { value: 'Velocity', label: t('serverSettings.softwareOptions.velocity'), group: proxyGroup },
-    {
-      value: 'Waterfall',
-      label: t('serverSettings.softwareOptions.waterfall'),
-      group: proxyGroup,
-    },
-    {
-      value: 'BungeeCord',
-      label: t('serverSettings.softwareOptions.bungeecord'),
-      group: proxyGroup,
-    },
-  ];
-
   const javaOptions: SelectOption[] = [
     { value: AUTOMATIC_JAVA, label: t('serverSettings.javaAutomatic') },
     { value: SYSTEM_JAVA_SENTINEL, label: t('serverSettings.javaSystemDefault') },
@@ -296,11 +258,9 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({
         name: normalized.name,
         profileName: normalized.profileName || undefined,
         groupName: normalized.groupName || undefined,
-        version: normalized.version,
         memory: normalized.memory,
         port: normalized.port,
         path: server.path,
-        software: normalized.software,
         javaPath: normalized.javaPath === AUTOMATIC_JAVA ? undefined : normalized.javaPath,
         autoRestartOnCrash: normalized.autoRestartOnCrash,
         maxAutoRestarts: normalized.maxAutoRestarts,
@@ -439,19 +399,12 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({
             onChange={(e) => setField('groupName', e.target.value)}
             placeholder={t('serverSettings.groupNamePlaceholder')}
           />
-          <Select
+          <Input
             label={t('serverSettings.serverSoftware')}
-            placeholder={arc.select.placeholder}
-            value={form.software}
-            onValueChange={(value) => setField('software', value)}
-            options={softwareOptions}
+            value={server.software || 'Paper'}
+            readOnly
           />
-          <Combobox
-            label={t('serverSettings.version')}
-            value={form.version}
-            onValueChange={(value) => setField('version', value)}
-            options={VERSION_OPTIONS.map((v) => ({ value: v, label: v }))}
-          />
+          <Input label={t('serverSettings.version')} value={server.version} readOnly />
           <div className={styles.actionCell}>
             <Button variant="secondary" type="button" onClick={() => setShowVersionWizard(true)}>
               {t('serverSettings.versionUpgrade.buttonLabel')}
@@ -808,7 +761,6 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({
           server={server}
           onClose={() => setShowVersionWizard(false)}
           onServerVersionChanged={(version) => {
-            setField('version', version);
             onServerVersionChanged(server.id, version);
             setShowVersionWizard(false);
           }}

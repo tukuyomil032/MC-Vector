@@ -5169,6 +5169,23 @@
         }
       }
     },
+    "error.server.version_locked": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Use the server JAR change workflow to change software or version."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ソフトウェアやバージョンを変えるには、サーバー JAR の変更画面を使ってください。"
+          }
+        }
+      }
+    },
     "error.server_jar.install_failed": {
       "extractionState": "manual",
       "localizations": {

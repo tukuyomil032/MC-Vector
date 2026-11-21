@@ -1,4 +1,4 @@
-# Native Java Runtime and Server Upgrade API
+# Native Java Runtime and Server Change API
 
 The shared Rust core owns the Java runtime registry, Adoptium downloads, safe
 archive extraction, the Java requirement of each Minecraft version, and server
@@ -121,34 +121,57 @@ Automatic, the major and version describe the Java selected for launch,
 including the system fallback. Explicit paths outside the registry are
 validated by the launch policy and checked with `-version`.
 
-## Server version upgrade
+## Server version and software change
 
 | Operation | Swift API | Result |
 | --- | --- | --- |
-| Candidates | `CoreClient.serverJarUpgradeCandidates(serverID:)` | `ServerJarCandidates` |
-| Prepare | `CoreClient.prepareServerJarUpgrade(serverID:targetVersion:)` (`nil` = newest) | `ServerJarUpgradePlan` |
+| Inspect installed version | `CoreClient.serverJarVersionStatus(serverID:)` | `ServerJarVersionStatus` |
+| Sync registry version | `CoreClient.syncVersionFromJar(serverID:)` | `ServerJarVersionStatus` |
+| Candidates | `CoreClient.serverJarUpgradeCandidates(serverID:targetSoftware:)` | `ServerJarCandidates` |
+| Build availability | `CoreClient.serverJarVersionAvailability(software:version:)` | `ServerJarVersionAvailability` |
+| Prepare | `CoreClient.prepareServerJarUpgrade(serverID:targetVersion:targetSoftware:allowUnstable:allowDowngrade:)` | `ServerJarUpgradePlan` |
 | Execute | `CoreClient.executeServerJarUpgrade(planID:)` | `ServerJarUpgradeOperation` |
 | Cancel | `ServerJarUpgradeOperation.cancel()` or `CoreClient.cancelServerJarUpgrade(operationID:)` | `Bool`, whether the ID was active |
 
-Candidates are the release versions the provider lists that are newer than the
-server's version, newest first, using the same resolvers as server creation
-(Paper Fill with the v2 fallback, LeafMC, Mojang, Fabric meta). Snapshots and
-pre-releases are skipped. Each `ServerJarCandidate` has `version`, `latest`,
-an optional `releaseNotesUrl` (best effort: the PaperMC downloads page for
-Paper, Folia and Velocity, the Purpur build page, the Fabric/Forge/NeoForge
-project pages, and the minecraft.net `minecraft-java-edition-<x-y-z>` article
-for Vanilla) and `requiredJavaMajor` from the table. `supported` is false for
-software MC-Vector cannot install by itself (no resolver, or Fabric, which
-publishes no checksum); Fabric candidates are still listed.
+Each lookup, sync, and prepare call is `async throws(CoreError)`.
+`ServerJarVersionStatus` carries `registeredVersion`, optional
+`detectedVersion`, and `mismatch`, which is true when the JAR supplies a version
+that differs from the registry. Detection reads bounded metadata entries
+inside the managed `server.jar` without extracting it. Sync uses that value
+to update the registry version. When detection returns `nil`, sync returns
+the current status and leaves the registry version intact. Ordinary settings
+saves reject edits to `version` and `software` with `server.version_locked`.
+
+`ServerJarCandidates` carries `serverId`, selected `software`, `currentVersion`,
+`supported`, `targetSoftwareCandidates`, and `candidates`. The target
+software list starts with the installed software and includes automatically
+installable alternatives from its family. Vanilla and proxies only offer
+their own software. Pass a listed alternative to load its versions.
+`supported` indicates whether MC-Vector can install the selected software
+automatically. A resolver can still list versions for informational use,
+as with Fabric, whose provider publishes no checksum.
+
+The core uses the detected JAR version for comparisons, with the registry
+version as a fallback. Candidates contain the provider's releases other than
+`currentVersion`, newest first. Each `ServerJarCandidate` has `version`, `newer`, `latest` (the
+provider's newest release), optional `releaseNotesUrl` and optional
+`requiredJavaMajor`. Probe the selected release before preparing it.
+`ServerJarVersionAvailability` has `.stable`, `.unstable(channel:)` and
+`.none(reason:)`. Provider lookup errors throw `CoreError`.
 
 `ServerJarUpgradePlan` carries `planId`, the server, `currentVersion`,
-`targetVersion`, the provider `fileName` (installed as `server.jar`), `size`
-when published, `checksum` (`algorithm` `sha256` or `sha1`, lowercase `value`),
-`verified`, `requiredJava` (Mojang first), `serverRunning`, `releaseNotesUrl`
-and `expiresInSeconds` (300). Prepare refuses a target older than the current
-version (`server_jar.invalid_request`), software without a resolver
-(`server_jar.unsupported`), and versions without a build
-(`server_jar.not_available`).
+`targetVersion`, target `software`, `downgrade`, `channel`, optional
+`softwareChange` with `from` and `to`, the provider `fileName` (installed as
+`server.jar`), `size` when published, `checksum` (`algorithm` `sha256` or
+`sha1`, lowercase `value`), `verified`, `requiredJava` (Mojang first),
+`serverRunning`, `releaseNotesUrl`, and `expiresInSeconds` (300).
+The target software defaults to the installed software and the target
+version defaults to the newest release with an eligible build. Both opt-in
+flags default to `false`. Downgrades require `allowDowngrade`. Prepare
+prefers the newest stable build, and `allowUnstable` permits the newest
+unstable build when the selected release has no stable build. Prepare rejects
+software outside the current family, software without a resolver, and
+releases without an eligible build.
 
 Execute consumes the plan once, even when it fails. It refuses plans without a
 published checksum (`server_jar.unverified`; the user places such jars by
@@ -158,15 +181,22 @@ and profiles whose software or version changed (`server_jar.profile_changed`).
 It holds the server's artifact-install lock, downloads the jar over HTTPS from
 the official hosts, verifies it while streaming, and swaps it in through the
 recovery journal: every stage (prepared, previous jar staged, new jar
-installed, registry updated) is persisted before the next file operation, the
-registry version is updated last, and any failure rolls back to the previous
-jar. Native recovers interrupted swaps at `start`; a server that cannot be
-recovered is marked unavailable and its files are left in place.
+installed, registry updated) is persisted before the next file operation.
+The registry version and software are updated after the JAR is installed.
+Only after a successful swap does the core clean up known bootstrap artifacts
+for the previous release, such as `versions/<old>/` and
+`cache/mojang_<old>.jar`. Failed and cancelled swaps preserve those paths.
+Cleanup is limited to managed paths and preserves worlds, configs, plugins,
+mods and libraries. Native recovers interrupted swaps at `start`. A server
+that cannot be recovered is marked unavailable and its files are left in place.
 
 `ServerJarUpgradeOperation.progress` is an
-`AsyncStream<ServerJarUpgradeProgress>` with `bufferingNewest(1)`: `phase`
-(`.download`, `.verify`, `.install`), `downloaded`, and `total` (0 while the
-size is unknown). Cancellation is honored until the swap starts.
+`AsyncStream<ServerJarUpgradeProgress>` with `bufferingNewest(1)`. Each event
+carries `operationId`, `phase` (`.download`, `.verify`, `.install`),
+`downloaded`, and `total` (0 while the size is unknown). Cancellation is
+honored during download and verification up to the start of the swap.
+`value() async throws(CoreError)` returns `ServerJarUpgradeResult` with
+`serverId`, `previousVersion`, `version`, `previousSoftware`, and `software`.
 
 ## Errors
 
@@ -177,7 +207,8 @@ local data paths redacted. Java codes: `java.invalid_request`, `java.in_use`,
 `java.install_failed`. Upgrade codes: `server_jar.unsupported`,
 `server_jar.not_available`, `server_jar.unverified`, `server_jar.plan_expired`,
 `server_jar.profile_changed`, `server_jar.install_failed`,
-`server_jar.invalid_request`, plus `server.running` and `server.not_found`.
+`server_jar.invalid_request`, plus `server.running`, `server.not_found`,
+and `server.version_locked`.
 Downloads use `download.network_failed`, `download.checksum_mismatch`,
 `download.too_large` and `download.unavailable`; cancellation uses
 `operation.cancelled`.

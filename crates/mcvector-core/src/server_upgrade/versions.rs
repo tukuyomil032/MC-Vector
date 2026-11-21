@@ -23,15 +23,29 @@ pub fn compare_releases(a: &[u32], b: &[u32]) -> Ordering {
 /// `current` is not a release version every release is returned.
 pub fn newer_releases(current: &str, versions: &[String]) -> Vec<String> {
     let current = release_components(current).filter(|_| is_release(current));
+    sorted_releases(versions)
+        .into_iter()
+        .filter(|version| {
+            current.as_ref().is_none_or(|current| {
+                compare_releases(&release_components(version).unwrap_or_default(), current)
+                    == Ordering::Greater
+            })
+        })
+        .collect()
+}
+
+pub(super) fn release_direction(current: &str, target: &str) -> Ordering {
+    match (release_components(current), release_components(target)) {
+        (Some(current), Some(target)) => compare_releases(&target, &current),
+        _ => Ordering::Greater,
+    }
+}
+
+pub(super) fn sorted_releases(versions: &[String]) -> Vec<String> {
     let mut releases: Vec<(Vec<u32>, String)> = versions
         .iter()
         .filter(|version| is_release(version))
         .filter_map(|version| Some((release_components(version)?, version.trim().to_owned())))
-        .filter(|(components, _)| {
-            current
-                .as_ref()
-                .is_none_or(|current| compare_releases(components, current) == Ordering::Greater)
-        })
         .collect();
     releases.sort_by(|a, b| compare_releases(&b.0, &a.0));
     releases.dedup_by(|a, b| compare_releases(&a.0, &b.0) == Ordering::Equal);

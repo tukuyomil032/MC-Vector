@@ -1,8 +1,7 @@
-//! Server version upgrades for the Native edition: newer versions the
-//! provider offers, a prepared plan, and the journaled jar swap with progress
-//! and cancellation.
+//! Server version and software changes for the Native edition.
 use super::java_runtimes::{redacted_error, JavaRequirementRecord, OperationRegistration};
 use super::*;
+use mcvector_core::server_jar::{self, VersionAvailability};
 use mcvector_core::server_upgrade::{self, ServerJarUpgrader, UpgradePhase};
 
 static UPGRADER: LazyLock<ServerJarUpgrader> = LazyLock::new(ServerJarUpgrader::default);
@@ -14,6 +13,7 @@ fn upgrade_error(error: server_upgrade::UpgradeError, data: &Path) -> FfiError {
 #[derive(Clone, Debug, PartialEq, Eq, uniffi::Record)]
 pub struct ServerJarCandidate {
     pub version: String,
+    pub newer: bool,
     /// The newest version the provider lists.
     pub latest: bool,
     pub release_notes_url: Option<String>,
@@ -26,10 +26,41 @@ pub struct ServerJarCandidates {
     pub server_id: String,
     pub software: String,
     pub current_version: String,
+    pub target_software_candidates: Vec<String>,
     /// False when MC-Vector cannot install this software's jar by itself.
     pub supported: bool,
-    /// Newer versions, newest first.
+    /// Different release versions, newest first.
     pub candidates: Vec<ServerJarCandidate>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, uniffi::Record)]
+pub struct ServerJarVersionStatus {
+    pub registered_version: String,
+    pub detected_version: Option<String>,
+    pub mismatch: bool,
+}
+
+impl From<server_upgrade::VersionStatus> for ServerJarVersionStatus {
+    fn from(status: server_upgrade::VersionStatus) -> Self {
+        Self {
+            registered_version: status.registered_version,
+            detected_version: status.detected_version,
+            mismatch: status.mismatch,
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, uniffi::Enum)]
+pub enum ServerJarVersionAvailability {
+    Stable,
+    Unstable { channel: String },
+    None { reason: String },
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, uniffi::Record)]
+pub struct ServerJarSoftwareChange {
+    pub from: String,
+    pub to: String,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, uniffi::Record)]
@@ -48,6 +79,9 @@ pub struct ServerJarUpgradePlan {
     pub software: String,
     pub current_version: String,
     pub target_version: String,
+    pub downgrade: bool,
+    pub channel: String,
+    pub software_change: Option<ServerJarSoftwareChange>,
     pub file_name: String,
     pub size: Option<u64>,
     pub checksum: Option<ServerJarChecksum>,
@@ -86,26 +120,31 @@ pub struct ServerJarUpgradeResult {
     pub server_id: String,
     pub previous_version: String,
     pub version: String,
+    pub previous_software: String,
+    pub software: String,
 }
 
-/// Newer versions the provider offers for the server.
+/// Release versions the selected provider offers for the server.
 #[uniffi::export(async_runtime = "tokio")]
 pub async fn server_jar_upgrade_candidates(
     server_id: String,
+    target_software: Option<String>,
 ) -> Result<ServerJarCandidates, FfiError> {
     let (data, registry, _) = session_handles()?;
-    server_upgrade::candidates(&registry, &server_id)
+    server_upgrade::candidates(&data, &registry, &server_id, target_software.as_deref())
         .await
         .map(|list| ServerJarCandidates {
             server_id: list.server_id,
             software: list.software,
             current_version: list.current_version,
+            target_software_candidates: list.target_software_candidates,
             supported: list.supported,
             candidates: list
                 .candidates
                 .into_iter()
                 .map(|candidate| ServerJarCandidate {
                     version: candidate.version,
+                    newer: candidate.newer,
                     latest: candidate.latest,
                     release_notes_url: candidate.release_notes_url,
                     required_java_major: candidate.required_java.map(Into::into),
@@ -115,15 +154,70 @@ pub async fn server_jar_upgrade_candidates(
         .map_err(|error| upgrade_error(error, &data))
 }
 
-/// Resolves `target_version` (the newest when None) into a short-lived plan.
+#[uniffi::export(async_runtime = "tokio")]
+pub async fn server_jar_version_status(
+    server_id: String,
+) -> Result<ServerJarVersionStatus, FfiError> {
+    let (data, registry, _) = session_handles()?;
+    server_upgrade::version_status(&data, &registry, &server_id)
+        .await
+        .map(Into::into)
+        .map_err(|error| upgrade_error(error, &data))
+}
+
+#[uniffi::export(async_runtime = "tokio")]
+pub async fn sync_version_from_jar(server_id: String) -> Result<ServerJarVersionStatus, FfiError> {
+    let (data, registry, operations) = session_handles()?;
+    server_upgrade::sync_version_from_jar(&data, &registry, &operations, &server_id)
+        .await
+        .map(Into::into)
+        .map_err(|error| upgrade_error(error, &data))
+}
+
+#[uniffi::export(async_runtime = "tokio")]
+pub async fn server_jar_version_availability(
+    software: String,
+    version: String,
+) -> Result<ServerJarVersionAvailability, FfiError> {
+    let (data, _, _) = session_handles()?;
+    server_jar::version_availability(&software, &version)
+        .await
+        .map(|availability| match availability {
+            VersionAvailability::Stable => ServerJarVersionAvailability::Stable,
+            VersionAvailability::Unstable { channel } => {
+                ServerJarVersionAvailability::Unstable { channel }
+            }
+            VersionAvailability::None { reason } => ServerJarVersionAvailability::None { reason },
+        })
+        .map_err(|error| {
+            redacted_error(
+                CoreError::new(CoreErrorCode::DownloadUnavailable, error),
+                &data,
+            )
+        })
+}
+
+/// Resolves `target_version` (the newest with an eligible build when None) into a short-lived plan.
 #[uniffi::export(async_runtime = "tokio")]
 pub async fn prepare_server_jar_upgrade(
     server_id: String,
     target_version: Option<String>,
+    target_software: Option<String>,
+    allow_unstable: bool,
+    allow_downgrade: bool,
 ) -> Result<ServerJarUpgradePlan, FfiError> {
     let (data, registry, _) = session_handles()?;
     UPGRADER
-        .prepare(&registry, &SERVERS, &server_id, target_version.as_deref())
+        .prepare(
+            &data,
+            &registry,
+            &SERVERS,
+            &server_id,
+            target_version.as_deref(),
+            target_software.as_deref(),
+            allow_unstable,
+            allow_downgrade,
+        )
         .await
         .map(|plan| ServerJarUpgradePlan {
             plan_id: plan.plan_id,
@@ -131,6 +225,12 @@ pub async fn prepare_server_jar_upgrade(
             software: plan.software,
             current_version: plan.current_version,
             target_version: plan.target_version,
+            downgrade: plan.downgrade,
+            channel: plan.channel,
+            software_change: plan.software_change.map(|change| ServerJarSoftwareChange {
+                from: change.from,
+                to: change.to,
+            }),
             file_name: plan.file_name,
             size: plan.size,
             checksum: plan
@@ -183,6 +283,8 @@ pub async fn execute_server_jar_upgrade(
             server_id: result.server_id,
             previous_version: result.previous_version,
             version: result.version,
+            previous_software: result.previous_software,
+            software: result.software,
         })
         .map_err(|error| upgrade_error(error, &data))
 }

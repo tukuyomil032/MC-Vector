@@ -16,7 +16,7 @@ use crate::registry::{MinecraftServer, ServerRegistry};
 use crate::server_jar::server_jar_path;
 
 /// Replaces `destination` with the verified `staging` jar and sets the
-/// profile's version to `target_version`. `after_persist` runs after each
+/// profile's version and software. `after_persist` runs after each
 /// journal write (tests inject crashes there).
 #[allow(clippy::too_many_arguments)]
 pub fn install_replacement_with_journal<F>(
@@ -26,7 +26,9 @@ pub fn install_replacement_with_journal<F>(
     registry: &ServerRegistry,
     server: &mut MinecraftServer,
     target_version: &str,
+    target_software: &str,
     sha256: &str,
+    before_swap: impl FnOnce() -> Result<(), String>,
     mut after_persist: F,
 ) -> Result<(), String>
 where
@@ -68,6 +70,8 @@ where
             server_id: server.id.clone(),
             source_version: server.version.clone(),
             target_version: target_version.to_owned(),
+            source_software: Some(server.software.clone()),
+            target_software: Some(target_software.to_owned()),
             stage: ServerJarReplacementStage::Prepared,
             rollback_file_name,
             staging_file_name,
@@ -78,6 +82,10 @@ where
 
     persist_jar_stage(registry, &record, ServerJarReplacementStage::Prepared)?;
     after_persist(ServerJarReplacementStage::Prepared)?;
+    if let Err(error) = before_swap() {
+        registry.delete_recovery_record(&record_id)?;
+        return Err(error);
+    }
 
     if had_previous {
         fs::rename(destination, &rollback_path)
@@ -110,6 +118,7 @@ where
     after_persist(ServerJarReplacementStage::NewJarInstalled)?;
 
     server.version = target_version.to_owned();
+    server.software = target_software.to_owned();
     match registry.update_server(server) {
         Ok(true) => {}
         Ok(false) => {
@@ -232,19 +241,27 @@ fn restore_replacement(
 }
 
 /// Finishes or undoes one interrupted replacement recorded in the journal.
-#[allow(clippy::too_many_arguments)]
 pub fn recover_replacement(
     app_data_dir: &Path,
     registry: &ServerRegistry,
-    record_id: &str,
-    server_id: &str,
-    source_version: &str,
-    target_version: &str,
-    rollback_file_name: &str,
-    staging_file_name: &str,
-    had_previous: bool,
-    sha256: &str,
+    record: &RecoveryRecord,
 ) -> Result<(), String> {
+    let RecoveryOperation::ServerJarReplacement {
+        server_id,
+        source_version,
+        target_version,
+        source_software,
+        target_software,
+        rollback_file_name,
+        staging_file_name,
+        had_previous,
+        sha256,
+        ..
+    } = &record.operation
+    else {
+        return Err("Expected a server jar replacement journal".into());
+    };
+    let record_id = &record.id;
     validate_server_jar_recovery_names(rollback_file_name, staging_file_name)?;
     if !is_sha256(sha256) {
         return Err("Server jar recovery record contains an invalid SHA-256 checksum".into());
@@ -267,10 +284,15 @@ pub fn recover_replacement(
     let server = registry
         .get_servers()?
         .into_iter()
-        .find(|server| server.id == server_id);
+        .find(|server| server.id == *server_id);
     let current_version = server.as_ref().map(|server| server.version.as_str());
 
-    if current_version == Some(target_version) {
+    let current_software = server.as_ref().map(|server| server.software.as_str());
+    let matches_target_software = target_software
+        .as_deref()
+        .is_none_or(|target| current_software == Some(target));
+
+    if current_version == Some(target_version) && matches_target_software {
         if destination_is_new {
             if rollback_exists {
                 fs::remove_file(&rollback_path).map_err(|error| {
@@ -291,7 +313,10 @@ pub fn recover_replacement(
                 )
             })?;
             if let Some(mut server) = server {
-                server.version = source_version.to_owned();
+                server.version.clone_from(source_version);
+                if let Some(source) = source_software {
+                    server.software.clone_from(source);
+                }
                 server.unavailable_reason = Some(
                     "The upgraded server jar was missing at startup; the previous jar was restored. Retry the upgrade when ready.".into(),
                 );
@@ -305,7 +330,12 @@ pub fn recover_replacement(
         return Err("Installed server jar is missing or changed; the previous jar was kept for manual recovery".into());
     }
 
-    if current_version.is_some_and(|version| version != source_version) {
+    if server.is_some()
+        && (current_version != Some(source_version)
+            || source_software
+                .as_deref()
+                .is_some_and(|source| current_software != Some(source)))
+    {
         return Err(format!(
             "Server registry version changed to {:?} during jar recovery",
             current_version.unwrap_or_default()
@@ -319,7 +349,7 @@ pub fn recover_replacement(
             );
         }
         restore_replacement(&destination, &rollback_path, true, sha256)?;
-    } else if had_previous {
+    } else if *had_previous {
         if destination_exists && !destination_is_new {
             // The existing jar was never moved aside, so the Prepared stage
             // did not touch it.
@@ -361,31 +391,10 @@ pub fn recover_startup(app_data_dir: &Path, registry: &ServerRegistry) -> Vec<Ja
     };
     let mut failures = Vec::new();
     for record in records {
-        let RecoveryOperation::ServerJarReplacement {
-            server_id,
-            source_version,
-            target_version,
-            rollback_file_name,
-            staging_file_name,
-            had_previous,
-            sha256,
-            ..
-        } = &record.operation
-        else {
+        let RecoveryOperation::ServerJarReplacement { server_id, .. } = &record.operation else {
             continue;
         };
-        if let Err(error) = recover_replacement(
-            app_data_dir,
-            registry,
-            &record.id,
-            server_id,
-            source_version,
-            target_version,
-            rollback_file_name,
-            staging_file_name,
-            *had_previous,
-            sha256,
-        ) {
+        if let Err(error) = recover_replacement(app_data_dir, registry, &record) {
             let error = format!(
                 "Server recovery needs attention; its journal was kept and server files were left in place: {error}"
             );
@@ -404,7 +413,7 @@ fn mark_server_unavailable(registry: &ServerRegistry, server_id: &str, error: &s
     let Ok(servers) = registry.get_servers() else {
         return;
     };
-    let Some(mut server) = servers.into_iter().find(|server| server.id == server_id) else {
+    let Some(mut server) = servers.into_iter().find(|server| server.id == *server_id) else {
         return;
     };
     server.unavailable_reason = Some(error.to_owned());
@@ -554,8 +563,10 @@ mod tests {
                 &managed_root,
                 &registry,
                 &mut server,
-                "1.21.1",
+                "1.20.6",
+                "LeafMC",
                 &sha256,
+                || Ok(()),
                 |persisted_stage| {
                     if persisted_stage == interrupted_stage {
                         Err(format!("simulated crash after {persisted_stage:?}"))
@@ -573,11 +584,13 @@ mod tests {
             let profile = registry.get_servers().unwrap().remove(0);
             match interrupted_stage {
                 ServerJarReplacementStage::RegistryUpdated => {
-                    assert_eq!(profile.version, "1.21.1");
+                    assert_eq!(profile.version, "1.20.6");
+                    assert_eq!(profile.software, "LeafMC");
                     assert_eq!(fs::read(&destination).unwrap(), b"new server jar");
                 }
                 _ => {
                     assert_eq!(profile.version, "1.20.6");
+                    assert_eq!(profile.software, "Paper");
                     assert_eq!(fs::read(&destination).unwrap(), b"old server jar");
                 }
             }

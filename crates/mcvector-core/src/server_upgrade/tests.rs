@@ -53,10 +53,29 @@ impl Fixture {
             server_id: server.id,
             software: server.software,
             source_version: server.version,
+            detected_source_version: None,
+            target_software: "Paper".into(),
             target_version: "1.21.4".into(),
             url: "https://fill-data.papermc.io/v1/objects/x/paper.jar".into(),
             checksum,
             expires_at: Instant::now() + PLAN_TTL,
+        }
+    }
+
+    fn bootstrap_files(&self) {
+        for path in [
+            "versions/1.20.4/old.jar",
+            "versions/1.21.4/new.jar",
+            "cache/mojang_1.20.4.jar",
+            "world/level.dat",
+            "plugins/plugin.jar",
+            "libraries/library.jar",
+            "mods/mod.jar",
+            "server.properties",
+        ] {
+            let path = self.server_dir.join(path);
+            fs::create_dir_all(path.parent().unwrap()).unwrap();
+            fs::write(path, b"fixture").unwrap();
         }
     }
 
@@ -150,11 +169,13 @@ async fn provider_version_lists_are_read_from_loopback() {
 }
 
 #[test]
-fn candidates_are_newer_releases_with_notes_and_java() {
+fn candidates_include_older_and_newer_releases_with_notes_and_java() {
     let fixture = Fixture::new("Paper", "1.20.4");
     let server = fixture.server();
     let listed = candidates_from(
         &server,
+        "Paper",
+        &server.version,
         Some(
             ["1.20.4", "1.20.6", "1.21.4", "1.21.4-pre1", "1.19.4"]
                 .map(String::from)
@@ -169,27 +190,41 @@ fn candidates_are_newer_releases_with_notes_and_java() {
             UpgradeCandidate {
                 version: "1.21.4".into(),
                 latest: true,
+                newer: true,
                 release_notes_url: release_notes_url("Paper", "1.21.4"),
                 required_java: Some(21),
             },
             UpgradeCandidate {
                 version: "1.20.6".into(),
                 latest: false,
+                newer: true,
                 release_notes_url: release_notes_url("Paper", "1.20.6"),
                 required_java: Some(21),
+            },
+            UpgradeCandidate {
+                version: "1.19.4".into(),
+                latest: false,
+                newer: false,
+                release_notes_url: release_notes_url("Paper", "1.19.4"),
+                required_java: Some(17),
             },
         ]
     );
 
     let mut fabric = server.clone();
     fabric.software = "Fabric".into();
-    let listed = candidates_from(&fabric, Some(vec!["1.21.4".into()]));
+    let listed = candidates_from(
+        &fabric,
+        "Fabric",
+        &fabric.version,
+        Some(vec!["1.21.4".into()]),
+    );
     assert!(!listed.supported);
     assert_eq!(listed.candidates.len(), 1);
 
     let mut spigot = server;
     spigot.software = "Spigot".into();
-    let listed = candidates_from(&spigot, None);
+    let listed = candidates_from(&spigot, "Spigot", &spigot.version, None);
     assert!(!listed.supported);
     assert!(listed.candidates.is_empty());
 }
@@ -284,7 +319,9 @@ fn staged_jar(fixture: &Fixture, body: &[u8], sha1: bool) -> download::VerifiedA
 async fn a_verified_jar_is_swapped_in_and_the_registry_version_updated() {
     for sha1 in [false, true] {
         let fixture = Fixture::new("Paper", "1.20.4");
-        let plan = fixture.plan(Some(ExpectedChecksum::sha256("a".repeat(64))));
+        let mut plan = fixture.plan(Some(ExpectedChecksum::sha256("a".repeat(64))));
+        plan.target_software = "LeafMC".into();
+        fixture.bootstrap_files();
         let (destination, managed_root) =
             server_jar::server_jar_path(&fixture.data, "server-id").unwrap();
         let mut server = fixture.server();
@@ -298,6 +335,7 @@ async fn a_verified_jar_is_swapped_in_and_the_registry_version_updated() {
             managed_root,
             None,
             |event| phases.push(event.phase),
+            None,
         )
         .await
         .unwrap();
@@ -306,6 +344,8 @@ async fn a_verified_jar_is_swapped_in_and_the_registry_version_updated() {
             UpgradeResult {
                 server_id: "server-id".into(),
                 previous_version: "1.20.4".into(),
+                previous_software: "Paper".into(),
+                software: "LeafMC".into(),
                 version: "1.21.4".into(),
             }
         );
@@ -313,7 +353,19 @@ async fn a_verified_jar_is_swapped_in_and_the_registry_version_updated() {
         assert_eq!(std::fs::read(&destination).unwrap(), b"new server jar");
         assert_eq!(fixture.server().version, "1.21.4");
         assert!(fixture.registry.recovery_records().unwrap().is_empty());
-        assert_eq!(fixture.files(), ["server.jar"]);
+        assert_eq!(fixture.server().software, "LeafMC");
+        assert!(!fixture.server_dir.join("versions/1.20.4").exists());
+        assert!(!fixture.server_dir.join("cache/mojang_1.20.4.jar").exists());
+        for path in [
+            "versions/1.21.4/new.jar",
+            "world/level.dat",
+            "plugins/plugin.jar",
+            "libraries/library.jar",
+            "mods/mod.jar",
+            "server.properties",
+        ] {
+            assert!(fixture.server_dir.join(path).exists(), "{path}");
+        }
     }
 }
 
@@ -323,8 +375,8 @@ async fn cancelling_before_the_swap_keeps_the_old_jar() {
     let plan = fixture.plan(Some(ExpectedChecksum::sha256("a".repeat(64))));
     let (destination, managed_root) =
         server_jar::server_jar_path(&fixture.data, "server-id").unwrap();
+    fixture.bootstrap_files();
     let cancel = CancelFlag::new();
-    cancel.cancel();
     let mut server = fixture.server();
     let error = commit_verified(
         &fixture.registry,
@@ -334,7 +386,12 @@ async fn cancelling_before_the_swap_keeps_the_old_jar() {
         destination.clone(),
         managed_root,
         Some(&cancel),
-        |_| {},
+        |event| {
+            if event.phase == UpgradePhase::Install {
+                cancel.cancel();
+            }
+        },
+        None,
     )
     .await
     .unwrap_err();
@@ -342,7 +399,44 @@ async fn cancelling_before_the_swap_keeps_the_old_jar() {
     assert_eq!(error.code(), CoreErrorCode::OperationCancelled);
     assert_eq!(std::fs::read(&destination).unwrap(), b"old server jar");
     assert_eq!(fixture.server().version, "1.20.4");
-    assert_eq!(fixture.files(), ["server.jar"]);
+    assert!(fixture.server_dir.join("versions/1.20.4/old.jar").exists());
+    assert!(fixture.server_dir.join("cache/mojang_1.20.4.jar").exists());
+}
+
+#[tokio::test]
+async fn a_failed_swap_keeps_the_old_jar_profile_and_leftovers() {
+    let fixture = Fixture::new("Paper", "1.20.4");
+    let mut plan = fixture.plan(Some(ExpectedChecksum::sha256("a".repeat(64))));
+    // The installed jar no longer matches what prepare detected.
+    plan.detected_source_version = Some("1.19.4".into());
+    let (destination, managed_root) =
+        server_jar::server_jar_path(&fixture.data, "server-id").unwrap();
+    fixture.bootstrap_files();
+    let mut server = fixture.server();
+    let error = commit_verified(
+        &fixture.registry,
+        &mut server,
+        &plan,
+        staged_jar(&fixture, b"new server jar", false),
+        destination.clone(),
+        managed_root,
+        None,
+        |_| {},
+        None,
+    )
+    .await
+    .unwrap_err();
+    assert_eq!(error.kind, UpgradeErrorKind::ProfileChanged);
+    assert_eq!(std::fs::read(&destination).unwrap(), b"old server jar");
+    assert_eq!(fixture.server().version, "1.20.4");
+    assert_eq!(fixture.server().software, "Paper");
+    assert!(fixture.registry.recovery_records().unwrap().is_empty());
+    assert!(fixture.server_dir.join("versions/1.20.4/old.jar").exists());
+    assert!(fixture.server_dir.join("cache/mojang_1.20.4.jar").exists());
+    assert!(!fixture
+        .files()
+        .iter()
+        .any(|name| name.starts_with(".server.jar-verified-")));
 }
 
 #[tokio::test]
@@ -351,26 +445,175 @@ async fn prepare_rejects_downgrades_and_unknown_servers_without_network() {
     let upgrader = ServerJarUpgrader::default();
     let servers = ServerManager::default();
     let error = upgrader
-        .prepare(&fixture.registry, &servers, "server-id", Some("1.20.4"))
+        .prepare(
+            &fixture.data,
+            &fixture.registry,
+            &servers,
+            "server-id",
+            Some("1.20.4"),
+            None,
+            false,
+            false,
+        )
         .await
         .unwrap_err();
     assert_eq!(error.kind, UpgradeErrorKind::InvalidRequest);
     let error = upgrader
-        .prepare(&fixture.registry, &servers, "missing", None)
+        .prepare(
+            &fixture.data,
+            &fixture.registry,
+            &servers,
+            "missing",
+            None,
+            None,
+            false,
+            false,
+        )
         .await
         .unwrap_err();
     assert_eq!(error.kind, UpgradeErrorKind::NotFound);
     let error = upgrader
-        .prepare(&fixture.registry, &servers, "../x", None)
+        .prepare(
+            &fixture.data,
+            &fixture.registry,
+            &servers,
+            "../x",
+            None,
+            None,
+            false,
+            false,
+        )
         .await
         .unwrap_err();
     assert_eq!(error.kind, UpgradeErrorKind::InvalidRequest);
 
     let fixture = Fixture::new("Spigot", "1.21.4");
     let error = upgrader
-        .prepare(&fixture.registry, &servers, "server-id", None)
+        .prepare(
+            &fixture.data,
+            &fixture.registry,
+            &servers,
+            "server-id",
+            None,
+            None,
+            false,
+            false,
+        )
         .await
         .unwrap_err();
     assert_eq!(error.kind, UpgradeErrorKind::Unsupported);
     assert_eq!(error.code(), CoreErrorCode::ServerJarUnsupported);
+}
+
+#[tokio::test]
+async fn prepare_only_resolves_compatible_targets_and_passes_opt_ins() {
+    let fixture = Fixture::new("Paper", "1.21.4");
+    let upgrader = ServerJarUpgrader::default();
+    let servers = ServerManager::default();
+    let rejected = upgrader
+        .prepare(
+            &fixture.data,
+            &fixture.registry,
+            &servers,
+            "server-id",
+            Some("1.21.4"),
+            Some("Vanilla"),
+            true,
+            true,
+        )
+        .await
+        .unwrap_err();
+    assert_eq!(rejected.kind, UpgradeErrorKind::InvalidRequest);
+
+    for allow_unstable in [false, true] {
+        let plan = upgrader
+            .prepare_with(
+                &fixture.data,
+                &fixture.registry,
+                &servers,
+                "server-id",
+                Some("1.20.4"),
+                Some("LeafMC"),
+                allow_unstable,
+                true,
+                |software, version, latest, unstable| async move {
+                    assert_eq!(software, "LeafMC");
+                    assert_eq!(version, "1.20.4");
+                    assert!(!latest);
+                    assert_eq!(unstable, allow_unstable);
+                    Ok(unstable.then(|| server_jar::ResolvedArtifact {
+                        channel: "experimental".into(),
+                        version,
+                        url: "unused".into(),
+                        checksum: Some(ExpectedChecksum::sha256("a".repeat(64))),
+                        file_name: "leaf.jar".into(),
+                        size: None,
+                    }))
+                },
+            )
+            .await;
+        if allow_unstable {
+            let plan = plan.unwrap();
+            assert!(plan.downgrade && plan.verified);
+            assert_eq!(plan.channel, "experimental");
+            assert_eq!(
+                plan.software_change,
+                Some(SoftwareChange {
+                    from: "Paper".into(),
+                    to: "LeafMC".into()
+                })
+            );
+            assert_eq!(plan.target_version, "1.20.4");
+        } else {
+            assert_eq!(plan.unwrap_err().kind, UpgradeErrorKind::NotAvailable);
+        }
+    }
+}
+
+#[tokio::test]
+async fn detects_version_and_syncs_registry_from_bounded_jar_metadata() {
+    use std::io::Write;
+    use zip::write::SimpleFileOptions;
+
+    let fixture = Fixture::new("Paper", "1.20.4");
+    let jar_path = fixture.server_dir.join("server.jar");
+    let write_jar = |name: &str, contents: &[u8]| {
+        let mut jar = zip::ZipWriter::new(fs::File::create(&jar_path).unwrap());
+        jar.start_file(name, SimpleFileOptions::default()).unwrap();
+        jar.write_all(contents).unwrap();
+        jar.finish().unwrap();
+    };
+
+    write_jar("version.json", &vec![b' '; 64 * 1024 + 1]);
+    assert_eq!(detected_version(&fixture.server()), None);
+    write_jar(
+        "META-INF/versions.list",
+        b"hash\t1.21.4\t1.21.4/paper.jar\n",
+    );
+    assert_eq!(
+        detected_version(&fixture.server()).as_deref(),
+        Some("1.21.4")
+    );
+    write_jar("version.json", br#"{"id":"26.1.1","name":"26.1.1"}"#);
+    assert_eq!(
+        detected_version(&fixture.server()).as_deref(),
+        Some("26.1.1")
+    );
+    let status = version_status(&fixture.data, &fixture.registry, "server-id")
+        .await
+        .unwrap();
+    assert!(status.mismatch);
+    assert_eq!(status.registered_version, "1.20.4");
+    let status = sync_version_from_jar(
+        &fixture.data,
+        &fixture.registry,
+        &ServerOperationManager::default(),
+        "server-id",
+    )
+    .await
+    .unwrap();
+    assert!(!status.mismatch);
+    assert_eq!(status.registered_version, "26.1.1");
+    assert_eq!(fixture.server().version, "26.1.1");
+    assert_eq!(fixture.server().software, "Paper");
 }

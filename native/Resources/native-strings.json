@@ -301,6 +301,10 @@
     "en": "This server's folder is outside MC-Vector's managed folders, so it cannot be changed here.",
     "ja": "このサーバーのフォルダーは MC-Vector の管理フォルダーの外にあるため、ここでは変更できません。"
   },
+  "error.server.version_locked": {
+    "en": "Use the server JAR change workflow to change software or version.",
+    "ja": "ソフトウェアやバージョンを変えるには、サーバー JAR の変更画面を使ってください。"
+  },
   "error.server_settings.invalid_memory": {
     "en": "The server memory must be between 1024 and 1048576 MB.",
     "ja": "メモリは1024から1048576 MBの範囲で指定してください。"

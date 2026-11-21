@@ -2895,6 +2895,28 @@ mod tests {
             .build()
             .unwrap();
 
+        let version_status = runtime
+            .block_on(server_jar_version_status("server-1".into()))
+            .unwrap();
+        assert_eq!(version_status.registered_version, "1.21.10");
+        assert_eq!(version_status.detected_version, None);
+        assert!(!version_status.mismatch);
+        assert_eq!(
+            runtime
+                .block_on(sync_version_from_jar("server-1".into()))
+                .unwrap(),
+            version_status
+        );
+        assert!(matches!(
+            runtime
+                .block_on(server_jar_version_availability(
+                    "Custom".into(),
+                    "1.21.10".into()
+                ))
+                .unwrap(),
+            ServerJarVersionAvailability::None { reason } if !reason.is_empty()
+        ));
+
         let plugin_dir = server_dir.join("plugins");
         std::fs::create_dir(&plugin_dir).unwrap();
         std::fs::write(plugin_dir.join("Example.jar"), b"local artifact").unwrap();
