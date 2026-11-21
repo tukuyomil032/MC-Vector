@@ -40,13 +40,14 @@ impl ServerEvents for TauriServerEvents {
     }
 }
 
-fn server_context(app: &AppHandle) -> Result<ServerContext, String> {
+pub(super) fn server_context(app: &AppHandle) -> Result<ServerContext, String> {
     let data_dir = app
         .path()
         .app_data_dir()
         .map_err(|_| "Failed to resolve app data directory".to_string())?;
     Ok(ServerContext {
         data_dir,
+        java_registry: super::java::registry(app),
         events: Arc::new(TauriServerEvents(app.clone())),
     })
 }
@@ -66,64 +67,6 @@ pub(crate) async fn start_registered_server(
         operations,
         registry,
         server_id,
-    )
-    .await
-}
-
-#[allow(clippy::too_many_arguments)]
-pub(crate) async fn start_server_with_config(
-    app: AppHandle,
-    state: &ServerManager,
-    limiter: &CommandLimiter,
-    operations: &ServerOperationManager,
-    server_id: String,
-    java_path: String,
-    memory: u32,
-    jar_file: String,
-    jvm_extra_args: Option<String>,
-    software: String,
-) -> Result<(), String> {
-    core_process::start_server_with_config(
-        server_context(&app)?,
-        state,
-        limiter,
-        operations,
-        server_id,
-        java_path,
-        memory,
-        jar_file,
-        jvm_extra_args,
-        software,
-    )
-    .await
-}
-
-#[allow(clippy::too_many_arguments)]
-pub(crate) async fn start_server_with_config_and_guard(
-    app: AppHandle,
-    state: &ServerManager,
-    limiter: &CommandLimiter,
-    operations: &ServerOperationManager,
-    server_id: String,
-    java_path: String,
-    memory: u32,
-    jar_file: String,
-    jvm_extra_args: Option<String>,
-    software: String,
-    operation: OperationGuard,
-) -> Result<(), String> {
-    core_process::start_server_with_config_and_guard(
-        server_context(&app)?,
-        state,
-        limiter,
-        operations,
-        server_id,
-        java_path,
-        memory,
-        jar_file,
-        jvm_extra_args,
-        software,
-        operation,
     )
     .await
 }

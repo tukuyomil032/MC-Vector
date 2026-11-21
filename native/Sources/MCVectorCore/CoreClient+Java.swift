@@ -94,6 +94,14 @@ extension CoreClient {
         }.value
     }
 
+    /// Store this value as a server's Java path to force Java from PATH.
+    public static let systemJavaSentinel: String = MCVectorCore.systemJavaSentinel()
+
+    /// Resolves the Java that would be used to start the registered server.
+    public static func resolveJava(serverID: String) async throws(CoreError) -> JavaResolution {
+        try await detachedCall { try await MCVectorCore.resolveServerJava(serverId: serverID) }
+    }
+
     /// The server's configured Java against what its Minecraft version needs.
     public static func javaCompatibility(serverID: String) async throws(CoreError) -> ServerJavaCompatibility {
         try await detachedCall { try await MCVectorCore.serverJavaCompatibility(serverId: serverID) }

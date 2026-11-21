@@ -901,6 +901,7 @@ export const ja: TranslationDictionary = {
     },
     version: 'バージョン',
     javaRuntime: 'Javaランタイム',
+    javaAutomatic: '自動',
     javaSystemDefault: 'システムの既定 (PATH環境変数)',
     manageJava: 'Javaを管理…',
     memory: 'メモリ (MB)',

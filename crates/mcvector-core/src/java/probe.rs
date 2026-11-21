@@ -122,6 +122,17 @@ pub fn read_release_file(home: &Path) -> Option<(Option<String>, Option<String>)
 /// Runs `<executable> -version` and parses its output. The process is killed
 /// when it takes longer than `timeout`.
 pub async fn probe_executable(executable: &Path, timeout: Duration) -> Result<JavaProbe, String> {
+    probe_available_executable(executable, timeout)
+        .await?
+        .ok_or_else(|| "Java version output could not be read".to_string())
+}
+
+/// Distinguishes an executable that succeeds with unrecognizable output from
+/// an unavailable or failing executable.
+pub(super) async fn probe_available_executable(
+    executable: &Path,
+    timeout: Duration,
+) -> Result<Option<JavaProbe>, String> {
     let mut command = tokio::process::Command::new(executable);
     command
         .arg("-version")
@@ -147,13 +158,13 @@ pub async fn probe_executable(executable: &Path, timeout: Duration) -> Result<Ja
     if !output.status.success() {
         return Err("Java exited with an error while reporting its version".into());
     }
-    let (version, major) = parse_version_output(&text)
-        .ok_or_else(|| "Java version output could not be read".to_string())?;
-    Ok(JavaProbe {
-        major,
-        version,
-        vendor: vendor_from_text(&text),
-    })
+    Ok(
+        parse_version_output(&text).map(|(version, major)| JavaProbe {
+            major,
+            version,
+            vendor: vendor_from_text(&text),
+        }),
+    )
 }
 
 #[cfg(test)]

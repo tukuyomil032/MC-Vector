@@ -20,6 +20,7 @@ download URLs or destination paths.
 | Delete | `CoreClient.deleteJava(major:)` | `Void` |
 | Add a custom runtime | `CoreClient.addCustomJava(path:)` | `JavaRuntimeRecord` |
 | Requirement of a version | `CoreClient.requiredJava(software:version:)` | optional `JavaRequirementRecord` |
+| Resolve a server's Java | `CoreClient.resolveJava(serverID:)` | `JavaResolution` |
 | A server's Java check | `CoreClient.javaCompatibility(serverID:)` | `ServerJavaCompatibility` |
 
 `JavaRuntimeRecord` has `major`, the full `version` when known (`21.0.5`),
@@ -85,13 +86,40 @@ Mojang does not list it uses the table: up to 1.16.5 → 8, 1.17.x → 16,
 one answered. Proxies (Velocity, BungeeCord, Waterfall) and snapshots without
 Mojang data return nil.
 
-`javaCompatibility(serverID:)` reports `required`, the server's
-`configuredPath` (nil for the system default), `configuredMajor`,
-`configuredVersion` and `satisfied` (`configuredMajor >= required.major`, nil
-when either is unknown). A registered runtime is read from the registry; any
-other path is validated by the launch policy and checked with `-version`. On
-macOS the system default is checked only when `/usr/libexec/java_home` finds a
-JDK, so the system install prompt never appears.
+### Java selection per server
+
+The profile's `javaPath` is optional. An unset or empty value selects
+Automatic, including for existing profiles. Store `CoreClient.systemJavaSentinel`
+(`system`) for System default, which runs `java` from PATH. Any other value is
+an explicit Java path and follows the existing launch validation.
+
+Given a required major, Automatic selects an available registered runtime of
+that major, then the available runtime with the smallest higher major, then
+system Java if it meets the requirement. If none qualify, resolution reports
+the missing requirement. Launch still attempts `java` from PATH. With no
+requirement, Automatic uses system Java if detected, then the newest available
+registered major, then `java` from PATH. On macOS, probing system Java is
+guarded by `/usr/libexec/java_home` to avoid triggering the install prompt.
+
+`CoreClient.resolveJava(serverID:)` is asynchronous and throws `CoreError` if
+the server cannot be loaded. Its `JavaResolution` has an optional
+`requiredMajor` and a `choice`:
+
+| Choice | Associated values |
+| --- | --- |
+| `.installed` | `path`, `major`, optional `version`, `origin`, and `reason` (`.exact`, `.newerMajor`, or `.newestAvailable`) |
+| `.system` | Optional detected `major` |
+| `.explicit` | The configured `path` |
+| `.systemDefault` | The explicit choice to use `java` from PATH |
+| `.missing` | `required` and optional `systemMajor` |
+
+`javaCompatibility(serverID:)` reports `required`, `configuredPath`
+(the selected installed or explicit path, nil when launch uses PATH),
+`configuredMajor`, `configuredVersion` and `satisfied`
+(`configuredMajor >= required.major`, nil when either is unknown). For
+Automatic, the major and version describe the Java selected for launch,
+including the system fallback. Explicit paths outside the registry are
+validated by the launch policy and checked with `-version`.
 
 ## Server version upgrade
 

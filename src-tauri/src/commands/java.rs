@@ -54,7 +54,7 @@ impl JavaRegistryStore for StoreJavaRegistry {
     }
 }
 
-fn registry(app: &AppHandle) -> Arc<dyn JavaRegistryStore> {
+pub(super) fn registry(app: &AppHandle) -> Arc<dyn JavaRegistryStore> {
     Arc::new(StoreJavaRegistry(app.clone()))
 }
 

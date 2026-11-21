@@ -16,6 +16,9 @@ use tokio::process::Command;
 use tokio::sync::{mpsc, watch, Mutex, OwnedMutexGuard};
 
 use crate::eula::ensure_server_eula_accepted;
+use crate::java::{
+    java_requirement_for_launch, resolve_java_with_requirement, JavaRegistryStore, JavaResolution,
+};
 use crate::java_policy::{validate_java_executable_path, validate_jvm_extra_args};
 use crate::managed_path::{
     is_link_or_reparse_point, resolve_managed_request, ManagedPathRequest, ManagedRoot,
@@ -550,6 +553,7 @@ pub trait ServerEvents: Send + Sync {
 pub struct ServerContext {
     /// The data folder that holds `servers/` and `java/`.
     pub data_dir: PathBuf,
+    pub java_registry: Arc<dyn JavaRegistryStore>,
     pub events: Arc<dyn ServerEvents>,
 }
 
@@ -641,11 +645,18 @@ fn audit_server_action(action: &str, server_id: &str) {
 #[derive(Debug)]
 struct ServerStartConfig {
     server_id: String,
-    java_path: String,
     memory: u32,
-    jar_file: String,
-    jvm_extra_args: Option<String>,
-    software: String,
+    jar_file: &'static str,
+    profile: MinecraftServer,
+}
+
+impl ServerStartConfig {
+    async fn resolve_java_path(
+        &self,
+        resolve: impl AsyncFnOnce(&MinecraftServer) -> JavaResolution,
+    ) -> String {
+        resolve(&self.profile).await.launch_path().to_owned()
+    }
 }
 
 fn start_config_for_profile(profile: MinecraftServer) -> Result<ServerStartConfig, String> {
@@ -664,10 +675,6 @@ fn start_config_for_profile(profile: MinecraftServer) -> Result<ServerStartConfi
         .as_u64()
         .and_then(|value| u32::try_from(value).ok())
         .ok_or_else(|| "Server memory setting is invalid".to_string())?;
-    let java_path = profile
-        .java_path
-        .filter(|path| !path.trim().is_empty())
-        .unwrap_or_else(|| "java".to_string());
     let jar_file = if profile.software.eq_ignore_ascii_case("forge") {
         "forge-server.jar"
     } else {
@@ -675,11 +682,9 @@ fn start_config_for_profile(profile: MinecraftServer) -> Result<ServerStartConfi
     };
     Ok(ServerStartConfig {
         server_id,
-        java_path,
         memory,
-        jar_file: jar_file.to_string(),
-        jvm_extra_args: profile.jvm_args,
-        software: profile.software,
+        jar_file,
+        profile,
     })
 }
 
@@ -726,62 +731,28 @@ pub async fn start_registered_server(
     start_server_with_guard(ctx, state, limiter, operations, config, operation).await
 }
 
-// Kept flat to match the automation callers in src-tauri.
-#[allow(clippy::too_many_arguments)]
-pub async fn start_server_with_config(
+/// Starts using a registered profile already read by the host's automation.
+pub async fn start_server_from_profile(
     ctx: ServerContext,
     state: &ServerManager,
     limiter: &CommandLimiter,
     operations: &ServerOperationManager,
-    server_id: String,
-    java_path: String,
-    memory: u32,
-    jar_file: String,
-    jvm_extra_args: Option<String>,
-    software: String,
+    profile: MinecraftServer,
 ) -> Result<(), String> {
-    let server_id = validate_server_id(&server_id)?;
+    let server_id = validate_server_id(&profile.id)?;
     let operation = operations.acquire(&server_id, OperationKind::Start).await?;
-    start_server_with_config_and_guard(
-        ctx,
-        state,
-        limiter,
-        operations,
-        server_id,
-        java_path,
-        memory,
-        jar_file,
-        jvm_extra_args,
-        software,
-        operation,
-    )
-    .await
+    start_server_from_profile_with_guard(ctx, state, limiter, operations, profile, operation).await
 }
 
-// Kept flat to match the automation callers in src-tauri.
-#[allow(clippy::too_many_arguments)]
-pub async fn start_server_with_config_and_guard(
+pub async fn start_server_from_profile_with_guard(
     ctx: ServerContext,
     state: &ServerManager,
     limiter: &CommandLimiter,
     operations: &ServerOperationManager,
-    server_id: String,
-    java_path: String,
-    memory: u32,
-    jar_file: String,
-    jvm_extra_args: Option<String>,
-    software: String,
+    profile: MinecraftServer,
     operation: OperationGuard,
 ) -> Result<(), String> {
-    let server_id = validate_server_id(&server_id)?;
-    let config = ServerStartConfig {
-        server_id,
-        java_path,
-        memory,
-        jar_file,
-        jvm_extra_args,
-        software,
-    };
+    let config = start_config_for_profile(profile)?;
     start_server_with_guard(ctx, state, limiter, operations, config, operation).await
 }
 
@@ -807,23 +778,16 @@ async fn start_server_with_guard(
     config: ServerStartConfig,
     operation: OperationGuard,
 ) -> Result<(), String> {
-    let ServerStartConfig {
-        server_id: validated_server_id,
-        java_path,
-        memory,
-        jar_file,
-        jvm_extra_args,
-        software,
-    } = config;
+    let memory = config.memory;
     let app_data_dir = ctx.data_dir.clone();
     let server_request = ManagedPathRequest {
         root: ManagedRoot::Servers,
-        server_id: Some(validated_server_id.clone()),
+        server_id: Some(config.server_id.clone()),
         relative_path: String::new(),
     };
     let validated_server_dir = resolve_managed_request(&app_data_dir, &server_request, false)
         .map_err(|error| format!("Invalid managed server directory: {error}"))?;
-    let validated_jar_file = validate_jar_file_name(&jar_file)?;
+    let validated_jar_file = validate_jar_file_name(config.jar_file)?;
     if !(MIN_MEMORY_MB..=MAX_MEMORY_MB).contains(&memory) {
         return Err(format!(
             "Memory must be between {}MB and {}MB",
@@ -831,7 +795,7 @@ async fn start_server_with_guard(
         ));
     }
 
-    let extra_args = match jvm_extra_args.as_deref() {
+    let extra_args = match config.profile.jvm_args.as_deref() {
         Some(s) if !s.trim().is_empty() => validate_jvm_extra_args(s)?,
         _ => vec![],
     };
@@ -843,14 +807,22 @@ async fn start_server_with_guard(
         return Err(format!("Jar file not found: {}", validated_jar_file));
     }
 
-    ensure_server_eula_accepted(&app_data_dir, &validated_server_id)?;
+    ensure_server_eula_accepted(&app_data_dir, &config.server_id)?;
 
+    // Mojang metadata lookup doesn't need to serialize with Java mutations.
+    let required = java_requirement_for_launch(&config.profile).await;
     // Java installation mutations use this same application-wide operation
-    // key. Hold it through executable validation, spawn, and process-map
-    // insertion so a runtime cannot be replaced between validation and start.
+    // key. Hold it from registry selection through process-map insertion so
+    // a runtime cannot be replaced or removed before the process registers.
     let java_runtime_guard = operations
         .acquire_global(GlobalOperation::JavaRuntime, OperationKind::ArtifactInstall)
         .await?;
+    let java_path = config
+        .resolve_java_path(async |profile| {
+            resolve_java_with_requirement(ctx.java_registry.clone(), profile, required).await
+        })
+        .await;
+    let validated_server_id = config.server_id;
     let validated_java_path = resolve_java_executable_path(&java_path, &app_data_dir.join("java"))?
         .to_string_lossy()
         .to_string();
@@ -888,7 +860,7 @@ async fn start_server_with_guard(
         generation,
         started_at,
     )));
-    let poll_tps = should_poll_tps(&software);
+    let poll_tps = should_poll_tps(&config.profile.software);
 
     let stdin = child
         .stdin
@@ -1439,6 +1411,7 @@ mod tests {
         RunningServer, ServerManager, ServerProcessControl, ServerProcessExit, ServerStatus,
         ServerStatusEvent, MAX_RUNNING_SERVERS,
     };
+    use crate::java::{JavaOrigin, JavaResolution, JavaSelection, JavaSelectionReason};
     use crate::java_policy::validate_jvm_extra_args;
     use crate::metric_history::MetricHistory;
     use crate::operations::{OperationKind, ServerOperationManager};
@@ -1469,15 +1442,53 @@ mod tests {
         .expect("test profile should deserialize")
     }
 
-    #[test]
-    fn start_configuration_comes_from_the_registered_profile() {
+    #[tokio::test]
+    async fn start_configuration_comes_from_the_registered_profile() {
         let config = start_config_for_profile(registered_profile()).unwrap();
         assert_eq!(config.server_id, "server-1");
-        assert_eq!(config.java_path, "/managed/java/bin/java");
+        assert_eq!(
+            config.profile.java_path.as_deref(),
+            Some("/managed/java/bin/java")
+        );
         assert_eq!(config.memory, 4096);
         assert_eq!(config.jar_file, "forge-server.jar");
-        assert_eq!(config.jvm_extra_args.as_deref(), Some("-XX:+UseG1GC"));
-        assert_eq!(config.software, "Forge");
+        assert_eq!(config.profile.jvm_args.as_deref(), Some("-XX:+UseG1GC"));
+        assert_eq!(config.profile.software, "Forge");
+    }
+
+    #[tokio::test]
+    async fn automatic_start_configuration_uses_the_resolved_java() {
+        let mut profile = registered_profile();
+        profile.java_path = None;
+        let config = start_config_for_profile(profile).unwrap();
+        let path = config
+            .resolve_java_path(async |profile| {
+                assert_eq!(profile.java_path, None);
+                assert_eq!(profile.version, "1.21.10");
+                JavaResolution {
+                    required_major: Some(21),
+                    choice: JavaSelection::Installed {
+                        path: "/managed/java/jdk-21".into(),
+                        major: 21,
+                        version: Some("21.0.9".into()),
+                        origin: JavaOrigin::Managed,
+                        reason: JavaSelectionReason::Exact,
+                    },
+                }
+            })
+            .await;
+        assert_eq!(path, "/managed/java/jdk-21");
+
+        let path = config
+            .resolve_java_path(async |_| JavaResolution {
+                required_major: Some(21),
+                choice: JavaSelection::Missing {
+                    required: 21,
+                    system_major: Some(17),
+                },
+            })
+            .await;
+        assert_eq!(path, "java");
     }
 
     #[test]

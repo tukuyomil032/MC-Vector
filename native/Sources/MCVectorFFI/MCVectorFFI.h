@@ -873,9 +873,20 @@ uint64_t uniffi_mcvector_ffi_fn_func_java_runtimes(void
 uint64_t uniffi_mcvector_ffi_fn_func_required_java_for_version(RustBuffer software, RustBuffer version
 );
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_RESOLVE_SERVER_JAVA
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_RESOLVE_SERVER_JAVA
+uint64_t uniffi_mcvector_ffi_fn_func_resolve_server_java(RustBuffer server_id
+);
+#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_SERVER_JAVA_COMPATIBILITY
 #define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_SERVER_JAVA_COMPATIBILITY
 uint64_t uniffi_mcvector_ffi_fn_func_server_java_compatibility(RustBuffer server_id
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_SYSTEM_JAVA_SENTINEL
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_SYSTEM_JAVA_SENTINEL
+RustBuffer uniffi_mcvector_ffi_fn_func_system_java_sentinel(RustCallStatus *_Nonnull out_status
+    
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_BULK_UPDATE_PLUGINS
@@ -1599,9 +1610,21 @@ uint16_t uniffi_mcvector_ffi_checksum_func_required_java_for_version(void
     
 );
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_RESOLVE_SERVER_JAVA
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_RESOLVE_SERVER_JAVA
+uint16_t uniffi_mcvector_ffi_checksum_func_resolve_server_java(void
+    
+);
+#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_SERVER_JAVA_COMPATIBILITY
 #define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_SERVER_JAVA_COMPATIBILITY
 uint16_t uniffi_mcvector_ffi_checksum_func_server_java_compatibility(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_SYSTEM_JAVA_SENTINEL
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_SYSTEM_JAVA_SENTINEL
+uint16_t uniffi_mcvector_ffi_checksum_func_system_java_sentinel(void
     
 );
 #endif

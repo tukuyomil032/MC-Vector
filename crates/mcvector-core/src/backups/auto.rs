@@ -1001,6 +1001,7 @@ mod tests {
             .tick(
                 ServerContext {
                     data_dir: root.path().to_path_buf(),
+                    java_registry: Arc::new(crate::java::ConfigJavaRegistry::new(root.path())),
                     events: Arc::new(NoopServerEvents),
                 },
                 &ServerManager::default(),

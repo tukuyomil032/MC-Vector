@@ -62,7 +62,7 @@ fn java_error(error: core_java::JavaError, data: &Path) -> FfiError {
     redacted_error(error.into(), data)
 }
 
-fn java_store(data: &Path) -> Arc<dyn JavaRegistryStore> {
+pub(crate) fn java_store(data: &Path) -> Arc<dyn JavaRegistryStore> {
     Arc::new(ConfigJavaRegistry::new(data))
 }
 
@@ -72,6 +72,15 @@ pub enum JavaRuntimeOrigin {
     Managed,
     /// Added by the user from an existing installation.
     Custom,
+}
+
+impl From<JavaOrigin> for JavaRuntimeOrigin {
+    fn from(origin: JavaOrigin) -> Self {
+        match origin {
+            JavaOrigin::Managed => Self::Managed,
+            JavaOrigin::Custom => Self::Custom,
+        }
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, uniffi::Record)]
@@ -99,10 +108,7 @@ impl From<core_java::JavaRuntime> for JavaRuntimeRecord {
             path: v.path,
             executable: v.executable,
             vendor: v.vendor,
-            origin: match v.origin {
-                JavaOrigin::Managed => JavaRuntimeOrigin::Managed,
-                JavaOrigin::Custom => JavaRuntimeOrigin::Custom,
-            },
+            origin: v.origin.into(),
             available: v.available,
         }
     }
@@ -170,12 +176,90 @@ impl From<JavaRequirement> for JavaRequirementRecord {
     }
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq, uniffi::Enum)]
+pub enum JavaSelectionReason {
+    Exact,
+    NewerMajor,
+    NewestAvailable,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, uniffi::Enum)]
+pub enum JavaSelection {
+    Installed {
+        path: String,
+        major: u32,
+        version: Option<String>,
+        origin: JavaRuntimeOrigin,
+        reason: JavaSelectionReason,
+    },
+    System {
+        major: Option<u32>,
+    },
+    Explicit {
+        path: String,
+    },
+    SystemDefault,
+    Missing {
+        required: u32,
+        system_major: Option<u32>,
+    },
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, uniffi::Record)]
+pub struct JavaResolution {
+    pub required_major: Option<u32>,
+    pub choice: JavaSelection,
+}
+
+impl From<core_java::JavaResolution> for JavaResolution {
+    fn from(resolution: core_java::JavaResolution) -> Self {
+        use core_java::JavaSelection as Choice;
+        use core_java::JavaSelectionReason as Reason;
+
+        let choice = match resolution.choice {
+            Choice::Installed {
+                path,
+                major,
+                version,
+                origin,
+                reason,
+            } => JavaSelection::Installed {
+                path,
+                major: major.into(),
+                version,
+                origin: origin.into(),
+                reason: match reason {
+                    Reason::Exact => JavaSelectionReason::Exact,
+                    Reason::NewerMajor => JavaSelectionReason::NewerMajor,
+                    Reason::NewestAvailable => JavaSelectionReason::NewestAvailable,
+                },
+            },
+            Choice::System { major } => JavaSelection::System {
+                major: major.map(Into::into),
+            },
+            Choice::Explicit { path } => JavaSelection::Explicit { path },
+            Choice::SystemDefault => JavaSelection::SystemDefault,
+            Choice::Missing {
+                required,
+                system_major,
+            } => JavaSelection::Missing {
+                required: required.into(),
+                system_major: system_major.map(Into::into),
+            },
+        };
+        Self {
+            required_major: resolution.required_major.map(Into::into),
+            choice,
+        }
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, uniffi::Record)]
 pub struct ServerJavaCompatibility {
     pub server_id: String,
     /// None for proxies and versions neither Mojang nor the table knows.
     pub required: Option<JavaRequirementRecord>,
-    /// The profile's Java path, or None for the system default.
+    /// The selected installed or explicit path, or None when launch uses PATH.
     pub configured_path: Option<String>,
     pub configured_major: Option<u32>,
     pub configured_version: Option<String>,
@@ -293,21 +377,37 @@ pub async fn required_java_for_version(
         .map(Into::into)
 }
 
-/// The server's configured Java against what its version needs.
+/// The value to store in a server profile to force Java from PATH.
+#[uniffi::export]
+pub fn system_java_sentinel() -> String {
+    core_java::SYSTEM_JAVA_SENTINEL.to_owned()
+}
+
+/// Resolves a registered server's Java using the same selection as launch.
 #[uniffi::export(async_runtime = "tokio")]
-pub async fn server_java_compatibility(
-    server_id: String,
-) -> Result<ServerJavaCompatibility, FfiError> {
+pub async fn resolve_server_java(server_id: String) -> Result<JavaResolution, FfiError> {
     let (data, registry, _) = session_handles()?;
-    let id = validate_server_id(&server_id)
-        .map_err(|error| core_error(CoreErrorCode::ServerNotFound, redact(&error, &data)))?;
-    let lookup_id = id.clone();
-    let server = blocking(move || {
+    let server = java_server(&data, registry, &server_id).await?;
+    Ok(
+        core_java::resolve_java_for_server(java_store(&data), &server)
+            .await
+            .into(),
+    )
+}
+
+async fn java_server(
+    data: &Path,
+    registry: ServerRegistry,
+    server_id: &str,
+) -> Result<MinecraftServer, FfiError> {
+    let id = validate_server_id(server_id)
+        .map_err(|error| core_error(CoreErrorCode::ServerNotFound, redact(&error, data)))?;
+    blocking(move || {
         registry
             .get_servers()
             .map_err(|error| core_error(CoreErrorCode::RegistryReadFailed, error))?
             .into_iter()
-            .find(|server| server.id == lookup_id)
+            .find(|server| server.id == id)
             .ok_or_else(|| core_error(CoreErrorCode::ServerNotFound, "Server is not registered"))
     })
     .await
@@ -318,13 +418,22 @@ pub async fn server_java_compatibility(
             retryable,
         } => FfiError::Core {
             code,
-            message: redact(&message, &data),
+            message: redact(&message, data),
             retryable,
         },
-    })?;
+    })
+}
+
+/// The server's selected Java against what its Minecraft version needs.
+#[uniffi::export(async_runtime = "tokio")]
+pub async fn server_java_compatibility(
+    server_id: String,
+) -> Result<ServerJavaCompatibility, FfiError> {
+    let (data, registry, _) = session_handles()?;
+    let server = java_server(&data, registry, &server_id).await?;
     let report = core_java::profile_compatibility(&data, java_store(&data), &server).await;
     Ok(ServerJavaCompatibility {
-        server_id: id,
+        server_id: server.id,
         required: report.required.map(Into::into),
         configured_path: report.configured_path,
         configured_major: report.configured_major.map(Into::into),
@@ -350,6 +459,54 @@ mod tests {
         assert!(cancel.is_cancelled());
         drop(registration);
         assert!(!OperationRegistration::cancel(id));
+    }
+
+    #[test]
+    fn java_resolution_preserves_the_installed_reason_and_missing_requirement() {
+        let installed: JavaResolution = core_java::JavaResolution {
+            required_major: Some(17),
+            choice: core_java::JavaSelection::Installed {
+                path: "/jdk".into(),
+                major: 21,
+                version: Some("21.0.5".into()),
+                origin: JavaOrigin::Custom,
+                reason: core_java::JavaSelectionReason::NewerMajor,
+            },
+        }
+        .into();
+        assert_eq!(
+            installed,
+            JavaResolution {
+                required_major: Some(17),
+                choice: JavaSelection::Installed {
+                    path: "/jdk".into(),
+                    major: 21,
+                    version: Some("21.0.5".into()),
+                    origin: JavaRuntimeOrigin::Custom,
+                    reason: JavaSelectionReason::NewerMajor,
+                },
+            }
+        );
+
+        let missing: JavaResolution = core_java::JavaResolution {
+            required_major: Some(21),
+            choice: core_java::JavaSelection::Missing {
+                required: 21,
+                system_major: Some(17),
+            },
+        }
+        .into();
+        assert_eq!(
+            missing,
+            JavaResolution {
+                required_major: Some(21),
+                choice: JavaSelection::Missing {
+                    required: 21,
+                    system_major: Some(17),
+                },
+            }
+        );
+        assert_eq!(system_java_sentinel(), "system");
     }
 
     #[test]

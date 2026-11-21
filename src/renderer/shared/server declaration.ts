@@ -1,3 +1,6 @@
+/** The stored server setting for choosing Java on PATH explicitly. */
+export const SYSTEM_JAVA_SENTINEL = 'system';
+
 export type ServerStatus =
   | 'online'
   | 'offline'
@@ -17,6 +20,7 @@ export interface MinecraftServer {
   memory: number;
   path: string;
   status: ServerStatus;
+  /** Unset or empty selects Java automatically. */
   javaPath?: string;
   autoRestartOnCrash?: boolean;
   maxAutoRestarts?: number;

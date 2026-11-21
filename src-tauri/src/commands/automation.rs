@@ -7,8 +7,11 @@ use std::sync::{
 use std::time::{Duration, Instant};
 
 use chrono::{Datelike, Local, LocalResult, NaiveTime, TimeZone, Timelike};
+use mcvector_core::server_process::{
+    start_server_from_profile, start_server_from_profile_with_guard,
+};
 use serde::Serialize;
-use tauri::{AppHandle, Emitter, Manager, State};
+use tauri::{AppHandle, Emitter, State};
 use tokio::sync::{Mutex, Notify};
 
 use super::backup::{
@@ -17,9 +20,8 @@ use super::backup::{
 };
 use super::eula::ensure_server_eula_accepted;
 use super::server::{
-    start_server_with_config, start_server_with_config_and_guard, stop_server_with_guard_recovery,
-    CommandLimiter, ServerManager, ServerStatus, ServerStatusEvent, StopErrorRecoveryState,
-    StopServerError,
+    server_context, stop_server_with_guard_recovery, CommandLimiter, ServerManager, ServerStatus,
+    ServerStatusEvent, StopErrorRecoveryState, StopServerError,
 };
 use super::server_registry::{MinecraftServer, ServerRegistry};
 use crate::state::operation_manager::{OperationGuard, OperationKind, ServerOperationManager};
@@ -1148,21 +1150,9 @@ async fn start_profile(
     limiter: &CommandLimiter,
     operations: &ServerOperationManager,
 ) -> Result<(), String> {
-    let (java_path, memory, jar_file, jvm_extra_args, software) =
-        start_settings_for_profile(app, profile)?;
-    start_server_with_config(
-        app.clone(),
-        servers,
-        limiter,
-        operations,
-        profile.id.clone(),
-        java_path,
-        memory,
-        jar_file,
-        jvm_extra_args,
-        software,
-    )
-    .await
+    let context = server_context(app)?;
+    ensure_server_eula_accepted(&context.data_dir, &profile.id)?;
+    start_server_from_profile(context, servers, limiter, operations, profile.clone()).await
 }
 
 async fn start_profile_with_guard(
@@ -1173,55 +1163,17 @@ async fn start_profile_with_guard(
     operations: &ServerOperationManager,
     operation: OperationGuard,
 ) -> Result<(), String> {
-    let (java_path, memory, jar_file, jvm_extra_args, software) =
-        start_settings_for_profile(app, profile)?;
-    start_server_with_config_and_guard(
-        app.clone(),
+    let context = server_context(app)?;
+    ensure_server_eula_accepted(&context.data_dir, &profile.id)?;
+    start_server_from_profile_with_guard(
+        context,
         servers,
         limiter,
         operations,
-        profile.id.clone(),
-        java_path,
-        memory,
-        jar_file,
-        jvm_extra_args,
-        software,
+        profile.clone(),
         operation,
     )
     .await
-}
-
-fn start_settings_for_profile(
-    app: &AppHandle,
-    profile: &MinecraftServer,
-) -> Result<(String, u32, String, Option<String>, String), String> {
-    let app_data_dir = app
-        .path()
-        .app_data_dir()
-        .map_err(|_| "Failed to resolve app data directory".to_string())?;
-    ensure_server_eula_accepted(&app_data_dir, &profile.id)?;
-    let memory = profile
-        .memory
-        .as_u64()
-        .and_then(|value| u32::try_from(value).ok())
-        .ok_or_else(|| "Server memory setting is invalid".to_string())?;
-    let java_path = profile
-        .java_path
-        .clone()
-        .filter(|path| !path.trim().is_empty())
-        .unwrap_or_else(|| "java".to_string());
-    let jar_file = if profile.software.eq_ignore_ascii_case("forge") {
-        "forge-server.jar"
-    } else {
-        "server.jar"
-    };
-    Ok((
-        java_path,
-        memory,
-        jar_file.to_string(),
-        profile.jvm_args.clone(),
-        profile.software.clone(),
-    ))
 }
 
 #[tauri::command]

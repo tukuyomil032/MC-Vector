@@ -901,6 +901,7 @@ export const en: TranslationDictionary = {
     },
     version: 'Version',
     javaRuntime: 'Java Runtime',
+    javaAutomatic: 'Automatic',
     javaSystemDefault: 'System Default (PATH environment)',
     manageJava: 'Manage Java…',
     memory: 'Memory (MB)',

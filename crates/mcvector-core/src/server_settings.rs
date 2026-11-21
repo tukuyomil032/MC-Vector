@@ -11,6 +11,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Number;
 
 use crate::error::{CoreError, CoreErrorCode};
+use crate::java::SYSTEM_JAVA_SENTINEL;
 use crate::java_policy::{validate_java_executable_path, validate_jvm_extra_args};
 use crate::managed_files;
 use crate::managed_path::{
@@ -45,7 +46,7 @@ pub struct ServerSettings {
     /// Server memory in MiB, matching the renderer's `memory` field.
     pub memory_mb: u64,
     pub port: u16,
-    /// `None` selects the system default Java runtime.
+    /// `None` selects Java automatically. `SYSTEM_JAVA_SENTINEL` uses Java on PATH.
     pub java_path: Option<String>,
     pub jvm_args: String,
     pub auto_restart_on_crash: bool,
@@ -386,13 +387,6 @@ fn validate_settings(
             "JVM arguments contain unsupported or unsafe flags.",
         ));
     }
-    if settings
-        .java_path
-        .as_deref()
-        .is_some_and(|path| path.trim().is_empty())
-    {
-        return Err(invalid_request("Java path is invalid."));
-    }
     Ok(())
 }
 
@@ -400,15 +394,20 @@ fn update_server_settings_sync(
     app_data_dir: &Path,
     registry: &ServerRegistry,
     server_id: &str,
-    settings: ServerSettingsUpdate,
+    mut settings: ServerSettingsUpdate,
 ) -> Result<ServerSettingsSaveResult, CoreError> {
     let original_server = registered_server(registry, server_id)?;
     let (_, properties_path) = validate_managed_profile(app_data_dir, &original_server)?;
     let mut updated_server = original_server.clone();
     let original_settings = settings_from_profile(&original_server)?;
+    settings.java_path = settings.java_path.as_deref().and_then(non_empty_trimmed);
     validate_settings(&settings, original_settings.memory_mb)?;
     if settings.java_path != original_settings.java_path {
-        if let Some(java_path) = settings.java_path.as_deref() {
+        if let Some(java_path) = settings
+            .java_path
+            .as_deref()
+            .filter(|path| *path != SYSTEM_JAVA_SENTINEL)
+        {
             validate_java_executable_path(java_path, &app_data_dir.join("java")).map_err(|_| {
                 invalid_request("Java path must identify a supported Java executable.")
             })?;
@@ -486,7 +485,7 @@ fn apply_update(
     server.version = settings.version.trim().to_string();
     server.memory = Number::from(settings.memory_mb);
     server.port = Number::from(settings.port);
-    server.java_path = settings.java_path.as_deref().and_then(non_empty_trimmed);
+    server.java_path.clone_from(&settings.java_path);
     server.jvm_args = non_empty_trimmed(&settings.jvm_args);
     server.auto_restart_on_crash = Some(settings.auto_restart_on_crash);
     server.max_auto_restarts = Some(Number::from(settings.max_auto_restarts));
@@ -692,6 +691,7 @@ mod tests {
         ServerSettings, ServerSettingsUpdate,
     };
     use crate::error::CoreErrorCode;
+    use crate::java::SYSTEM_JAVA_SENTINEL;
     use crate::operations::{OperationKind, ServerOperationManager};
     use crate::registry::{MinecraftServer, ServerRegistry};
 
@@ -823,6 +823,42 @@ mod tests {
         assert_eq!(settings.software, "Paper");
         assert_eq!(settings.java_path, None);
         assert!(settings.backup_restart_after_safe_backup);
+    }
+
+    #[tokio::test]
+    async fn system_java_setting_round_trips_through_legacy_and_typed_updates() {
+        let (app_data, registry, operations) = setup(None);
+        let mut profile = registry.get_servers().unwrap().remove(0);
+        profile.java_path = Some(SYSTEM_JAVA_SENTINEL.to_string());
+        assert!(update_server_profile(
+            &operations,
+            app_data.path().to_path_buf(),
+            registry.clone(),
+            profile,
+        )
+        .await
+        .expect("the legacy settings command should persist the sentinel"));
+
+        let reopened = ServerRegistry::open(app_data.path()).unwrap();
+        let stored = reopened.get_servers().unwrap().remove(0);
+        assert_eq!(stored.java_path.as_deref(), Some(SYSTEM_JAVA_SENTINEL));
+        let settings = load(&app_data, &reopened, &operations).await;
+        assert_eq!(settings.java_path.as_deref(), Some(SYSTEM_JAVA_SENTINEL));
+
+        let mut update = update_from(&settings);
+        update.java_path = Some(String::new());
+        let saved = update_server_settings(
+            &operations,
+            app_data.path().to_path_buf(),
+            reopened.clone(),
+            settings.server_id,
+            update,
+        )
+        .await
+        .expect("the typed settings command should treat empty as Automatic");
+        assert!(saved.restart_required);
+        assert_eq!(saved.settings.java_path, None);
+        assert_eq!(reopened.get_servers().unwrap()[0].java_path, None);
     }
 
     #[tokio::test]

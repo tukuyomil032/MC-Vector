@@ -13,6 +13,7 @@ pub mod install;
 pub mod probe;
 pub mod registry;
 pub mod requirement;
+mod resolution;
 
 use std::fmt;
 use std::path::{Path, PathBuf};
@@ -26,6 +27,11 @@ pub use registry::{
     JAVA_REGISTRY_KEY,
 };
 pub use requirement::{required_java, table_requirement, JavaRequirement, RequirementSource};
+pub(crate) use resolution::{java_requirement_for_launch, resolve_java_with_requirement};
+pub use resolution::{
+    resolve_java_for_server, JavaResolution, JavaSelection, JavaSelectionReason,
+    SYSTEM_JAVA_SENTINEL,
+};
 
 use crate::download::{
     self, CancelFlag, DownloadError, DownloadErrorKind, DownloadOptions, ExpectedChecksum,
@@ -694,7 +700,7 @@ pub async fn add_custom(context: &JavaContext<'_>, path: &str) -> Result<JavaRun
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct JavaCompatibility {
     pub required: Option<JavaRequirement>,
-    /// The profile's `javaPath`, or None for the system default (`java` on PATH).
+    /// The runtime path, when a registered or explicit path is selected.
     pub configured_path: Option<String>,
     pub configured_major: Option<u16>,
     pub configured_version: Option<String>,
@@ -711,14 +717,31 @@ pub async fn profile_compatibility(
     server: &MinecraftServer,
 ) -> JavaCompatibility {
     let required = required_java(&server.software, &server.version).await;
-    let configured_path = server
-        .java_path
-        .as_deref()
-        .map(str::trim)
-        .filter(|path| !path.is_empty() && !matches!(*path, "java" | "java.exe"))
-        .map(str::to_owned);
-    let (configured_major, configured_version) =
-        configured_runtime(data_dir, &store, configured_path.as_deref()).await;
+    let (choice, system) = resolution::resolve_selection(
+        store.clone(),
+        server.java_path.as_deref(),
+        required.map(|requirement| requirement.major),
+    )
+    .await;
+    let (configured_path, configured_major, configured_version) = match choice {
+        JavaSelection::Installed {
+            path,
+            major,
+            version,
+            ..
+        } => (Some(path), Some(major), version),
+        JavaSelection::Explicit { path } if !matches!(path.trim(), "java" | "java.exe") => {
+            let (major, version) = configured_runtime(data_dir, &store, &path).await;
+            (Some(path), major, version)
+        }
+        JavaSelection::Explicit { .. } | JavaSelection::SystemDefault => {
+            let system = resolution::system_java().await;
+            (None, system.major, system.version)
+        }
+        JavaSelection::System { .. } | JavaSelection::Missing { .. } => {
+            (None, system.major, system.version)
+        }
+    };
     JavaCompatibility {
         satisfied: match (configured_major, required) {
             (Some(configured), Some(required)) => Some(configured >= required.major),
@@ -734,11 +757,9 @@ pub async fn profile_compatibility(
 async fn configured_runtime(
     data_dir: &Path,
     store: &Arc<dyn JavaRegistryStore>,
-    configured: Option<&str>,
+    configured: &str,
 ) -> (Option<u16>, Option<String>) {
-    let Some(configured) = configured else {
-        return system_java().await;
-    };
+    let configured = configured.trim();
     if let Ok(versions) = load(store).await {
         let runtimes: Vec<JavaRuntime> = versions.iter().map(runtime_from_entry).collect();
         let configured_path = Path::new(configured);
@@ -769,32 +790,6 @@ async fn configured_runtime(
             }
         }
         None => (None, None),
-    }
-}
-
-/// `java` on PATH. On macOS the `/usr/bin/java` stub opens an install prompt
-/// when no JDK exists, so `/usr/libexec/java_home` is asked first.
-async fn system_java() -> (Option<u16>, Option<String>) {
-    if cfg!(target_os = "macos") {
-        let has_jdk = tokio::time::timeout(
-            probe::PROBE_TIMEOUT,
-            tokio::process::Command::new("/usr/libexec/java_home")
-                .stdout(std::process::Stdio::null())
-                .stderr(std::process::Stdio::null())
-                .kill_on_drop(true)
-                .status(),
-        )
-        .await
-        .ok()
-        .and_then(Result::ok)
-        .is_some_and(|status| status.success());
-        if !has_jdk {
-            return (None, None);
-        }
-    }
-    match probe::probe_executable(Path::new(probe::executable_name()), probe::PROBE_TIMEOUT).await {
-        Ok(probed) => (Some(probed.major), Some(probed.version)),
-        Err(_) => (None, None),
     }
 }
 

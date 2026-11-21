@@ -27,7 +27,7 @@ import {
 } from '../../../lib/ngrok-commands';
 import { VERSION_OPTIONS } from '../../constants/versionOptions';
 import { JVM_PRESETS } from '../../shared/jvm-presets';
-import type { MinecraftServer } from '../../shared/server declaration';
+import { type MinecraftServer, SYSTEM_JAVA_SENTINEL } from '../../shared/server declaration';
 import JavaManagerModal from '../JavaManagerModal';
 import VersionUpgradeWizard from '../VersionUpgradeWizard';
 import styles from './ServerSettings.module.css';
@@ -42,7 +42,7 @@ interface ServerSettingsProps {
 }
 
 type ScheduleType = 'interval' | 'daily' | 'weekly';
-const SYSTEM_JAVA = '__system_default__';
+const AUTOMATIC_JAVA = '__automatic__';
 
 /** Every editable field of the general settings, kept in one object so the form resets and saves as a unit. */
 interface GeneralForm {
@@ -80,7 +80,7 @@ function toForm(server: MinecraftServer): GeneralForm {
     version: server.version,
     memory: server.memory,
     port: server.port,
-    javaPath: server.javaPath || SYSTEM_JAVA,
+    javaPath: server.javaPath?.trim() || AUTOMATIC_JAVA,
     jvmArgs: server.jvmArgs ?? '',
     autoRestartOnCrash: Boolean(server.autoRestartOnCrash),
     maxAutoRestarts: server.maxAutoRestarts ?? 3,
@@ -272,9 +272,13 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({
   ];
 
   const javaOptions: SelectOption[] = [
-    { value: SYSTEM_JAVA, label: t('serverSettings.javaSystemDefault') },
+    { value: AUTOMATIC_JAVA, label: t('serverSettings.javaAutomatic') },
+    { value: SYSTEM_JAVA_SENTINEL, label: t('serverSettings.javaSystemDefault') },
     ...installedJava.map((j) => ({ value: j.path, label: `${j.name} (${j.path})` })),
   ];
+  if (!javaOptions.some(({ value }) => value === form.javaPath)) {
+    javaOptions.push({ value: form.javaPath, label: form.javaPath });
+  }
 
   const selectedPreset = JVM_PRESETS.find((preset) => preset.args === form.jvmArgs)?.id;
 
@@ -297,7 +301,7 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({
         port: normalized.port,
         path: server.path,
         software: normalized.software,
-        javaPath: normalized.javaPath === SYSTEM_JAVA ? undefined : normalized.javaPath,
+        javaPath: normalized.javaPath === AUTOMATIC_JAVA ? undefined : normalized.javaPath,
         autoRestartOnCrash: normalized.autoRestartOnCrash,
         maxAutoRestarts: normalized.maxAutoRestarts,
         autoRestartDelaySec: normalized.autoRestartDelaySec,

@@ -902,6 +902,7 @@ export interface TranslationDictionary {
     };
     version: string;
     javaRuntime: string;
+    javaAutomatic: string;
     javaSystemDefault: string;
     manageJava: string;
     memory: string;

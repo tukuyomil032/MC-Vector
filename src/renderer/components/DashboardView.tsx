@@ -9,7 +9,11 @@ import { formatBytes } from '../shared/format-bytes';
 import { Phrase } from '../shared/japanese-phrase';
 import { sendServerNotification } from '../../lib/notification-commands';
 import { tauriListen } from '../../lib/tauri-api';
-import type { MinecraftServer, ServerStatus } from '../components/../shared/server declaration';
+import {
+  type MinecraftServer,
+  type ServerStatus,
+  SYSTEM_JAVA_SENTINEL,
+} from '../shared/server declaration';
 import {
   type DisplayOnlyMetricPoint,
   type MetricDisplayPoint,
@@ -439,7 +443,9 @@ export default function DashboardView({ server }: Props) {
             <div>
               <dt className={styles.factLabel}>{t('dashboard.stats.javaRuntime')}</dt>
               <dd className={styles.factValue}>
-                {server.javaPath || t('serverSettings.javaSystemDefault')}
+                {server.javaPath?.trim() === SYSTEM_JAVA_SENTINEL
+                  ? t('serverSettings.javaSystemDefault')
+                  : server.javaPath?.trim() || t('serverSettings.javaAutomatic')}
               </dd>
             </div>
           </dl>

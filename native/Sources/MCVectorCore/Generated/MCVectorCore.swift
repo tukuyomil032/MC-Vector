@@ -3661,6 +3661,60 @@ public func FfiConverterTypeJavaRequirementRecord_lower(_ value: JavaRequirement
 }
 
 
+public struct JavaResolution: Equatable, Hashable {
+    public var requiredMajor: UInt32?
+    public var choice: JavaSelection
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(requiredMajor: UInt32?, choice: JavaSelection) {
+        self.requiredMajor = requiredMajor
+        self.choice = choice
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension JavaResolution: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeJavaResolution: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> JavaResolution {
+        return
+            try JavaResolution(
+                requiredMajor: FfiConverterOptionUInt32.read(from: &buf), 
+                choice: FfiConverterTypeJavaSelection.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: JavaResolution, into buf: inout [UInt8]) {
+        FfiConverterOptionUInt32.write(value.requiredMajor, into: &buf)
+        FfiConverterTypeJavaSelection.write(value.choice, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeJavaResolution_lift(_ buf: RustBuffer) throws -> JavaResolution {
+    return try FfiConverterTypeJavaResolution.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeJavaResolution_lower(_ value: JavaResolution) -> RustBuffer {
+    return FfiConverterTypeJavaResolution.lower(value)
+}
+
+
 public struct JavaRuntimeRecord: Equatable, Hashable {
     public var major: UInt32
     /**
@@ -5849,7 +5903,7 @@ public struct ServerJavaCompatibility: Equatable, Hashable {
      */
     public var required: JavaRequirementRecord?
     /**
-     * The profile's Java path, or None for the system default.
+     * The selected installed or explicit path, or None when launch uses PATH.
      */
     public var configuredPath: String?
     public var configuredMajor: UInt32?
@@ -5866,7 +5920,7 @@ public struct ServerJavaCompatibility: Equatable, Hashable {
          * None for proxies and versions neither Mojang nor the table knows.
          */required: JavaRequirementRecord?, 
         /**
-         * The profile's Java path, or None for the system default.
+         * The selected installed or explicit path, or None when launch uses PATH.
          */configuredPath: String?, configuredMajor: UInt32?, configuredVersion: String?, 
         /**
          * `configured_major >= required.major`; None when either is unknown.
@@ -6135,7 +6189,7 @@ public struct ServerSettings: Equatable, Hashable {
     public var memoryMb: UInt64
     public var port: UInt16
     /**
-     * `None` selects the system Java runtime.
+     * `None` selects Java automatically. Use the system Java sentinel to force PATH.
      */
     public var javaPath: String?
     public var jvmArgs: String
@@ -6159,7 +6213,7 @@ public struct ServerSettings: Equatable, Hashable {
     // declare one manually.
     public init(serverId: String, serverPath: String, name: String, profileName: String, groupName: String, software: String, version: String, memoryMb: UInt64, port: UInt16, 
         /**
-         * `None` selects the system Java runtime.
+         * `None` selects Java automatically. Use the system Java sentinel to force PATH.
          */javaPath: String?, jvmArgs: String, autoRestartOnCrash: Bool, maxAutoRestarts: UInt32, autoRestartDelaySec: UInt32, autoBackupEnabled: Bool, autoBackupIntervalMin: UInt32, autoBackupScheduleType: AutoBackupScheduleType, autoBackupTime: String, autoBackupWeekday: UInt8, autoBackupRetainCount: UInt32, autoBackupRetainDays: UInt32, backupRestartAfterSafeBackup: Bool, notifyOnCrash: Bool, notifyOnStart: Bool, notifyOnHighCpu: Bool, notifyHighCpuThreshold: UInt8) {
         self.serverId = serverId
         self.serverPath = serverPath
@@ -7640,6 +7694,183 @@ public func FfiConverterTypeJavaRuntimeOrigin_lift(_ buf: RustBuffer) throws -> 
 #endif
 public func FfiConverterTypeJavaRuntimeOrigin_lower(_ value: JavaRuntimeOrigin) -> RustBuffer {
     return FfiConverterTypeJavaRuntimeOrigin.lower(value)
+}
+
+
+
+
+public enum JavaSelection: Equatable, Hashable {
+    
+    case installed(path: String, major: UInt32, version: String?, origin: JavaRuntimeOrigin, reason: JavaSelectionReason
+    )
+    case system(major: UInt32?
+    )
+    case explicit(path: String
+    )
+    case systemDefault
+    case missing(required: UInt32, systemMajor: UInt32?
+    )
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension JavaSelection: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeJavaSelection: FfiConverterRustBuffer {
+    typealias SwiftType = JavaSelection
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> JavaSelection {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .installed(path: try FfiConverterString.read(from: &buf), major: try FfiConverterUInt32.read(from: &buf), version: try FfiConverterOptionString.read(from: &buf), origin: try FfiConverterTypeJavaRuntimeOrigin.read(from: &buf), reason: try FfiConverterTypeJavaSelectionReason.read(from: &buf)
+        )
+        
+        case 2: return .system(major: try FfiConverterOptionUInt32.read(from: &buf)
+        )
+        
+        case 3: return .explicit(path: try FfiConverterString.read(from: &buf)
+        )
+        
+        case 4: return .systemDefault
+        
+        case 5: return .missing(required: try FfiConverterUInt32.read(from: &buf), systemMajor: try FfiConverterOptionUInt32.read(from: &buf)
+        )
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: JavaSelection, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case let .installed(path,major,version,origin,reason):
+            writeInt(&buf, Int32(1))
+            FfiConverterString.write(path, into: &buf)
+            FfiConverterUInt32.write(major, into: &buf)
+            FfiConverterOptionString.write(version, into: &buf)
+            FfiConverterTypeJavaRuntimeOrigin.write(origin, into: &buf)
+            FfiConverterTypeJavaSelectionReason.write(reason, into: &buf)
+            
+        
+        case let .system(major):
+            writeInt(&buf, Int32(2))
+            FfiConverterOptionUInt32.write(major, into: &buf)
+            
+        
+        case let .explicit(path):
+            writeInt(&buf, Int32(3))
+            FfiConverterString.write(path, into: &buf)
+            
+        
+        case .systemDefault:
+            writeInt(&buf, Int32(4))
+        
+        
+        case let .missing(required,systemMajor):
+            writeInt(&buf, Int32(5))
+            FfiConverterUInt32.write(required, into: &buf)
+            FfiConverterOptionUInt32.write(systemMajor, into: &buf)
+            
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeJavaSelection_lift(_ buf: RustBuffer) throws -> JavaSelection {
+    return try FfiConverterTypeJavaSelection.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeJavaSelection_lower(_ value: JavaSelection) -> RustBuffer {
+    return FfiConverterTypeJavaSelection.lower(value)
+}
+
+
+
+
+public enum JavaSelectionReason: Equatable, Hashable {
+    
+    case exact
+    case newerMajor
+    case newestAvailable
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension JavaSelectionReason: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeJavaSelectionReason: FfiConverterRustBuffer {
+    typealias SwiftType = JavaSelectionReason
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> JavaSelectionReason {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .exact
+        
+        case 2: return .newerMajor
+        
+        case 3: return .newestAvailable
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: JavaSelectionReason, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case .exact:
+            writeInt(&buf, Int32(1))
+        
+        
+        case .newerMajor:
+            writeInt(&buf, Int32(2))
+        
+        
+        case .newestAvailable:
+            writeInt(&buf, Int32(3))
+        
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeJavaSelectionReason_lift(_ buf: RustBuffer) throws -> JavaSelectionReason {
+    return try FfiConverterTypeJavaSelectionReason.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeJavaSelectionReason_lower(_ value: JavaSelectionReason) -> RustBuffer {
+    return FfiConverterTypeJavaSelectionReason.lower(value)
 }
 
 
@@ -11064,7 +11295,24 @@ public func requiredJavaForVersion(software: String, version: String)async  -> J
         )
 }
 /**
- * The server's configured Java against what its version needs.
+ * Resolves a registered server's Java using the same selection as launch.
+ */
+public func resolveServerJava(serverId: String)async throws  -> JavaResolution  {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_mcvector_ffi_fn_func_resolve_server_java(FfiConverterString.lower(serverId)
+                )
+            },
+            pollFunc: ffi_mcvector_ffi_rust_future_poll_rust_buffer,
+            completeFunc: ffi_mcvector_ffi_rust_future_complete_rust_buffer,
+            freeFunc: ffi_mcvector_ffi_rust_future_free_rust_buffer,
+            liftFunc: FfiConverterTypeJavaResolution_lift,
+            errorHandler: FfiConverterTypeFfiError_lift
+        )
+}
+/**
+ * The server's selected Java against what its Minecraft version needs.
  */
 public func serverJavaCompatibility(serverId: String)async throws  -> ServerJavaCompatibility  {
     return
@@ -11079,6 +11327,16 @@ public func serverJavaCompatibility(serverId: String)async throws  -> ServerJava
             liftFunc: FfiConverterTypeServerJavaCompatibility_lift,
             errorHandler: FfiConverterTypeFfiError_lift
         )
+}
+/**
+ * The value to store in a server profile to force Java from PATH.
+ */
+public func systemJavaSentinel() -> String  {
+    return try!  FfiConverterString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_mcvector_ffi_fn_func_system_java_sentinel(uniffiCallStatus
+    )
+})
 }
 public func bulkUpdatePlugins(operationId: String, serverId: String, observer: PluginBulkObserver)async throws  -> PluginBulkOutcome  {
     return
@@ -11470,7 +11728,13 @@ private let initializationResult: InitializationResult = {
     if (uniffi_mcvector_ffi_checksum_func_required_java_for_version() != 30556) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_mcvector_ffi_checksum_func_server_java_compatibility() != 48929) {
+    if (uniffi_mcvector_ffi_checksum_func_resolve_server_java() != 7275) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mcvector_ffi_checksum_func_server_java_compatibility() != 34206) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mcvector_ffi_checksum_func_system_java_sentinel() != 59075) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_mcvector_ffi_checksum_func_bulk_update_plugins() != 10162) {

@@ -474,7 +474,7 @@ pub struct ServerSettings {
     pub version: String,
     pub memory_mb: u64,
     pub port: u16,
-    /// `None` selects the system Java runtime.
+    /// `None` selects Java automatically. Use the system Java sentinel to force PATH.
     pub java_path: Option<String>,
     pub jvm_args: String,
     pub auto_restart_on_crash: bool,
@@ -1206,6 +1206,7 @@ impl ServerEvents for FfiServerEvents {
 
 fn server_context(data_dir: PathBuf) -> ServerContext {
     ServerContext {
+        java_registry: java_runtimes::java_store(&data_dir),
         data_dir,
         events: Arc::new(FfiServerEvents),
     }

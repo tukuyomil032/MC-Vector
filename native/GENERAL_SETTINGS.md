@@ -56,7 +56,7 @@ Missing optional registry fields use the values displayed by
 | Field | Default |
 | --- | --- |
 | profile_name, group_name, jvm_args | Empty string |
-| java_path | System Java (no explicit path) |
+| java_path | Automatic Java selection (no explicit path) |
 | software when empty | Paper |
 | auto_restart_on_crash | false |
 | max_auto_restarts | 3 |
@@ -100,8 +100,10 @@ imported server whose version is unknown; it is limited to 128 bytes without
 control characters. Profile and group names are
 trimmed, at most 128 bytes, and cannot contain control characters. JVM arguments
 use the existing Java policy, including the tuning flags in React's presets;
-unsafe executable-loading and command arguments remain refused. A changed Java
-path must pass the existing managed/trusted-system executable policy.
+unsafe executable-loading and command arguments remain refused. An unset or
+empty Java setting selects Automatic, and `system` selects Java on PATH. A
+changed explicit path must pass the existing managed/trusted-system executable
+policy.
 
 Failures use `invalid_name`, `invalid_memory`, `invalid_port`,
 `invalid_request`, `not_found`, `unmanaged`, `io`, or `registry`, each prefixed
