@@ -3,480 +3,426 @@
 import MCVectorCore
 import SwiftUI
 
-/// The server version upgrade (React VersionUpgradeWizard): Check → Backup →
-/// Download → Done. Beyond React it lets the user pick the target version,
-/// links its release notes, fixes a Java runtime that is too old for the
-/// target, and can skip the backup.
-@MainActor
-@Observable
-final class UpgradeWizardModel {
-    enum Step: Int { case check, backup, download, done }
-
-    enum Check: Equatable {
-        case loading
-        case failed(CoreError)
-        case loaded(ServerJarCandidates)
-    }
-
-    let serverID: String
-    private(set) var step: Step = .check
-    private(set) var check: Check = .loading
-    var target: String?
-    private(set) var java: ServerJavaCompatibility?
-    /// The server picks its Java automatically (no java_path saved).
-    private(set) var javaAutomatic = true
-    private(set) var javaFixing: Double??
-    private(set) var plan: ServerJarUpgradePlan?
-    var skipBackup = false
-    /// Backup or download progress (nil while indeterminate).
-    private(set) var progress: Double??
-    private(set) var result: ServerJarUpgradeResult?
-    private(set) var isPreparing = false
-
-    init(serverID: String) {
-        self.serverID = serverID
-    }
-
-    var isBusy: Bool { progress != nil || javaFixing != nil || isPreparing }
-
-    var candidates: [ServerJarCandidate] {
-        if case .loaded(let list) = check { return list.candidates }
-        return []
-    }
-
-    var selected: ServerJarCandidate? { candidates.first { $0.version == target } }
-
-    /// The Java the selected target needs, when the server's runtime is older.
-    var javaShortfall: UInt32? {
-        guard let required = selected?.requiredJavaMajor else { return nil }
-        if let configured = java?.configuredMajor, configured >= required { return nil }
-        if java?.configuredMajor == nil, java?.satisfied == true { return nil }
-        return required
-    }
-
-    func load() async {
-        check = .loading
-        do {
-            let list = try await CoreClient.serverJarUpgradeCandidates(serverID: serverID)
-            java = try? await CoreClient.javaCompatibility(serverID: serverID)
-            if let settings = try? await CoreClient.serverSettings(serverID: serverID) {
-                javaAutomatic = settings.javaPath?.isEmpty ?? true
-            }
-            withAnimation(Motion.standard) {
-                check = .loaded(list)
-                target = list.candidates.first(where: \.latest)?.version ?? list.candidates.first?.version
-            }
-        } catch {
-            withAnimation(Motion.standard) { check = .failed(error) }
-        }
-    }
-
-    /// Installs (or reuses) the Java the target needs and sets it for the server.
-    func fixJava(_ major: UInt32, feedback: FeedbackCenter) async {
-        guard javaFixing == nil else { return }
-        javaFixing = .some(nil)
-        defer { javaFixing = nil }
-        do {
-            let path: String
-            if let existing = try await CoreClient.javaRuntimes().first(where: { $0.major == major && $0.available }) {
-                path = existing.path
-            } else {
-                let operation = CoreClient.installJava(major: major)
-                let watcher = Task {
-                    for await event in operation.progress where event.total > 0 {
-                        withAnimation(Motion.value) { javaFixing = Double(event.downloaded) / Double(event.total) }
-                    }
-                }
-                defer { watcher.cancel() }
-                path = try await operation.value().path
-            }
-            // Automatic servers pick the new runtime by themselves; others are
-            // switched to it explicitly.
-            if !javaAutomatic {
-                var update = GeneralSettingsModel.update(from: try await CoreClient.serverSettings(serverID: serverID))
-                update.javaPath = path
-                _ = try await CoreClient.updateServerSettings(serverID: serverID, settings: update)
-            }
-            java = try? await CoreClient.javaCompatibility(serverID: serverID)
-            feedback.toast(
-                .success,
-                javaAutomatic
-                    ? L10n.t("javaManager.toast.downloadSuccess", ["version": major])
-                    : L10n.t("native.upgrade.javaSet", ["major": major]))
-        } catch {
-            feedback.showError(L10n.t("javaManager.toast.downloadFailed"), message: error.uiText)
-        }
-    }
-
-    /// Prepares the plan for the target and moves to the backup step.
-    func start(feedback: FeedbackCenter) async {
-        guard let target else { return }
-        isPreparing = true
-        defer { isPreparing = false }
-        do {
-            let plan = try await CoreClient.prepareServerJarUpgrade(serverID: serverID, targetVersion: target)
-            preparedAt = .now
-            withAnimation(Motion.spring) {
-                self.plan = plan
-                step = .backup
-            }
-        } catch {
-            feedback.showError(L10n.t("serverSettings.versionUpgrade.downloadFailed"), message: error.uiText)
-        }
-    }
-
-    func runBackup(feedback: FeedbackCenter) async {
-        guard !skipBackup else {
-            withAnimation(Motion.spring) { step = .download }
-            return
-        }
-        let name = "before-upgrade-\(plan?.targetVersion ?? "server").zip"
-        let operation = CoreClient.createBackup(serverID: serverID, backupName: name)
-        progress = .some(0)
-        let watcher = Task {
-            for await event in operation.progress {
-                withAnimation(Motion.value) { progress = Double(event.progress) }
-            }
-        }
-        defer {
-            watcher.cancel()
-            progress = nil
-        }
-        do {
-            switch try await operation.value() {
-            case .confirmationRequired:
-                feedback.showError(
-                    L10n.t("serverSettings.versionUpgrade.backupFailed"),
-                    message: L10n.t("serverSettings.versionUpgrade.serverMustBeOffline"))
-            case .created:
-                withAnimation(Motion.spring) { step = .download }
-            }
-        } catch {
-            feedback.showError(L10n.t("serverSettings.versionUpgrade.backupFailed"), message: error.uiText)
-        }
-    }
-
-    func runDownload(feedback: FeedbackCenter) async {
-        guard var plan else { return }
-        // A plan lives a few minutes; the backup may have taken longer.
-        if plan.expiresInSeconds == 0 || Date.now > preparedAt.addingTimeInterval(TimeInterval(plan.expiresInSeconds)) {
-            guard
-                let fresh = try? await CoreClient.prepareServerJarUpgrade(
-                    serverID: serverID, targetVersion: plan.targetVersion)
-            else { return }
-            plan = fresh
-            self.plan = fresh
-            preparedAt = .now
-        }
-        let operation = CoreClient.executeServerJarUpgrade(planID: plan.planId)
-        progress = .some(nil)
-        let watcher = Task {
-            for await event in operation.progress {
-                withAnimation(Motion.value) {
-                    progress = event.total > 0 ? Double(event.downloaded) / Double(event.total) : .some(nil)
-                }
-            }
-        }
-        defer {
-            watcher.cancel()
-            progress = nil
-        }
-        do {
-            let result = try await operation.value()
-            withAnimation(Motion.spring) {
-                self.result = result
-                step = .done
-            }
-        } catch {
-            feedback.showError(L10n.t("serverSettings.versionUpgrade.downloadFailed"), message: error.uiText)
-        }
-    }
-
-    private var preparedAt = Date.now
-}
-
+/// Change Version (React VersionUpgradeWizard, reworked): Choose → Backup →
+/// Install → Done. Each step shows only its own controls; nothing chosen on
+/// one step stays on the next. Errors show inside the wizard. While work
+/// runs, the only button is Cancel.
 struct UpgradeWizard: View {
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.openURL) private var openURL
-    @Environment(FeedbackCenter.self) private var feedback
     @Environment(AppState.self) private var app
-    @Environment(ServerRuntime.self) private var runtime
     @State private var model: UpgradeWizardModel
-    /// Called after a successful upgrade so the settings page reloads.
-    let onUpgraded: () -> Void
+    /// Called after the version changed so the settings page reloads.
+    let onChanged: () -> Void
 
-    init(serverID: String, onUpgraded: @escaping () -> Void) {
+    init(serverID: String, onChanged: @escaping () -> Void) {
         _model = State(initialValue: UpgradeWizardModel(serverID: serverID))
-        self.onUpgraded = onUpgraded
+        self.onChanged = onChanged
     }
 
-    private var isRunning: Bool { !["offline", "crashed"].contains(runtime.status(of: model.serverID)) }
-
     var body: some View {
-        @Bindable var model = model
         VStack(alignment: .leading, spacing: 18) {
-            Text(L10n.t("serverSettings.versionUpgrade.title")).font(.title3.weight(.semibold))
+            Text(L10n.t("native.upgrade.title")).font(.title3.weight(.semibold))
             StepIndicator(
-                titles: ["stepCheck", "stepBackup", "stepDownload", "stepDone"].map {
-                    L10n.t("serverSettings.versionUpgrade.\($0)")
-                },
+                titles: [
+                    L10n.t("native.upgrade.stepChoose"), L10n.t("serverSettings.versionUpgrade.stepBackup"),
+                    L10n.t("native.upgrade.stepInstall"), L10n.t("serverSettings.versionUpgrade.stepDone"),
+                ],
                 current: model.step == .done ? 4 : model.step.rawValue
             )
             Group {
                 switch model.step {
-                case .check: checkStep
-                case .backup: backupStep
-                case .download: downloadStep
-                case .done: doneStep
+                case .choose: ChooseStep(model: model, close: { dismiss() })
+                case .backup: BackupStep(model: model, close: { dismiss() })
+                case .install:
+                    InstallStep(model: model, close: { dismiss() }) {
+                        onChanged()
+                        Task { await app.reloadServers(selectFirstIfMissing: false) }
+                    }
+                case .done: DoneStep(model: model, close: { dismiss() })
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .transition(
-                .asymmetric(insertion: .move(edge: .trailing), removal: .move(edge: .leading)).combined(with: .opacity))
-            if model.isBusy {
-                Text(L10n.t("serverSettings.versionUpgrade.blockedWhileRunning"))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-            HStack {
-                Spacer()
-                Button(L10n.t("serverSettings.versionUpgrade.close")) { dismiss() }
-                    .keyboardShortcut(.cancelAction)
-                    .disabled(model.isBusy)
-                primaryButton
-            }
+                .asymmetric(insertion: .move(edge: .trailing), removal: .move(edge: .leading))
+                    .combined(with: .opacity))
         }
         .padding(22)
-        .frame(width: 520)
+        .frame(width: 540)
         .clipped()
-        .animation(Motion.standard, value: model.check)
-        .animation(Motion.standard, value: model.step)
-        .interactiveDismissDisabled(model.isBusy)
+        .animation(Motion.spring, value: model.step)
+        .interactiveDismissDisabled(model.isWorking)
         .task { await model.load() }
-        .environment(\.locale, Locale(identifier: L10n.language))
     }
+}
 
-    @ViewBuilder private var primaryButton: some View {
-        switch model.step {
-        case .check:
-            Button(L10n.t("serverSettings.versionUpgrade.startUpgrade")) {
-                Task { await model.start(feedback: feedback) }
-            }
-            .buttonStyle(.borderedProminent)
-            .keyboardShortcut(.defaultAction)
-            .disabled(model.selected == nil || isRunning || model.isBusy)
-        case .backup:
-            Button(
-                L10n.t(model.skipBackup ? "native.upgrade.continue" : "serverSettings.versionUpgrade.runBackup")
-            ) {
-                Task { await model.runBackup(feedback: feedback) }
-            }
-            .buttonStyle(.borderedProminent)
-            .keyboardShortcut(.defaultAction)
-            .disabled(isRunning || model.isBusy)
-        case .download:
-            Button(L10n.t("serverSettings.versionUpgrade.runDownload")) {
-                Task {
-                    await model.runDownload(feedback: feedback)
-                    if model.step == .done {
-                        onUpgraded()
-                        await app.reloadServers(selectFirstIfMissing: false)
-                    }
-                }
-            }
-            .buttonStyle(.borderedProminent)
-            .keyboardShortcut(.defaultAction)
-            .disabled(isRunning || model.isBusy || model.plan?.verified == false)
-        case .done:
-            Button(L10n.t("serverSettings.versionUpgrade.close")) { dismiss() }
-                .buttonStyle(.borderedProminent)
-                .keyboardShortcut(.defaultAction)
+/// Error of the current step.
+private struct StepFailure: View {
+    let model: UpgradeWizardModel
+    let titleKey: String
+
+    var body: some View {
+        if let failure = model.failure {
+            InlineErrorBanner(title: L10n.t(titleKey), message: failure.uiText)
+        }
+    }
+}
+
+/// The bottom row, buttons aligned to the trailing edge.
+private struct StepButtons<Content: View>: View {
+    @ViewBuilder let content: Content
+
+    var body: some View {
+        HStack {
+            Spacer()
+            content
+        }
+        .controlSize(.large)
+    }
+}
+
+/// An icon and a sentence, tinted by importance.
+private struct Notice: View {
+    let systemImage: String
+    let text: String
+    var tint: Color = .secondary
+
+    var body: some View {
+        Label {
+            Text(text).fixedSize(horizontal: false, vertical: true)
+        } icon: {
+            Image(systemName: systemImage).foregroundStyle(tint)
+        }
+        .font(.callout)
+        .transition(.opacity.combined(with: .move(edge: .top)))
+    }
+}
+
+// MARK: Choose
+
+private struct ChooseStep: View {
+    @Bindable var model: UpgradeWizardModel
+    let close: () -> Void
+    @Environment(\.openURL) private var openURL
+    @Environment(FeedbackCenter.self) private var feedback
+    @Environment(ServerRuntime.self) private var runtime
+    /// Only for this step: use a development build when there is no stable one.
+    @State private var useUnstable = false
+
+    private var isRunning: Bool { !["offline", "crashed"].contains(runtime.status(of: model.serverID)) }
+
+    private var canContinue: Bool {
+        guard model.selected != nil, !isRunning, !model.isWorking else { return false }
+        switch model.availability {
+        case .some(.stable): return true
+        case .some(.unstable): return useUnstable
+        case .some(.none), nil: return false
         }
     }
 
-    // MARK: Steps
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            switch model.load {
+            case .loading:
+                HStack(spacing: 8) {
+                    ProgressView().controlSize(.small)
+                    Text(L10n.t("serverSettings.versionUpgrade.fetching")).foregroundStyle(.secondary)
+                }
+                .frame(maxWidth: .infinity, minHeight: 120)
+            case .failed(let error):
+                InlineErrorBanner(title: L10n.t("native.upgrade.checkFailed"), message: error.uiText)
+                StepButtons {
+                    Button(L10n.t("common.cancel"), action: close).keyboardShortcut(.cancelAction)
+                    Button(L10n.t("plugins.browser.retry")) { Task { await model.load() } }
+                        .keyboardShortcut(.defaultAction)
+                }
+            case .loaded(let list):
+                form(list)
+            }
+        }
+        .task(id: "\(model.software ?? "")-\(model.target ?? "")") {
+            useUnstable = false
+            model.failure = nil
+            await model.checkAvailability()
+        }
+    }
 
-    @ViewBuilder private var checkStep: some View {
-        switch model.check {
-        case .loading:
-            HStack(spacing: 8) {
-                ProgressView().controlSize(.small)
-                Text(L10n.t("serverSettings.versionUpgrade.fetching")).foregroundStyle(.secondary)
+    @ViewBuilder private func form(_ list: ServerJarCandidates) -> some View {
+        Form {
+            LabeledContent(L10n.t("serverSettings.versionUpgrade.currentVersion")) {
+                Text("\(model.currentSoftware ?? list.software) \(list.currentVersion)").monospacedDigit()
             }
-        case .failed(let error):
-            VStack(alignment: .leading, spacing: 8) {
-                Label(L10n.t("native.upgrade.checkFailed"), systemImage: "wifi.exclamationmark")
-                Text(error.uiText).font(.caption).foregroundStyle(.secondary)
-                Button(L10n.t("plugins.browser.retry")) { Task { await model.load() } }
+            if list.targetSoftwareCandidates.count > 1 {
+                Picker(L10n.t("serverSettings.serverSoftware"), selection: softwareBinding) {
+                    ForEach(list.targetSoftwareCandidates, id: \.self) { Text($0).tag(String?.some($0)) }
+                }
             }
-        case .loaded(let list) where !list.supported:
-            Label(L10n.t("serverSettings.versionUpgrade.unsupported"), systemImage: "nosign")
-                .foregroundStyle(.secondary)
-        case .loaded(let list):
-            VStack(alignment: .leading, spacing: 12) {
-                Grid(horizontalSpacing: 12, verticalSpacing: 12) {
-                    GridRow {
-                        versionTile("serverSettings.versionUpgrade.currentVersion") {
-                            Text(list.currentVersion)
+            if list.supported, !list.candidates.isEmpty {
+                Picker(L10n.t("native.upgrade.targetVersion"), selection: $model.target) {
+                    let newer = list.candidates.filter(\.newer)
+                    let older = list.candidates.filter { !$0.newer }
+                    if !newer.isEmpty {
+                        Section(L10n.t("native.upgrade.newer")) {
+                            ForEach(newer, id: \.version) { candidate in
+                                Text(label(candidate)).tag(String?.some(candidate.version))
+                            }
                         }
-                        versionTile("native.upgrade.targetVersion") {
-                            if list.candidates.isEmpty {
-                                Text(list.currentVersion)
-                            } else {
-                                Picker(L10n.t("native.upgrade.targetVersion"), selection: $model.target) {
-                                    ForEach(list.candidates, id: \.version) { candidate in
-                                        Text(
-                                            candidate.latest
-                                                ? L10n.t("native.upgrade.latestTag", ["version": candidate.version])
-                                                : candidate.version
-                                        )
-                                        .tag(String?.some(candidate.version))
-                                    }
-                                }
-                                .labelsHidden()
-                                .fixedSize()
+                    }
+                    if !older.isEmpty {
+                        Section(L10n.t("native.upgrade.older")) {
+                            ForEach(older, id: \.version) { candidate in
+                                Text(candidate.version).tag(String?.some(candidate.version))
                             }
                         }
                     }
                 }
-                if list.candidates.isEmpty {
-                    Label(L10n.t("serverSettings.versionUpgrade.alreadyLatest"), systemImage: "checkmark.seal.fill")
-                        .foregroundStyle(.green)
-                } else if let url = model.selected?.releaseNotesUrl.flatMap(URL.init(string:)) {
-                    Button(L10n.t("native.upgrade.releaseNotes"), systemImage: "arrow.up.right.square") { openURL(url) }
+                if let url = model.selected?.releaseNotesUrl.flatMap(URL.init(string:)) {
+                    LabeledContent(L10n.t("native.upgrade.releaseNotes")) {
+                        Button(L10n.t("native.upgrade.openReleaseNotes"), systemImage: "arrow.up.right.square") {
+                            openURL(url)
+                        }
                         .buttonStyle(.link)
-                }
-                if let required = model.javaShortfall {
-                    javaWarning(required)
-                        .transition(.opacity.combined(with: .move(edge: .top)))
-                }
-                if isRunning {
-                    Label(L10n.t("serverSettings.versionUpgrade.serverMustBeOffline"), systemImage: "stop.circle")
-                        .foregroundStyle(.orange)
-                }
-            }
-            .animation(Motion.standard, value: model.javaShortfall)
-        }
-    }
-
-    private func versionTile(_ titleKey: String, @ViewBuilder value: () -> some View) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(L10n.t(titleKey)).font(.caption).foregroundStyle(.secondary)
-            value().font(.title3.weight(.semibold).monospacedDigit())
-        }
-        .frame(maxWidth: .infinity, minHeight: 48, alignment: .leading)
-        .padding(12)
-        .background(.quaternary.opacity(0.6), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
-    }
-
-    private func javaWarning(_ required: UInt32) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Label {
-                Text(
-                    model.java?.configuredMajor.map {
-                        L10n.t(
-                            "native.upgrade.javaTooOld",
-                            ["target": model.target ?? "", "required": required, "configured": $0])
-                    } ?? L10n.t("native.upgrade.javaUnknown", ["target": model.target ?? "", "required": required]))
-            } icon: {
-                Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.orange)
-            }
-            HStack {
-                Button(
-                    L10n.t(
-                        model.javaAutomatic ? "native.upgrade.javaDownload" : "native.upgrade.javaFix",
-                        ["major": required])
-                ) {
-                    Task { await model.fixJava(required, feedback: feedback) }
-                }
-                .disabled(model.isBusy)
-                if let fixing = model.javaFixing {
-                    if let fraction = fixing {
-                        ProgressView(value: fraction).frame(width: 120)
-                        Text(fraction, format: .percent.precision(.fractionLength(0)))
-                            .monospacedDigit()
-                            .contentTransition(.numericText(value: fraction))
-                            .font(.caption)
-                    } else {
-                        ProgressView().controlSize(.small)
                     }
                 }
             }
         }
-        .padding(12)
-        .background(.orange.opacity(0.1), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
-    }
+        .formStyle(.grouped)
+        .scrollDisabled(true)
+        .fixedSize(horizontal: false, vertical: true)
+        .disabled(model.isWorking)
 
-    private var backupStep: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text(L10n.t("serverSettings.versionUpgrade.backupDescription"))
-            Toggle(L10n.t("native.upgrade.skipBackup"), isOn: Bindable(model).skipBackup)
-                .disabled(model.isBusy)
-            if model.skipBackup {
-                Text(L10n.t("native.upgrade.skipBackupNote")).font(.caption).foregroundStyle(.orange)
+        notices(list)
+        StepFailure(model: model, titleKey: "native.upgrade.prepareFailed")
+
+        StepButtons {
+            Button(L10n.t("common.cancel"), action: close).keyboardShortcut(.cancelAction)
+            Button(L10n.t("native.upgrade.next")) {
+                Task { await model.next(allowUnstable: useUnstable) }
             }
-            progressRow(labelKey: "serverSettings.versionUpgrade.backupProgressLabel")
+            .buttonStyle(.borderedProminent)
+            .keyboardShortcut(.defaultAction)
+            .disabled(!canContinue)
         }
     }
 
-    private var downloadStep: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text(L10n.t("serverSettings.versionUpgrade.downloadDescription"))
+    private var softwareBinding: Binding<String?> {
+        Binding(
+            get: { model.software },
+            set: { value in Task { await model.load(software: value) } })
+    }
+
+    private func label(_ candidate: ServerJarCandidate) -> String {
+        candidate.latest ? L10n.t("native.upgrade.latestTag", ["version": candidate.version]) : candidate.version
+    }
+
+    /// What the user must know about this choice, most important first.
+    @ViewBuilder private func notices(_ list: ServerJarCandidates) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            if !list.supported {
+                Notice(systemImage: "nosign", text: L10n.t("serverSettings.versionUpgrade.unsupported"))
+            } else if list.candidates.isEmpty {
+                Notice(systemImage: "checkmark.seal", text: L10n.t("serverSettings.versionUpgrade.alreadyLatest"))
+            }
+            if isRunning {
+                Notice(
+                    systemImage: "stop.circle", text: L10n.t("serverSettings.versionUpgrade.serverMustBeOffline"),
+                    tint: .orange)
+            }
+            switch model.availability {
+            case .some(.unstable(let channel)):
+                VStack(alignment: .leading, spacing: 6) {
+                    Notice(
+                        systemImage: "flask",
+                        text: L10n.t(
+                            "native.upgrade.unstable",
+                            ["version": model.target ?? "", "channel": channel.uppercased()]),
+                        tint: .orange)
+                    Toggle(L10n.t("native.upgrade.useUnstable"), isOn: $useUnstable)
+                        .padding(.leading, 26)
+                }
+            case .some(.none(let reason)):
+                Notice(
+                    systemImage: "xmark.octagon",
+                    text: L10n.t("native.upgrade.unavailable", ["version": model.target ?? "", "reason": reason]),
+                    tint: .red)
+            case .some(.stable), nil:
+                EmptyView()
+            }
+            if model.isDowngrade {
+                Notice(
+                    systemImage: "exclamationmark.triangle", text: L10n.t("native.upgrade.downgradeWarning"),
+                    tint: .orange)
+            }
+            if let required = model.javaShortfall {
+                javaNotice(required)
+            }
+        }
+        .animation(Motion.standard, value: model.availability)
+        .animation(Motion.standard, value: model.isDowngrade)
+    }
+
+    private func javaNotice(_ required: UInt32) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Notice(
+                systemImage: "cup.and.saucer",
+                text: model.java?.configuredMajor.map {
+                    L10n.t(
+                        "native.upgrade.javaTooOld",
+                        ["target": model.target ?? "", "required": required, "configured": $0])
+                } ?? L10n.t("native.upgrade.javaUnknown", ["target": model.target ?? "", "required": required]),
+                tint: .orange)
+            Group {
+                if let fixing = model.javaFixing {
+                    RollingPercent(label: L10n.t("native.java.downloading", ["major": required]), fraction: fixing)
+                        .frame(width: 240)
+                } else {
+                    Button(
+                        L10n.t(
+                            model.javaAutomatic ? "native.upgrade.javaDownload" : "native.upgrade.javaFix",
+                            ["major": required])
+                    ) {
+                        Task { await model.fixJava(required, feedback: feedback) }
+                    }
+                }
+            }
+            .padding(.leading, 26)
+        }
+    }
+}
+
+// MARK: Backup
+
+private struct BackupStep: View {
+    let model: UpgradeWizardModel
+    let close: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            if let progress = model.progress {
+                RollingPercent(label: L10n.t("serverSettings.versionUpgrade.backupProgressLabel"), fraction: progress)
+                StepButtons {
+                    Button(L10n.t("common.cancel")) { Task { await model.cancelBackup() } }
+                        .keyboardShortcut(.cancelAction)
+                }
+            } else {
+                Text(L10n.t("serverSettings.versionUpgrade.backupDescription"))
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                StepFailure(model: model, titleKey: "serverSettings.versionUpgrade.backupFailed")
+                StepButtons {
+                    Button(L10n.t("common.cancel"), action: close).keyboardShortcut(.cancelAction)
+                    if !model.backupRequired {
+                        Button(L10n.t("native.upgrade.skipBackup")) { model.skipBackup() }
+                    }
+                    Button(L10n.t("native.upgrade.backupAndContinue")) { Task { await model.runBackup() } }
+                        .buttonStyle(.borderedProminent)
+                        .keyboardShortcut(.defaultAction)
+                }
+            }
+        }
+        .animation(Motion.standard, value: model.progress == nil)
+    }
+}
+
+// MARK: Install
+
+private struct InstallStep: View {
+    let model: UpgradeWizardModel
+    let close: () -> Void
+    let changed: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
             if let plan = model.plan {
-                HStack {
-                    Text("\(plan.currentVersion) → \(plan.targetVersion)").font(.headline.monospacedDigit())
+                HStack(alignment: .firstTextBaseline) {
+                    Text(summary(plan)).font(.title3.weight(.semibold).monospacedDigit())
                     Spacer()
                     VStack(alignment: .trailing, spacing: 2) {
                         Text(plan.fileName).font(.caption.monospaced()).foregroundStyle(.secondary)
                         if let size = plan.size {
-                            Text(Int64(size), format: .byteCount(style: .file)).font(.caption).foregroundStyle(
-                                .secondary)
+                            Text(Int64(size), format: .byteCount(style: .file))
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
                         }
                     }
                 }
                 if !plan.verified {
-                    Label(
-                        L10n.t("serverSettings.versionUpgrade.unverifiedReason"), systemImage: "exclamationmark.shield"
-                    )
-                    .font(.callout)
-                    .foregroundStyle(.orange)
+                    Notice(
+                        systemImage: "exclamationmark.shield",
+                        text: L10n.t("serverSettings.versionUpgrade.unverifiedReason"), tint: .orange)
                 }
             }
-            progressRow(labelKey: "serverSettings.versionUpgrade.downloadProgressLabel")
-        }
-    }
-
-    private var doneStep: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Label(L10n.t("serverSettings.versionUpgrade.doneDescription"), systemImage: "checkmark.circle.fill")
-                .foregroundStyle(.green)
-                .font(.headline)
-            if let result = model.result {
-                Text(L10n.t("native.upgrade.upgradedFrom", ["from": result.previousVersion, "to": result.version]))
-                    .foregroundStyle(.secondary)
-            }
-        }
-    }
-
-    @ViewBuilder private func progressRow(labelKey: String) -> some View {
-        if let progress = model.progress {
-            VStack(alignment: .leading, spacing: 6) {
-                HStack {
-                    Text(L10n.t(labelKey)).font(.caption).foregroundStyle(.secondary)
-                    Spacer()
-                    if let fraction = progress {
-                        Text(fraction, format: .percent.precision(.fractionLength(0)))
-                            .font(.caption.monospacedDigit())
-                            .contentTransition(.numericText(value: fraction))
+            if let progress = model.progress {
+                RollingPercent(label: phaseLabel, fraction: progress)
+                StepButtons {
+                    Button(L10n.t("common.cancel")) { Task { await model.cancelInstall() } }
+                        .keyboardShortcut(.cancelAction)
+                        .disabled(!model.canCancelInstall)
+                }
+            } else {
+                StepFailure(model: model, titleKey: "serverSettings.versionUpgrade.downloadFailed")
+                StepButtons {
+                    Button(L10n.t("common.cancel"), action: close).keyboardShortcut(.cancelAction)
+                    Button(L10n.t("native.upgrade.replace")) {
+                        Task {
+                            await model.runInstall()
+                            if model.step == .done { changed() }
+                        }
                     }
-                }
-                if let fraction = progress {
-                    ProgressView(value: fraction)
-                } else {
-                    ProgressView().progressViewStyle(.linear)
+                    .buttonStyle(.borderedProminent)
+                    .keyboardShortcut(.defaultAction)
+                    .disabled(model.plan?.verified == false)
                 }
             }
-            .transition(.opacity)
         }
+        .animation(Motion.standard, value: model.progress == nil)
+    }
+
+    private func summary(_ plan: ServerJarUpgradePlan) -> String {
+        if let change = plan.softwareChange {
+            return "\(change.from) \(plan.currentVersion) → \(change.to) \(plan.targetVersion)"
+        }
+        return "\(plan.currentVersion) → \(plan.targetVersion)"
+    }
+
+    private var phaseLabel: String {
+        switch model.phase {
+        case .verify: L10n.t("native.java.phase.verify")
+        case .install: L10n.t("native.upgrade.replacing")
+        case .download, nil: L10n.t("serverSettings.versionUpgrade.downloadProgressLabel")
+        }
+    }
+}
+
+// MARK: Done
+
+private struct DoneStep: View {
+    let model: UpgradeWizardModel
+    let close: () -> Void
+
+    var body: some View {
+        VStack(spacing: 16) {
+            VStack(spacing: 8) {
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.system(size: 40))
+                    .foregroundStyle(.green)
+                    .symbolEffect(.bounce, value: model.result != nil)
+                if let result = model.result {
+                    Text(summary(result)).font(.title3.weight(.semibold).monospacedDigit())
+                }
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 8)
+            StepButtons {
+                Button(L10n.t("native.upgrade.done"), action: close)
+                    .buttonStyle(.borderedProminent)
+                    .keyboardShortcut(.defaultAction)
+            }
+        }
+    }
+
+    private func summary(_ result: ServerJarUpgradeResult) -> String {
+        if result.previousSoftware != result.software {
+            return "\(result.previousSoftware) \(result.previousVersion) → \(result.software) \(result.version)"
+        }
+        return "\(result.previousVersion) → \(result.version)"
     }
 }

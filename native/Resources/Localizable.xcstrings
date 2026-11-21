@@ -11180,6 +11180,23 @@
         }
       }
     },
+    "native.upgrade.backupAndContinue": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Back Up and Continue"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "バックアップを取って次へ"
+          }
+        }
+      }
+    },
     "native.upgrade.checkFailed": {
       "extractionState": "manual",
       "localizations": {
@@ -11197,19 +11214,36 @@
         }
       }
     },
-    "native.upgrade.continue": {
+    "native.upgrade.done": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Continue"
+            "value": "Done"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "次へ"
+            "value": "完了"
+          }
+        }
+      }
+    },
+    "native.upgrade.downgradeWarning": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Going back to an older version can make worlds saved by the newer one unreadable. A backup is taken first."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "古い版に戻すと、新しい版で保存したワールドが読めなくなることがあります。先にバックアップを取ります。"
           }
         }
       }
@@ -11246,24 +11280,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "このサーバーで Java {major} を使う"
-          }
-        }
-      }
-    },
-    "native.upgrade.javaSet": {
-      "comment": "Placeholders: {major}",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Java {major} is set for this server"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "このサーバーに Java {major} を設定しました"
           }
         }
       }
@@ -11322,6 +11338,91 @@
         }
       }
     },
+    "native.upgrade.newer": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Newer Versions"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "新しい版"
+          }
+        }
+      }
+    },
+    "native.upgrade.next": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Next"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "次へ"
+          }
+        }
+      }
+    },
+    "native.upgrade.older": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Older Versions"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "古い版"
+          }
+        }
+      }
+    },
+    "native.upgrade.openReleaseNotes": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "開く"
+          }
+        }
+      }
+    },
+    "native.upgrade.prepareFailed": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This version can't be prepared"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "この版を用意できませんでした"
+          }
+        }
+      }
+    },
     "native.upgrade.releaseNotes": {
       "extractionState": "manual",
       "localizations": {
@@ -11339,36 +11440,87 @@
         }
       }
     },
+    "native.upgrade.replace": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Replace"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "入れ替える"
+          }
+        }
+      }
+    },
+    "native.upgrade.replacing": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Replacing the server JAR…"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "サーバーの JAR を入れ替えています…"
+          }
+        }
+      }
+    },
     "native.upgrade.skipBackup": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Skip the backup this time"
+            "value": "Continue Without Backup"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "今回はバックアップを取らない"
+            "value": "取らずに次へ"
           }
         }
       }
     },
-    "native.upgrade.skipBackupNote": {
+    "native.upgrade.stepChoose": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "If the upgrade goes wrong, there is no backup to restore."
+            "value": "Choose"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "更新がうまくいかなかったとき、戻せるバックアップがありません。"
+            "value": "選ぶ"
+          }
+        }
+      }
+    },
+    "native.upgrade.stepInstall": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Install"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "入れる"
           }
         }
       }
@@ -11379,31 +11531,83 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Upgrade To"
+            "value": "Change To"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "更新先"
+            "value": "変更先"
           }
         }
       }
     },
-    "native.upgrade.upgradedFrom": {
-      "comment": "Placeholders: {from}, {to}",
+    "native.upgrade.title": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Upgraded from {from} to {to}."
+            "value": "Change Version"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "{from} から {to} に更新しました。"
+            "value": "バージョンの変更"
+          }
+        }
+      }
+    },
+    "native.upgrade.unavailable": {
+      "comment": "Placeholders: {version}, {reason}",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "{version} can't be installed: {reason}"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "{version} は入れられません：{reason}"
+          }
+        }
+      }
+    },
+    "native.upgrade.unstable": {
+      "comment": "Placeholders: {version}, {channel}",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "{version} has no stable build yet. The {channel} build may be unstable."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "{version} には、まだ安定版のビルドがありません。{channel} のビルドは不安定なことがあります。"
+          }
+        }
+      }
+    },
+    "native.upgrade.useUnstable": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Use the development build"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "開発版のビルドを使う"
           }
         }
       }
