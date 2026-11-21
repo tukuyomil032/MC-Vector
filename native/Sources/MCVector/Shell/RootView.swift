@@ -64,6 +64,22 @@ struct RootView: View {
         .onChange(of: runtime.pendingEula) { _, pending in
             if let pending { app.activeSheet = .serverEula(serverID: pending.serverID) }
         }
+        .alert(
+            L10n.t("native.java.missingTitle"),
+            isPresented: Binding(get: { runtime.pendingJava != nil }, set: { if !$0 { runtime.pendingJava = nil } }),
+            presenting: runtime.pendingJava
+        ) { pending in
+            Button(L10n.t("native.java.downloadAndStart", ["major": pending.required])) {
+                Task { await runtime.downloadJavaAndStart() }
+            }
+            .keyboardShortcut(.defaultAction)
+            Button(L10n.t("native.java.startWithSystem")) {
+                Task { await runtime.startWithSystemJava() }
+            }
+            Button(L10n.t("common.cancel"), role: .cancel) { runtime.pendingJava = nil }
+        } message: { pending in
+            Text(javaMissingMessage(pending))
+        }
         .task {
             runtime.serverProfile = { [app] id in app.servers.first { $0.id == id } }
             await app.reloadServers()
@@ -94,5 +110,21 @@ private struct ShellSheetPlaceholder: View {
         }
         .padding(20)
         .frame(width: 440, height: 260)
+    }
+}
+
+extension RootView {
+    /// "E2E Server (1.21.10) needs Java 21. The system Java is 17."
+    fileprivate func javaMissingMessage(_ pending: ServerRuntime.PendingJava) -> String {
+        let server = app.servers.first { $0.id == pending.serverID }
+        var text = L10n.t(
+            "native.java.missingMessage",
+            ["name": server?.name ?? "", "version": server?.version ?? "", "major": pending.required])
+        if let system = pending.systemMajor {
+            text += "\n" + L10n.t("native.java.missingSystem", ["major": system])
+        } else {
+            text += "\n" + L10n.t("native.java.missingNoSystem")
+        }
+        return text
     }
 }

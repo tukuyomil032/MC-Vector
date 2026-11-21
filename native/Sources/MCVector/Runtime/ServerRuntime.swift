@@ -40,6 +40,22 @@ final class ServerRuntime {
     private var lastHighCpuNotice: [String: Date] = [:]
     static let highCpuCooldown: TimeInterval = 5 * 60
     private(set) var pendingEula: PendingEula?
+
+    /// A start or restart under Automatic Java when no installed or system Java
+    /// is new enough: the user picks download, system Java or cancel.
+    struct PendingJava: Equatable, Identifiable {
+        let serverID: String
+        let action: PendingEula.Action
+        let required: UInt32
+        let systemMajor: UInt32?
+        var id: String { serverID }
+    }
+
+    var pendingJava: PendingJava?
+    /// Java being downloaded for a waiting start (major and 0...1, or nil while unknown).
+    private(set) var javaDownload: (major: UInt32, fraction: Double?)?
+    /// Starts that already passed the Java check (the user chose system Java).
+    private var javaCheckPassed: Set<String> = []
     private var nextEntryID = 0
 
     private let feedback: FeedbackCenter
@@ -78,6 +94,7 @@ final class ServerRuntime {
     func start(_ serverID: String) async {
         guard ServerStatusStyle.canStart(status(of: serverID)) else { return }
         guard ensureEula(serverID, then: .start) else { return }
+        guard await ensureJava(serverID, then: .start) else { return }
         transitional[serverID] = "starting"
         do throws(CoreError) {
             try await CoreClient.startServer(id: serverID)
@@ -107,6 +124,7 @@ final class ServerRuntime {
     func restart(_ serverID: String) async {
         guard status(of: serverID) == "online" else { return }
         guard ensureEula(serverID, then: .restart) else { return }
+        guard await ensureJava(serverID, then: .restart) else { return }
         transitional[serverID] = "restarting"
         defer { transitional[serverID] = nil }
         do throws(CoreError) {
@@ -133,6 +151,61 @@ final class ServerRuntime {
     /// Sends a console command. Throws so the Console keeps the input on failure.
     func send(_ command: String, to serverID: String) async throws(CoreError) {
         try await CoreClient.sendCommand(id: serverID, command: command)
+    }
+
+    // MARK: Java
+
+    /// True when the server can start with a suitable Java; otherwise asks.
+    /// Only Automatic servers can be missing one; explicit choices pass.
+    private func ensureJava(_ serverID: String, then action: PendingEula.Action) async -> Bool {
+        if javaCheckPassed.remove(serverID) != nil { return true }
+        guard let resolution = try? await CoreClient.resolveJava(serverID: serverID),
+            case let .missing(required, systemMajor) = resolution.choice
+        else { return true }
+        pendingJava = PendingJava(serverID: serverID, action: action, required: required, systemMajor: systemMajor)
+        return false
+    }
+
+    private func resume(_ pending: PendingJava) async {
+        javaCheckPassed.insert(pending.serverID)
+        switch pending.action {
+        case .start: await start(pending.serverID)
+        case .restart: await restart(pending.serverID)
+        }
+        javaCheckPassed.remove(pending.serverID)
+    }
+
+    /// Starts with the system `java` although it is too old (the user chose to).
+    func startWithSystemJava() async {
+        guard let pending = pendingJava else { return }
+        pendingJava = nil
+        await resume(pending)
+    }
+
+    /// Downloads the required Java, which Automatic then picks, and starts.
+    func downloadJavaAndStart() async {
+        guard let pending = pendingJava else { return }
+        pendingJava = nil
+        let operation = CoreClient.installJava(major: pending.required)
+        javaDownload = (pending.required, nil)
+        feedback.toast(.info, L10n.t("javaManager.downloadStatus", ["version": pending.required]))
+        let watcher = Task {
+            for await event in operation.progress where event.total > 0 {
+                javaDownload = (pending.required, Double(event.downloaded) / Double(event.total))
+            }
+        }
+        defer {
+            watcher.cancel()
+            javaDownload = nil
+        }
+        do {
+            _ = try await operation.value()
+            feedback.toast(.success, L10n.t("javaManager.toast.downloadSuccess", ["version": pending.required]))
+        } catch {
+            feedback.showError(L10n.t("javaManager.toast.downloadFailed"), message: error.uiText)
+            return
+        }
+        await resume(pending)
     }
 
     // MARK: EULA
