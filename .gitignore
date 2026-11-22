@@ -184,7 +184,7 @@ apps/native-macos/*.xcodeproj
 # Instruments trace captures (local performance investigation artifacts)
 apps/native-macos/*.trace/
 
-.agents/**
+.agents/skills/**/
 .claude/skills/**
 .vscode/launch.json
 
