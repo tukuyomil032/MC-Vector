@@ -3142,17 +3142,21 @@ public struct FileItem: Equatable, Hashable {
      * Seconds since the Unix epoch.
      */
     public var modified: UInt64
+    public var created: UInt64?
+    public var childCount: UInt32?
 
     // Default memberwise initializers are never public by default, so we
     // declare one manually.
     public init(name: String, isDirectory: Bool, size: UInt64, 
         /**
          * Seconds since the Unix epoch.
-         */modified: UInt64) {
+         */modified: UInt64, created: UInt64?, childCount: UInt32?) {
         self.name = name
         self.isDirectory = isDirectory
         self.size = size
         self.modified = modified
+        self.created = created
+        self.childCount = childCount
     }
 
     
@@ -3174,7 +3178,9 @@ public struct FfiConverterTypeFileItem: FfiConverterRustBuffer {
                 name: FfiConverterString.read(from: &buf), 
                 isDirectory: FfiConverterBool.read(from: &buf), 
                 size: FfiConverterUInt64.read(from: &buf), 
-                modified: FfiConverterUInt64.read(from: &buf)
+                modified: FfiConverterUInt64.read(from: &buf), 
+                created: FfiConverterOptionUInt64.read(from: &buf), 
+                childCount: FfiConverterOptionUInt32.read(from: &buf)
         )
     }
 
@@ -3183,6 +3189,8 @@ public struct FfiConverterTypeFileItem: FfiConverterRustBuffer {
         FfiConverterBool.write(value.isDirectory, into: &buf)
         FfiConverterUInt64.write(value.size, into: &buf)
         FfiConverterUInt64.write(value.modified, into: &buf)
+        FfiConverterOptionUInt64.write(value.created, into: &buf)
+        FfiConverterOptionUInt32.write(value.childCount, into: &buf)
     }
 }
 
@@ -10611,6 +10619,23 @@ public func cloneServer(sourceServerId: String, name: String)async throws  -> Se
         )
 }
 /**
+ * Compresses entries into a new archive in their parent folder.
+ */
+public func compressFileEntries(serverId: String, parent: String, names: [String])async throws  -> String  {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_mcvector_ffi_fn_func_compress_file_entries(FfiConverterString.lower(serverId),FfiConverterString.lower(parent),FfiConverterSequenceString.lower(names)
+                )
+            },
+            pollFunc: ffi_mcvector_ffi_rust_future_poll_rust_buffer,
+            completeFunc: ffi_mcvector_ffi_rust_future_complete_rust_buffer,
+            freeFunc: ffi_mcvector_ffi_rust_future_free_rust_buffer,
+            liftFunc: FfiConverterString.lift,
+            errorHandler: FfiConverterTypeFfiError_lift
+        )
+}
+/**
  * The UI locale saved in config.json by either edition (`"en"` or `"ja"`),
  * or None to follow the system language (NAT-008). Requires `start`.
  */
@@ -10728,6 +10753,23 @@ public func deleteServer(serverId: String)async throws  -> Bool  {
         )
 }
 /**
+ * Duplicates selected entries in input order, preserving earlier successes on failure.
+ */
+public func duplicateFileEntries(serverId: String, parent: String, names: [String])async throws  -> [String]  {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_mcvector_ffi_fn_func_duplicate_file_entries(FfiConverterString.lower(serverId),FfiConverterString.lower(parent),FfiConverterSequenceString.lower(names)
+                )
+            },
+            pollFunc: ffi_mcvector_ffi_rust_future_poll_rust_buffer,
+            completeFunc: ffi_mcvector_ffi_rust_future_complete_rust_buffer,
+            freeFunc: ffi_mcvector_ffi_rust_future_free_rust_buffer,
+            liftFunc: FfiConverterSequenceString.lift,
+            errorHandler: FfiConverterTypeFfiError_lift
+        )
+}
+/**
  * Estimates duration from the newest usable backup throughput samples.
  */
 public func estimateBackupDuration(targetBytes: UInt64, history: [BackupRecord]) -> BackupEstimate?  {
@@ -10738,6 +10780,23 @@ public func estimateBackupDuration(targetBytes: UInt64, history: [BackupRecord])
         FfiConverterSequenceTypeBackupRecord.lower(history),uniffiCallStatus
     )
 })
+}
+/**
+ * Extracts an archive into a newly created sibling folder.
+ */
+public func extractFileEntry(serverId: String, relative: String)async throws  -> String  {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_mcvector_ffi_fn_func_extract_file_entry(FfiConverterString.lower(serverId),FfiConverterString.lower(relative)
+                )
+            },
+            pollFunc: ffi_mcvector_ffi_rust_future_poll_rust_buffer,
+            completeFunc: ffi_mcvector_ffi_rust_future_complete_rust_buffer,
+            freeFunc: ffi_mcvector_ffi_rust_future_free_rust_buffer,
+            liftFunc: FfiConverterString.lift,
+            errorHandler: FfiConverterTypeFfiError_lift
+        )
 }
 /**
  * The absolute path of an entry, for revealing it in Finder.
@@ -11836,6 +11895,9 @@ private let initializationResult: InitializationResult = {
     if (uniffi_mcvector_ffi_checksum_func_clone_server() != 45594) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_mcvector_ffi_checksum_func_compress_file_entries() != 6768) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_mcvector_ffi_checksum_func_config_locale() != 3848) {
         return InitializationResult.apiChecksumMismatch
     }
@@ -11857,7 +11919,13 @@ private let initializationResult: InitializationResult = {
     if (uniffi_mcvector_ffi_checksum_func_delete_server() != 34295) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_mcvector_ffi_checksum_func_duplicate_file_entries() != 37815) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_mcvector_ffi_checksum_func_estimate_backup_duration() != 39741) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mcvector_ffi_checksum_func_extract_file_entry() != 43875) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_mcvector_ffi_checksum_func_file_entry_path() != 61501) {

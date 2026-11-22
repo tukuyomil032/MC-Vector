@@ -2499,6 +2499,8 @@ pub struct FileItem {
     pub size: u64,
     /// Seconds since the Unix epoch.
     pub modified: u64,
+    pub created: Option<u64>,
+    pub child_count: Option<u32>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, uniffi::Record)]
@@ -2592,6 +2594,8 @@ pub async fn list_files(server_id: String, relative: String) -> Result<Vec<FileI
                 is_directory: entry.is_directory,
                 size: entry.size,
                 modified: entry.modified,
+                created: entry.created,
+                child_count: entry.child_count,
             })
             .collect())
     })
@@ -2687,6 +2691,171 @@ pub async fn move_file_entries(
         Ok(())
     })
     .await
+}
+
+/// Duplicates selected entries in input order, preserving earlier successes on failure.
+#[uniffi::export(async_runtime = "tokio")]
+pub async fn duplicate_file_entries(
+    server_id: String,
+    parent: String,
+    names: Vec<String>,
+) -> Result<Vec<String>, FfiError> {
+    let (data_dir, _, operations) = session_handles()?;
+    let _guard = operations
+        .acquire(&server_id, OperationKind::FileMutation)
+        .await
+        .map_err(|error| path_error(error, &data_dir))?;
+    blocking(move || duplicate_entries_in(&data_dir, &server_id, &parent, names)).await
+}
+
+fn duplicate_entries_in(
+    data_dir: &std::path::Path,
+    server_id: &str,
+    parent: &str,
+    names: Vec<String>,
+) -> Result<Vec<String>, FfiError> {
+    let directory = server_path(data_dir, server_id, parent, false)?;
+    names
+        .into_iter()
+        .map(|name| {
+            let name = managed_files::validate_entry_name(&name)
+                .map_err(|error| files_error(error, data_dir))?;
+            server_path(data_dir, server_id, &join_relative(parent, &name), false)?;
+            managed_files::duplicate_entry(&directory, &name)
+                .map_err(|error| files_error(error, data_dir))
+        })
+        .collect()
+}
+
+const ARCHIVE_NAME_LIMIT: u32 = 10_000;
+
+fn numbered_entry_name(base: &str, extension: &str, number: u32) -> String {
+    if number == 1 {
+        format!("{base}{extension}")
+    } else {
+        format!("{base} {number}{extension}")
+    }
+}
+
+fn compression_base(names: &[String], data_dir: &std::path::Path) -> Result<String, FfiError> {
+    if names.is_empty() {
+        return Err(core_error(
+            CoreErrorCode::FilesInvalidName,
+            "Select at least one entry",
+        ));
+    }
+    for name in names {
+        managed_files::validate_entry_name(name).map_err(|error| files_error(error, data_dir))?;
+    }
+    Ok(if names.len() == 1 {
+        names[0].clone()
+    } else {
+        "Archive".into()
+    })
+}
+
+fn extraction_stem(name: &str) -> Result<&str, FfiError> {
+    let split = name.len().checked_sub(4);
+    match split.and_then(|index| name.get(..index).zip(name.get(index..))) {
+        Some((stem, suffix)) if suffix.eq_ignore_ascii_case(".zip") && !stem.is_empty() => Ok(stem),
+        _ => Err(core_error(
+            CoreErrorCode::FilesInvalidName,
+            "Select a .zip archive with a nonempty name",
+        )),
+    }
+}
+
+fn compress_entries_in(
+    data_dir: &std::path::Path,
+    server_id: &str,
+    parent: &str,
+    names: &[String],
+) -> Result<String, FfiError> {
+    let base = compression_base(names, data_dir)?;
+    let sources = names
+        .iter()
+        .map(|name| server_path(data_dir, server_id, &join_relative(parent, name), false))
+        .collect::<Result<Vec<_>, _>>()?;
+    let folder = server_path(data_dir, server_id, parent, false)?;
+    for number in 1..=ARCHIVE_NAME_LIMIT {
+        let name = numbered_entry_name(&base, ".zip", number);
+        let destination = folder.join(&name);
+        match std::fs::symlink_metadata(&destination) {
+            Ok(_) => continue,
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+            Err(error) => return Err(path_error(error.to_string(), data_dir)),
+        }
+        match mcvector_core::backups::create::compress_items(sources.clone(), destination.clone()) {
+            Ok(_) => return Ok(name),
+            // Core erases the underlying io::Error; an entry now occupying the
+            // destination is the observable installation collision. Never replace it.
+            Err(_) if std::fs::symlink_metadata(&destination).is_ok() => continue,
+            Err(error) => return Err(error.into()),
+        }
+    }
+    Err(core_error(
+        CoreErrorCode::FilesAlreadyExists,
+        "No available archive name",
+    ))
+}
+
+fn extract_entry_in(
+    data_dir: &std::path::Path,
+    server_id: &str,
+    relative: &str,
+) -> Result<String, FfiError> {
+    let (parent, archive_name) = relative.rsplit_once('/').unwrap_or(("", relative));
+    let stem = extraction_stem(archive_name)?;
+    managed_files::validate_entry_name(stem).map_err(|error| files_error(error, data_dir))?;
+    let archive = server_path(data_dir, server_id, relative, false)?;
+    let folder = server_path(data_dir, server_id, parent, false)?;
+    for number in 1..=ARCHIVE_NAME_LIMIT {
+        let name = numbered_entry_name(stem, "", number);
+        let destination = folder.join(&name);
+        match std::fs::create_dir(&destination) {
+            Ok(()) => {}
+            Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => continue,
+            Err(error) => return Err(path_error(error.to_string(), data_dir)),
+        }
+        if let Err(error) =
+            mcvector_core::backups::restore::extract_managed_item(&archive, &destination)
+        {
+            std::fs::remove_dir_all(&destination)
+                .map_err(|cleanup| path_error(cleanup.to_string(), data_dir))?;
+            return Err(error.into());
+        }
+        return Ok(name);
+    }
+    Err(core_error(
+        CoreErrorCode::FilesAlreadyExists,
+        "No available extraction folder name",
+    ))
+}
+
+/// Compresses entries into a new archive in their parent folder.
+#[uniffi::export(async_runtime = "tokio")]
+pub async fn compress_file_entries(
+    server_id: String,
+    parent: String,
+    names: Vec<String>,
+) -> Result<String, FfiError> {
+    let (data_dir, _, operations) = session_handles()?;
+    let _guard = operations
+        .acquire(&server_id, OperationKind::FileMutation)
+        .await
+        .map_err(|error| path_error(error, &data_dir))?;
+    blocking(move || compress_entries_in(&data_dir, &server_id, &parent, &names)).await
+}
+
+/// Extracts an archive into a newly created sibling folder.
+#[uniffi::export(async_runtime = "tokio")]
+pub async fn extract_file_entry(server_id: String, relative: String) -> Result<String, FfiError> {
+    let (data_dir, _, operations) = session_handles()?;
+    let _guard = operations
+        .acquire(&server_id, OperationKind::FileMutation)
+        .await
+        .map_err(|error| path_error(error, &data_dir))?;
+    blocking(move || extract_entry_in(&data_dir, &server_id, &relative)).await
 }
 
 /// Deletes entries (folders recursively). Stops at the first failure.
@@ -2822,6 +2991,137 @@ pub async fn write_text_document(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn duplicate_multiple_entries_preserves_input_order_and_originals() {
+        let root = archive_fixture();
+        let names = duplicate_entries_in(
+            root.path(),
+            "test",
+            "",
+            vec!["folder".into(), "a.txt".into(), "a.txt".into()],
+        )
+        .unwrap();
+        assert_eq!(names, ["folder copy", "a copy.txt", "a copy 2.txt"]);
+        let server = root.path().join("servers/test");
+        assert_eq!(std::fs::read(server.join("a.txt")).unwrap(), b"original");
+        assert_eq!(
+            std::fs::read(server.join("folder copy/inside.txt")).unwrap(),
+            b"inside"
+        );
+        assert!(duplicate_entries_in(root.path(), "test", "", vec!["../bad".into()]).is_err());
+    }
+
+    #[test]
+    fn archive_names_preserve_extensions_and_number_before_zip() {
+        let root = tempfile::tempdir().unwrap();
+        assert_eq!(
+            compression_base(&["a.txt".into()], root.path()).unwrap(),
+            "a.txt"
+        );
+        assert_eq!(
+            compression_base(&["folder".into()], root.path()).unwrap(),
+            "folder"
+        );
+        assert_eq!(
+            compression_base(&["a".into(), "b".into()], root.path()).unwrap(),
+            "Archive"
+        );
+        assert_eq!(numbered_entry_name("a.txt", ".zip", 2), "a.txt 2.zip");
+        assert!(compression_base(&[], root.path()).is_err());
+        assert!(compression_base(&["../bad".into()], root.path()).is_err());
+    }
+
+    fn archive_fixture() -> tempfile::TempDir {
+        let root = tempfile::tempdir().unwrap();
+        let server = root.path().join("servers/test");
+        std::fs::create_dir_all(server.join("folder")).unwrap();
+        std::fs::write(server.join("a.txt"), "original").unwrap();
+        std::fs::write(server.join("folder/inside.txt"), "inside").unwrap();
+        root
+    }
+
+    #[test]
+    fn compression_numbers_single_and_multiple_entry_archives() {
+        let root = archive_fixture();
+        for (names, expected) in [
+            (vec!["a.txt".into()], "a.txt.zip"),
+            (vec!["a.txt".into()], "a.txt 2.zip"),
+            (vec!["folder".into()], "folder.zip"),
+            (vec!["a.txt".into(), "folder".into()], "Archive.zip"),
+            (vec!["a.txt".into(), "folder".into()], "Archive 2.zip"),
+        ] {
+            assert_eq!(
+                compress_entries_in(root.path(), "test", "", &names).unwrap(),
+                expected
+            );
+        }
+    }
+
+    #[test]
+    fn extraction_uses_new_numbered_folder_and_preserves_existing_files() {
+        let root = archive_fixture();
+        let server = root.path().join("servers/test");
+        compress_entries_in(root.path(), "test", "", &["folder".into()]).unwrap();
+        std::fs::rename(server.join("folder.zip"), server.join("payload.ZIP")).unwrap();
+        assert_eq!(
+            extract_entry_in(root.path(), "test", "payload.ZIP").unwrap(),
+            "payload"
+        );
+        std::fs::write(server.join("payload/folder/inside.txt"), "untouched").unwrap();
+        assert_eq!(
+            extract_entry_in(root.path(), "test", "payload.ZIP").unwrap(),
+            "payload 2"
+        );
+        assert_eq!(
+            std::fs::read_to_string(server.join("payload/folder/inside.txt")).unwrap(),
+            "untouched"
+        );
+        assert_eq!(
+            std::fs::read_to_string(server.join("payload 2/folder/inside.txt")).unwrap(),
+            "inside"
+        );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn archive_collisions_skip_symlinks_without_touching_targets() {
+        let root = archive_fixture();
+        let server = root.path().join("servers/test");
+        std::os::unix::fs::symlink(server.join("a.txt"), server.join("a.txt.zip")).unwrap();
+        assert_eq!(
+            compress_entries_in(root.path(), "test", "", &["a.txt".into()]).unwrap(),
+            "a.txt 2.zip"
+        );
+        std::os::unix::fs::symlink(server.join("folder"), server.join("a.txt 2")).unwrap();
+        assert_eq!(
+            extract_entry_in(root.path(), "test", "a.txt 2.zip").unwrap(),
+            "a.txt 2 2"
+        );
+        assert_eq!(
+            std::fs::read_to_string(server.join("a.txt")).unwrap(),
+            "original"
+        );
+        assert!(!server.join("folder/a.txt").exists());
+    }
+
+    #[test]
+    fn extraction_rejects_non_zip_and_cleans_corrupt_archive_folder() {
+        let root = archive_fixture();
+        let server = root.path().join("servers/test");
+        assert!(
+            matches!(extract_entry_in(root.path(), "test", "a.txt"), Err(FfiError::Core { code, .. }) if code == "files.invalid_name")
+        );
+        std::fs::write(server.join("broken.zip"), "corrupt").unwrap();
+        std::fs::create_dir(server.join("broken")).unwrap();
+        std::fs::write(server.join("broken/keep"), "keep").unwrap();
+        assert!(extract_entry_in(root.path(), "test", "broken.zip").is_err());
+        assert!(!server.join("broken 2").exists());
+        assert_eq!(
+            std::fs::read_to_string(server.join("broken/keep")).unwrap(),
+            "keep"
+        );
+    }
 
     // The session is process-wide, so the start/get_servers flow is covered by
     // one test to avoid ordering between tests.

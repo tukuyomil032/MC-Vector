@@ -569,6 +569,11 @@ void uniffi_mcvector_ffi_fn_func_cancel_server_import(RustBuffer token, RustCall
 uint64_t uniffi_mcvector_ffi_fn_func_clone_server(RustBuffer source_server_id, RustBuffer name
 );
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_COMPRESS_FILE_ENTRIES
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_COMPRESS_FILE_ENTRIES
+uint64_t uniffi_mcvector_ffi_fn_func_compress_file_entries(RustBuffer server_id, RustBuffer parent, RustBuffer names
+);
+#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_CONFIG_LOCALE
 #define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_CONFIG_LOCALE
 RustBuffer uniffi_mcvector_ffi_fn_func_config_locale(RustCallStatus *_Nonnull out_status
@@ -605,9 +610,19 @@ uint64_t uniffi_mcvector_ffi_fn_func_delete_managed_backup(RustBuffer server_id,
 uint64_t uniffi_mcvector_ffi_fn_func_delete_server(RustBuffer server_id
 );
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_DUPLICATE_FILE_ENTRIES
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_DUPLICATE_FILE_ENTRIES
+uint64_t uniffi_mcvector_ffi_fn_func_duplicate_file_entries(RustBuffer server_id, RustBuffer parent, RustBuffer names
+);
+#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_ESTIMATE_BACKUP_DURATION
 #define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_ESTIMATE_BACKUP_DURATION
 RustBuffer uniffi_mcvector_ffi_fn_func_estimate_backup_duration(uint64_t target_bytes, RustBuffer history, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_EXTRACT_FILE_ENTRY
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_EXTRACT_FILE_ENTRY
+uint64_t uniffi_mcvector_ffi_fn_func_extract_file_entry(RustBuffer server_id, RustBuffer relative
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_FILE_ENTRY_PATH
@@ -1271,6 +1286,12 @@ uint16_t uniffi_mcvector_ffi_checksum_func_clone_server(void
     
 );
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_COMPRESS_FILE_ENTRIES
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_COMPRESS_FILE_ENTRIES
+uint16_t uniffi_mcvector_ffi_checksum_func_compress_file_entries(void
+    
+);
+#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_CONFIG_LOCALE
 #define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_CONFIG_LOCALE
 uint16_t uniffi_mcvector_ffi_checksum_func_config_locale(void
@@ -1313,9 +1334,21 @@ uint16_t uniffi_mcvector_ffi_checksum_func_delete_server(void
     
 );
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_DUPLICATE_FILE_ENTRIES
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_DUPLICATE_FILE_ENTRIES
+uint16_t uniffi_mcvector_ffi_checksum_func_duplicate_file_entries(void
+    
+);
+#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_ESTIMATE_BACKUP_DURATION
 #define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_ESTIMATE_BACKUP_DURATION
 uint16_t uniffi_mcvector_ffi_checksum_func_estimate_backup_duration(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_EXTRACT_FILE_ENTRY
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_EXTRACT_FILE_ENTRY
+uint16_t uniffi_mcvector_ffi_checksum_func_extract_file_entry(void
     
 );
 #endif

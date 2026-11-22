@@ -80,6 +80,11 @@ pub struct FileEntry {
     pub size: u64,
     /// Modification time, seconds since the Unix epoch.
     pub modified: u64,
+    /// Creation time, when supplied by the filesystem, in Unix seconds.
+    pub created: Option<u64>,
+    /// Direct entries only; unavailable for files or unreadable folders.
+    #[serde(rename = "childCount")]
+    pub child_count: Option<u32>,
 }
 
 /// The folder a managed root lives in.
@@ -169,6 +174,23 @@ pub fn list_directory(dir_path: &Path) -> Result<Vec<FileEntry>, FilesError> {
             is_directory,
             size: if is_directory { 0 } else { metadata.len() },
             modified,
+            created: metadata
+                .created()
+                .ok()
+                .and_then(|time| time.duration_since(std::time::UNIX_EPOCH).ok())
+                .map(|duration| duration.as_secs()),
+            child_count: if is_directory {
+                std::fs::read_dir(entry.path())
+                    .ok()
+                    .and_then(|mut children| {
+                        children.try_fold(0_u32, |count, child| {
+                            child.ok()?;
+                            count.checked_add(1)
+                        })
+                    })
+            } else {
+                None
+            },
         });
     }
     entries.sort_by(|left, right| {
@@ -624,9 +646,170 @@ pub fn import_entries(
     Ok(imported)
 }
 
+/// Duplicates one entry beside its source, reserving a unique Finder-style name.
+/// Earlier duplicates remain in place if a later selected entry fails.
+pub fn duplicate_entry(parent: &Path, name: &str) -> Result<String, FilesError> {
+    let name = validate_entry_name(name)?;
+    let source = parent.join(&name);
+    let metadata = std::fs::symlink_metadata(&source)
+        .map_err(|error| FilesError::io(format!("Failed to inspect duplicate source: {error}")))?;
+    let staging = parent.join(format!(".duplicate-{}", Uuid::new_v4()));
+    std::fs::create_dir(&staging)
+        .map_err(|error| FilesError::io(format!("Failed to create duplicate staging: {error}")))?;
+    let _staging_guard = StagingGuard::new(staging.clone());
+    let staged = staging.join("entry");
+    let deadline = Instant::now() + MAX_IMPORT_DURATION;
+    preflight_import_tree(&source, &mut ImportBudget::with_deadline(deadline))?;
+    let mut budget = ImportBudget::with_deadline(deadline);
+    copy_external_entry(&source, &staged, parent, &mut budget)?;
+    let (stem, extension) = if metadata.is_dir() {
+        (name.as_str(), String::new())
+    } else {
+        match name.rsplit_once('.') {
+            Some((stem, extension)) if !stem.is_empty() && !extension.is_empty() => {
+                (stem, format!(".{extension}"))
+            }
+            _ => (name.as_str(), String::new()),
+        }
+    };
+    for number in 1..=10_000 {
+        let suffix = if number == 1 {
+            String::new()
+        } else {
+            format!(" {number}")
+        };
+        let candidate = validate_entry_name(&format!("{stem} copy{suffix}{extension}"))?;
+        let destination = parent.join(&candidate);
+        let reservation = if metadata.is_dir() {
+            std::fs::create_dir(&destination).map(|_| None)
+        } else {
+            std::fs::OpenOptions::new()
+                .write(true)
+                .create_new(true)
+                .open(&destination)
+                .map(Some)
+        };
+        let output = match reservation {
+            Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => continue,
+            Err(error) => {
+                return Err(FilesError::io(format!(
+                    "Failed to reserve duplicate: {error}"
+                )))
+            }
+            Ok(output) => output,
+        };
+        if let Some(mut output) = output {
+            let result = (|| {
+                let mut input = std::fs::File::open(&staged)?;
+                std::io::copy(&mut input, &mut output)?;
+                output.sync_all()
+            })();
+            drop(output);
+            if let Err(error) = result {
+                let _ = std::fs::remove_file(&destination);
+                return Err(FilesError::io(format!(
+                    "Failed to finish duplicate: {error}"
+                )));
+            }
+        }
+        if metadata.is_dir() {
+            let mut cleanup = StagingGuard::new(destination.clone());
+            for child in std::fs::read_dir(&staged).map_err(|error| {
+                FilesError::io(format!("Failed to read duplicate staging: {error}"))
+            })? {
+                let child = child.map_err(|error| FilesError::io(error.to_string()))?;
+                std::fs::rename(child.path(), destination.join(child.file_name())).map_err(
+                    |error| FilesError::io(format!("Failed to finish duplicate: {error}")),
+                )?;
+            }
+            cleanup.disarm();
+        }
+        return Ok(candidate);
+    }
+    Err(FilesError::new(
+        FilesErrorKind::AlreadyExists,
+        "Duplicate name limit reached",
+    ))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn lists_creation_time_and_direct_child_count() {
+        let (_d, root) = dir();
+        let folder = root.join("folder");
+        std::fs::create_dir(&folder).unwrap();
+        for name in ["a", "b", "c"] {
+            std::fs::write(folder.join(name), name).unwrap();
+        }
+        std::fs::write(root.join("file"), "data").unwrap();
+        let entries = list_directory(&root).unwrap();
+        assert_eq!(entries[0].child_count, Some(3));
+        let expected = std::fs::metadata(folder)
+            .unwrap()
+            .created()
+            .ok()
+            .and_then(|time| time.duration_since(std::time::UNIX_EPOCH).ok())
+            .map(|duration| duration.as_secs());
+        assert_eq!(entries[0].created, expected);
+        assert_eq!(entries[1].child_count, None);
+    }
+
+    #[test]
+    fn duplicates_files_folders_dotfiles_and_numbered_names() {
+        let (_d, root) = dir();
+        std::fs::create_dir_all(root.join("folder/nested")).unwrap();
+        std::fs::write(root.join("folder/nested/content"), "recursive").unwrap();
+        for name in ["file.txt", ".paper", "README"] {
+            std::fs::write(root.join(name), name).unwrap();
+        }
+        let names: Vec<_> = ["file.txt", "folder", ".paper", "README"]
+            .into_iter()
+            .map(|name| duplicate_entry(&root, name).unwrap())
+            .collect();
+        assert_eq!(
+            names,
+            ["file copy.txt", "folder copy", ".paper copy", "README copy"]
+        );
+        assert_eq!(
+            duplicate_entry(&root, "file.txt").unwrap(),
+            "file copy 2.txt"
+        );
+        std::fs::write(root.join("file copy 3.txt"), "existing").unwrap();
+        assert_eq!(
+            duplicate_entry(&root, "file.txt").unwrap(),
+            "file copy 4.txt"
+        );
+        assert_eq!(
+            std::fs::read(root.join("file copy 3.txt")).unwrap(),
+            b"existing"
+        );
+        for name in ["file.txt", ".paper", "README"] {
+            assert_eq!(std::fs::read(root.join(name)).unwrap(), name.as_bytes());
+        }
+        assert_eq!(
+            std::fs::read(root.join("folder copy/nested/content")).unwrap(),
+            b"recursive"
+        );
+        assert_eq!(
+            std::fs::read(root.join("folder/nested/content")).unwrap(),
+            b"recursive"
+        );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn duplicate_rejects_symlinks_and_cleans_staging() {
+        let (_d, root) = dir();
+        std::fs::create_dir(root.join("folder")).unwrap();
+        std::os::unix::fs::symlink("/etc", root.join("folder/link")).unwrap();
+        assert!(duplicate_entry(&root, "folder").is_err());
+        assert!(!root.join("folder copy").exists());
+        assert_eq!(std::fs::read_dir(&root).unwrap().count(), 1);
+        assert!(duplicate_entry(&root, "../escape").is_err());
+    }
 
     fn dir() -> (tempfile::TempDir, PathBuf) {
         let dir = tempfile::tempdir().unwrap();

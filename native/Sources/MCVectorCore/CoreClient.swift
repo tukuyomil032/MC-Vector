@@ -205,6 +205,22 @@ public enum CoreClient {
         }
     }
 
+    public static func duplicateFileEntries(serverID: String, parent: String, names: [String]) async throws(CoreError)
+        -> [String]
+    {
+        try await call { try await MCVectorCore.duplicateFileEntries(serverId: serverID, parent: parent, names: names) }
+    }
+
+    public static func compressFileEntries(serverID: String, parent: String, names: [String]) async throws(CoreError)
+        -> String
+    {
+        try await call { try await MCVectorCore.compressFileEntries(serverId: serverID, parent: parent, names: names) }
+    }
+
+    public static func extractFileEntry(serverID: String, relative: String) async throws(CoreError) -> String {
+        try await call { try await MCVectorCore.extractFileEntry(serverId: serverID, relative: relative) }
+    }
+
     public static func deleteFileEntries(serverID: String, entries: [String]) async throws(CoreError) {
         try await call { try await MCVectorCore.deleteFileEntries(serverId: serverID, entries: entries) }
     }
