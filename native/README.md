@@ -85,9 +85,40 @@ native/scripts/capture.sh --fixture groups --locale ja SHELL-ROOT TOAST-stack-3
 ```
 
 - States are defined in `Sources/MCVector/Capture/CaptureState.swift` (debug builds only).
-- `--fixture` picks the server data in `scripts/fixtures/<name>/` (`e2e`, `groups`, or `empty`); each launch gets a fresh copy in `native/.build/fixtures/`, so your real data is never touched.
+- `--fixture` picks the server data in `scripts/fixtures/<name>/` (`e2e`, `groups`, or `empty`); each launch gets a fresh copy in `~/Library/Caches/com.tukuyomi032.mcvector.capture/fixtures/`, so your real data is never touched.
 - Output: `native/.build/captures/<locale>/<ID>.png`. The terminal needs the Screen Recording permission.
 - States that open a context menu (`*-context-menu`) post a right click, which needs the Accessibility permission for "MC-Vector Native". Without it the capture stops at once and opens that settings pane. The grant survives rebuilds only with a stable signature (see [Signing debug builds](#signing-debug-builds)).
+
+## E2E
+
+Run `native/scripts/e2e.sh --locale ja` to build and run the Native pass/fail suite.
+Use `--no-build` after an existing debug build, or pass state IDs to run a subset:
+
+```sh
+native/scripts/e2e.sh --locale ja --no-build VERIFY-files VERIFY-editor
+native/scripts/e2e.sh --locale en --all
+```
+
+The default suite runs `E2E-relaunch`, `E2E-navigate`, and every `VERIFY-*`
+state except `VERIFY-real-*`. `--all` includes the real Paper states, which
+require network access and a compatible Java installation. Relaunch checks
+window restoration across two direct executable launches and graceful quits;
+navigation checks routes and Settings; verification states emit explicit
+success/failure checks for server, file, and editor operations.
+
+Each state gets fresh fixture data. The runner requires readiness, a living
+process for two seconds after readiness, and at least one successful check.
+Any failed check, unknown state, readiness timeout (30 seconds, or 300 seconds
+for real Paper), or early exit fails the state. A table reports each result,
+elapsed seconds, and the first failure. Exit status is 1 when any state fails,
+or 2 for invalid usage or when another non-capture MCVector process is running.
+The runner refuses to proceed if it cannot inspect the process list.
+
+Logs and fixture data use the same runtime directory as capture:
+`~/Library/Caches/com.tukuyomi032.mcvector.capture`, overridable with
+`MCVECTOR_CAPTURE_RUN_DIR=<absolute path>`. Build output stays in `native/.build`.
+The runner stops its app and fixture servers after each state. Quit any normal
+MCVector session before running it.
 
 ## Layout
 

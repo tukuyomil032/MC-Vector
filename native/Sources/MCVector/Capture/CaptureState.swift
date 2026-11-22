@@ -36,6 +36,12 @@
             NSApp.windows.first(where: { $0.canBecomeMain })?.makeKeyAndOrderFront(nil)
             try? await Task.sleep(for: .milliseconds(300))
             switch id {
+            case "VERIFY-clone", "VERIFY-delete", "VERIFY-create-manual", "VERIFY-create-paper",
+                "VERIFY-create-vanilla", "VERIFY-create-cancel", "VERIFY-import", "VERIFY-start-stop", "VERIFY-crash",
+                "VERIFY-real-paper", "VERIFY-real-paper-dashboard", "VERIFY-template":
+                await verifyState(id, app: app, feedback: feedback, runtime: runtime)
+            case "E2E-navigate":
+                await verifyNavigation(app: app)
             case "SHELL-ROOT":
                 app.navigate(to: .dashboard)
             case "CONTENT-noserver-empty", "CONTENT-noserver-select":
@@ -73,21 +79,6 @@
                 }
             // Verification states: run a core action without its confirmation, then
             // show the result, so the FFI path can be checked end to end.
-            case "VERIFY-clone":
-                if let copy = try? await CoreClient.cloneServer(id: "server-1", name: "E2E Server Copy") {
-                    await app.reloadServers()
-                    app.selectedServerID = copy.id
-                    feedback.toast(.success, L10n.t("server.toast.cloned"))
-                } else {
-                    feedback.toast(.error, L10n.t("server.toast.cloneFailed"))
-                }
-            case "VERIFY-delete":
-                let deleted = (try? await CoreClient.deleteServer(id: "server-1")) ?? false
-                await app.reloadServers()
-                feedback.toast(
-                    deleted ? .success : .error,
-                    L10n.t(deleted ? "server.toast.deleted" : "server.toast.deleteFailed")
-                )
             case "ADD-CHOICE-open":
                 app.activeSheet = .addServerChoice
             case "ADD-SERVER-empty":
@@ -112,62 +103,6 @@
                 }
                 pendingCreateServerModel = model
                 app.activeSheet = .addServer
-            case "VERIFY-create-manual":
-                // Runs the real creation for software without an automatic jar
-                // (no network), then shows the result like the sheet does.
-                let input = NewServerInput(
-                    operationId: UUID().uuidString.lowercased(),
-                    name: "Lobby-2",
-                    profileName: nil,
-                    groupName: "Testing",
-                    software: "Spigot",
-                    version: "1.21.10",
-                    port: 25_570,
-                    memoryGb: 2,
-                    templateId: nil,
-                    importToken: nil
-                )
-                do {
-                    let created = try await CoreClient.createServer(input) { _ in }
-                    await app.reloadServers()
-                    app.selectedServerID = created.server.id
-                    feedback.toast(.info, L10n.t("native.addServer.createdManualJar", ["name": created.server.name]))
-                } catch {
-                    feedback.toast(.error, error.uiText)
-                }
-            case "VERIFY-create-paper", "VERIFY-create-vanilla", "VERIFY-create-cancel":
-                // Real downloads from the official sources (needs the network).
-                let software = id == "VERIFY-create-paper" ? "Paper" : "Vanilla"
-                let operationID = UUID().uuidString.lowercased()
-                let input = NewServerInput(
-                    operationId: operationID,
-                    name: "verify-\(software.lowercased())",
-                    profileName: nil,
-                    groupName: "Verify",
-                    software: software,
-                    version: "1.21.10",
-                    port: 25_580,
-                    memoryGb: 2,
-                    templateId: nil,
-                    importToken: nil
-                )
-                let cancelOnDownload = id == "VERIFY-create-cancel"
-                do {
-                    let created = try await CoreClient.createServer(input) { stage in
-                        if cancelOnDownload, case .downloading = stage {
-                            CoreClient.cancelServerCreation(operationID: operationID)
-                        }
-                    }
-                    await app.reloadServers()
-                    app.selectedServerID = created.server.id
-                    signal(
-                        "[capture] created \(created.server.software) \(created.server.version) jar=\(created.jarInstalled) path=\(created.server.path)"
-                    )
-                    feedback.toast(.success, L10n.t("server.toast.created", ["name": created.server.name]))
-                } catch {
-                    signal("[capture] create failed: \(error.code) \(error.message)")
-                    feedback.toast(.error, error.uiText)
-                }
             case "IMPORT-empty":
                 app.activeSheet = .importServer
             case "IMPORT-analyzed", "IMPORT-invalid", "IMPORT-progress", "IMPORT-no-jar":
@@ -183,22 +118,6 @@
                 }
                 pendingImportServerModel = model
                 app.activeSheet = .importServer
-            case "VERIFY-import":
-                // Real import of the fixture folder through the FFI.
-                let model = ImportServerModel()
-                await model.choose(folder: importSource("paper-survival"))
-                if let created = await model.importServer() {
-                    await app.reloadServers()
-                    app.selectedServerID = created.server.id
-                    let copied = FileManager.default.fileExists(atPath: created.server.path + "/world/level.dat")
-                    signal(
-                        "[capture] imported \(created.server.software) \(created.server.version) port=\(created.server.port ?? 0) world=\(copied) path=\(created.server.path)"
-                    )
-                    feedback.toast(.success, L10n.t("importServer.toast.success"))
-                } else {
-                    signal("[capture] import failed: \(model.failure?.code ?? "?") \(model.failure?.message ?? "")")
-                    feedback.toast(.error, model.failure?.uiText ?? "?")
-                }
             case "CONSOLE-offline":
                 app.navigate(to: .console)
             case "CONSOLE-running", "CONSOLE-search", "CONSOLE-filter-warn", "CONSOLE-pinned", "HEADER-online":
@@ -220,72 +139,6 @@
                 app.navigate(to: .console)
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
                     NSApp.terminate(nil)
-                }
-            case "VERIFY-start-stop":
-                await runtime.start("server-1")
-                try? await Task.sleep(for: .seconds(1))
-                signal("[capture] after start: \(runtime.status(of: "server-1"))")
-                do throws(CoreError) {
-                    try await runtime.send("list", to: "server-1")
-                } catch {
-                    signal("[capture] send failed: \(error.code)")
-                }
-                do throws(CoreError) {
-                    try await runtime.send("list", to: "server-1")
-                    signal("[capture] second send within 100 ms was accepted")
-                } catch {
-                    signal("[capture] rate limit: \(error.code)")
-                }
-                try? await Task.sleep(for: .milliseconds(500))
-                await runtime.stop("server-1")
-                try? await Task.sleep(for: .milliseconds(300))
-                let lines = runtime.logs["server-1"] ?? []
-                signal(
-                    "[capture] after stop: \(runtime.status(of: "server-1")) lines=\(lines.count) stderr=\(lines.contains(where: \.isStderr)) last=\(lines.last?.text ?? "")"
-                )
-                app.navigate(to: .console)
-            case "VERIFY-crash":
-                await startStandIn(runtime: runtime, serverID: "server-1")
-                try? await runtime.send("crash", to: "server-1")
-                try? await Task.sleep(for: .seconds(1))
-                signal("[capture] after crash: \(runtime.status(of: "server-1"))")
-                app.navigate(to: .console)
-            case "VERIFY-real-paper":
-                // Downloads Paper, accepts its EULA, runs it with the real Java,
-                // waits for "Done (", sends a command, then stops it.
-                do throws(CoreError) {
-                    let created = try await CoreClient.createServer(
-                        NewServerInput(
-                            operationId: UUID().uuidString.lowercased(), name: "real-paper", profileName: nil,
-                            groupName: nil, software: "Paper", version: "1.21.10", port: 25_590, memoryGb: 2,
-                            templateId: nil, importToken: nil
-                        )
-                    ) { _ in }
-                    await app.reloadServers()
-                    let id = created.server.id
-                    app.selectedServerID = id
-                    app.navigate(to: .console)
-                    try CoreClient.acceptServerEula(id: id)
-                    await runtime.start(id)
-                    var done = false
-                    for _ in 0..<240 {
-                        if runtime.logs[id]?.contains(where: { $0.text.contains("Done (") }) == true {
-                            done = true
-                            break
-                        }
-                        if runtime.status(of: id) == "crashed" { break }
-                        try? await Task.sleep(for: .milliseconds(500))
-                    }
-                    signal(
-                        "[capture] paper done=\(done) status=\(runtime.status(of: id)) lines=\(runtime.logs[id]?.count ?? 0)"
-                    )
-                    try? await runtime.send("list", to: id)
-                    try? await Task.sleep(for: .seconds(1))
-                    signal("[capture] list reply: \(runtime.logs[id]?.last?.text ?? "")")
-                    await runtime.stop(id)
-                    signal("[capture] after stop: \(runtime.status(of: id))")
-                } catch {
-                    signal("[capture] real paper failed: \(error.code) \(error.message)")
                 }
             case "DASH-offline":
                 app.navigate(to: .dashboard)
@@ -321,34 +174,13 @@
                 signal(
                     "[capture] metrics resource=\(snapshot?.resource.count ?? 0) tps=\(snapshot?.tps.count ?? 0) elapsed=\(snapshot?.elapsedMs ?? 0)"
                 )
+                if id == "VERIFY-high-cpu" {
+                    check("high cpu notice cooldown", highCpuNoticeCount == 1, "notices=\(highCpuNoticeCount)")
+                    check("high cpu metrics", (snapshot?.resource.isEmpty == false) && (snapshot?.tps.isEmpty == false))
+                }
                 if id == "DASH-narrow" {
                     resizeMainWindow(to: CGSize(width: 820, height: 800))
                     try? await Task.sleep(for: .milliseconds(400))
-                }
-            case "VERIFY-real-paper-dashboard":
-                do throws(CoreError) {
-                    let created = try await CoreClient.createServer(
-                        NewServerInput(
-                            operationId: UUID().uuidString.lowercased(), name: "real-paper", profileName: nil,
-                            groupName: nil, software: "Paper", version: "1.21.10", port: 25_591, memoryGb: 2,
-                            templateId: nil, importToken: nil
-                        )
-                    ) { _ in }
-                    await app.reloadServers()
-                    let id = created.server.id
-                    app.selectedServerID = id
-                    app.navigate(to: .dashboard)
-                    try CoreClient.acceptServerEula(id: id)
-                    await runtime.start(id)
-                    for _ in 0..<120 where (runtime.metrics[id]?.tps.count ?? 0) < 3 {
-                        try? await Task.sleep(for: .milliseconds(500))
-                    }
-                    let snapshot = runtime.metrics[id]
-                    signal(
-                        "[capture] paper metrics resource=\(snapshot?.resource.count ?? 0) tps=\(snapshot?.tps.map(\.tps) ?? [])"
-                    )
-                } catch {
-                    signal("[capture] real paper failed: \(error.code) \(error.message)")
                 }
             case "MOTION-tour", "MOTION-tour-reduced":
                 // A scripted walk through the app's motion, recorded by capture.sh
@@ -532,52 +364,7 @@
                 FileEditorView.captureScript = .init(type: "max-players=20\n", save: true)
                 app.navigate(to: .files)
             case "VERIFY-editor":
-                // Editor saving rules through the FFI, logged for capture.sh.
-                let server = "server-1"
-                func bytes(_ relative: String) -> [UInt8] {
-                    guard let url = try? CoreClient.fileEntryURL(serverID: server, relative: relative),
-                        let data = try? Data(contentsOf: url)
-                    else { return [] }
-                    return Array(data)
-                }
-                do {
-                    var document = try await CoreClient.readTextDocument(
-                        serverID: server, relative: "bom-crlf.properties")
-                    document.text = "motd=Edited\nserver-port=25565\n"
-                    try await CoreClient.writeTextDocument(
-                        serverID: server, relative: "bom-crlf.properties", document: document)
-                    let expected = Array("\u{FEFF}motd=Edited\r\nserver-port=25565\r\n".utf8)
-                    signal("[capture] bom+crlf edit kept: \(bytes("bom-crlf.properties") == expected)")
-
-                    let mixed = try await CoreClient.readTextDocument(serverID: server, relative: "editor/mixed.txt")
-                    signal("[capture] mixed read: ending=\(mixed.lineEnding) mixed=\(mixed.mixedLineEndings)")
-                    try await CoreClient.writeTextDocument(
-                        serverID: server, relative: "editor/mixed.txt", document: mixed)
-                    signal(
-                        "[capture] mixed saved as crlf: \(bytes("editor/mixed.txt") == Array("a\r\nb\r\nc\r\n".utf8))")
-                } catch {
-                    signal("[capture] editor round trip failed: \(error.code)")
-                }
-                let listing = (try? await CoreClient.listFiles(serverID: server, relative: "editor")) ?? []
-                for name in ["size-under.txt", "size-limit.txt", "size-over.txt", "not-utf8.txt"] {
-                    guard let item = listing.first(where: { $0.name == name }) else {
-                        signal("[capture] \(name): missing")
-                        continue
-                    }
-                    let document = EditorDocument(
-                        serverID: server, relativePath: "editor/\(name)", fileName: name, size: item.size
-                    )
-                    await document.load()
-                    let phase =
-                        switch document.phase {
-                        case .ready: "ready"
-                        case .unsupported: "unsupported"
-                        case .failed: "failed"
-                        case .loading: "loading"
-                        }
-                    signal("[capture] \(name) (\(item.size) bytes): \(phase)")
-                }
-                app.navigate(to: .files)
+                await verifyEditor(app: app)
             case "CONFIRM-delete-files":
                 app.navigate(to: .files)
                 Task {
@@ -589,72 +376,7 @@
                     )
                 }
             case "VERIFY-files":
-                // Real file operations through the FFI, logged for capture.sh.
-                let server = "server-1"
-                func step(_ label: String, _ work: () async throws -> Void) async {
-                    do {
-                        try await work()
-                        signal("[capture] \(label): ok")
-                    } catch {
-                        signal("[capture] \(label): \((error as? CoreError)?.code ?? "\(error)")")
-                    }
-                }
-                await step("create folder") {
-                    try await CoreClient.createFileEntry(serverID: server, parent: "", name: "notes", isDirectory: true)
-                }
-                await step("create file") {
-                    try await CoreClient.createFileEntry(
-                        serverID: server, parent: "notes", name: "todo.txt", isDirectory: false)
-                }
-                await step("create existing file") {
-                    try await CoreClient.createFileEntry(
-                        serverID: server, parent: "", name: "server.properties", isDirectory: false)
-                }
-                await step("rename") {
-                    try await CoreClient.renameFileEntry(
-                        serverID: server, relative: "notes/todo.txt", newName: "done.txt")
-                }
-                await step("rename onto existing") {
-                    try await CoreClient.renameFileEntry(serverID: server, relative: "notes", newName: "config")
-                }
-                await step("move") {
-                    try await CoreClient.moveFileEntries(serverID: server, entries: ["notes"], destination: "plugins")
-                }
-                await step("bad name") {
-                    try await CoreClient.createFileEntry(serverID: server, parent: "", name: "a/b", isDirectory: false)
-                }
-                await step("delete") {
-                    try await CoreClient.deleteFileEntries(serverID: server, entries: ["plugins/notes"])
-                }
-                let original = try? Data(
-                    contentsOf: (try? CoreClient.fileEntryURL(serverID: server, relative: "bom-crlf.properties"))!)
-                await step("round trip") {
-                    let document = try await CoreClient.readTextDocument(
-                        serverID: server, relative: "bom-crlf.properties")
-                    signal(
-                        "[capture] document bom=\(document.hasBom) ending=\(document.lineEnding) text=\(document.text.debugDescription)"
-                    )
-                    try await CoreClient.writeTextDocument(
-                        serverID: server, relative: "bom-crlf.properties", document: document)
-                }
-                let after = try? Data(
-                    contentsOf: (try? CoreClient.fileEntryURL(serverID: server, relative: "bom-crlf.properties"))!)
-                signal("[capture] bytes unchanged=\(original == after && original != nil)")
-                await step("binary refused") {
-                    _ = try await CoreClient.readTextDocument(serverID: server, relative: "world/region/r.0.0.mca")
-                }
-                let listing = (try? await CoreClient.listFiles(serverID: server, relative: "")) ?? []
-                signal(
-                    "[capture] root: \(listing.map { $0.isDirectory ? $0.name + "/" : $0.name }.joined(separator: " "))"
-                )
-                app.navigate(to: .files)
-            case "VERIFY-template":
-                do {
-                    try await CoreClient.saveTemplate(fromServer: "server-1", name: "Survival Template")
-                    feedback.toast(.success, L10n.t("server.toast.templateSaved"))
-                } catch {
-                    feedback.toast(.error, L10n.t("server.toast.templateSaveFailed"))
-                }
+                await verifyFiles(app: app)
             default:
                 if let route = AppRoute.allCases.first(where: { id == "ROUTE-\($0.rawValue)" }) {
                     app.navigate(to: route)
@@ -960,7 +682,7 @@
         }
 
         /// Folders prepared by capture.sh next to the fixture data folder.
-        private static func importSource(_ name: String) -> URL {
+        static func importSource(_ name: String) -> URL {
             let dataDir = ProcessInfo.processInfo.environment["MCVECTOR_DATA_DIR"] ?? NSTemporaryDirectory()
             return URL(fileURLWithPath: dataDir).deletingLastPathComponent()
                 .appendingPathComponent("import-source").appendingPathComponent(name)
@@ -968,6 +690,7 @@
 
         /// Records a line for capture.sh from anywhere in the app.
         static func note(_ line: String) {
+            if line.hasPrefix("[capture] high cpu notice:") { highCpuNoticeCount += 1 }
             signal(line)
         }
 
