@@ -22,6 +22,8 @@ struct ConsoleView: View {
     @State private var isAtBottom = true
     @State private var copied = false
     @FocusState private var searchFocused: Bool
+    /// Bumped to move typing back to the command line.
+    @State private var commandFocusRequest = 0
 
     static let maxPins = 5
 
@@ -41,7 +43,7 @@ struct ConsoleView: View {
             Divider()
             logArea
             Divider()
-            CommandLine(serverID: serverID, isOnline: status == "online")
+            CommandLine(serverID: serverID, isOnline: status == "online", focusRequest: commandFocusRequest)
         }
         .background(.background)
         .animation(Motion.standard, value: isSearching)
@@ -344,6 +346,9 @@ struct ConsoleView: View {
             }
             // Lines start at the top while they fit; once they overflow, the view
             // opens at the newest line and stays there as lines arrive.
+            // A click on the log (not a drag that selects text) sends typing back to
+            // the command line; selectable log text would otherwise keep the focus.
+            .simultaneousGesture(TapGesture().onEnded { commandFocusRequest += 1 })
             .defaultScrollAnchor(.top, for: .alignment)
             .defaultScrollAnchor(.bottom, for: .initialOffset)
             .defaultScrollAnchor(.bottom, for: .sizeChanges)
@@ -426,7 +431,9 @@ private struct LogRow: View {
 private struct CommandLine: View {
     let serverID: String
     let isOnline: Bool
+    let focusRequest: Int
     @Environment(ServerRuntime.self) private var runtime
+    @FocusState private var isFocused: Bool
     @Environment(FeedbackCenter.self) private var feedback
     @State private var text = ""
     @State private var history: [String] = []
@@ -442,26 +449,34 @@ private struct CommandLine: View {
             Text(">")
                 .font(.system(.body, design: .monospaced))
                 .foregroundStyle(.secondary)
-            TextField(L10n.t("console.command.label"), text: $text, prompt: Text(L10n.t("console.command.placeholder")))
-                .textFieldStyle(.plain)
-                .font(.system(.body, design: .monospaced))
-                .onSubmit { Task { await send() } }
-                .onKeyPress(.upArrow) {
-                    recall(-1)
-                    return .handled
-                }
-                .onKeyPress(.downArrow) {
-                    recall(1)
-                    return .handled
-                }
+            TextField(
+                L10n.t("console.command.label"), text: $text,
+                prompt: Text(L10n.t(isOnline ? "console.command.placeholder" : "console.command.offlineHint"))
+            )
+            .textFieldStyle(.plain)
+            .font(.system(.body, design: .monospaced))
+            .focused($isFocused)
+            .onSubmit { Task { await send() } }
+            .onKeyPress(.upArrow) {
+                recall(-1)
+                return .handled
+            }
+            .onKeyPress(.downArrow) {
+                recall(1)
+                return .handled
+            }
             Button(L10n.t("console.actions.send")) { Task { await send() } }
                 .disabled(text.trimmingCharacters(in: .whitespaces).isEmpty || isSending)
         }
         .disabled(!isOnline)
-        .help(isOnline ? "" : L10n.t("console.command.offlineHint"))
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
-        .onAppear { history = UserDefaults.standard.stringArray(forKey: historyKey) ?? [] }
+        .onAppear {
+            history = UserDefaults.standard.stringArray(forKey: historyKey) ?? []
+            if isOnline { isFocused = true }
+        }
+        .onChange(of: focusRequest) { if isOnline { isFocused = true } }
+        .onChange(of: isOnline) { _, online in if online { isFocused = true } }
     }
 
     private func send() async {
