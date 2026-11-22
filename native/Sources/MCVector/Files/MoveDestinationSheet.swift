@@ -125,7 +125,11 @@ struct MoveDestinationSheet: View {
                     browsed.append(name)
                 } label: {
                     HStack {
-                        Label(name, systemImage: "folder.fill")
+                        Label {
+                            Text(name)
+                        } icon: {
+                            FileIconView(name: name, isDirectory: true)
+                        }
                         Spacer()
                         Image(systemName: "chevron.right")
                             .font(.caption)

@@ -67,8 +67,36 @@
             }
         }
 
+        /// Every SVG the icon catalog names ships in the app, and names map as
+        /// Material Icon Theme does (Minecraft's folders to the app's own icons).
+        @MainActor
+        static func verifyFileIcons() {
+            let named = Set(
+                [FileIconCatalog.plainFile, FileIconCatalog.plainFolder]
+                    + FileIconCatalog.minecraftFolders.values + FileIconCatalog.folders.values
+                    + FileIconCatalog.files.values + FileIconCatalog.extensions.values)
+            let missing = named.filter { FileIconImages.image(named: $0) == nil }.sorted()
+            check("file icons ship", missing.isEmpty, "missing: \(missing.joined(separator: ", "))")
+            let files = [
+                "server.properties": "settings", "Bukkit.YML": "yaml", "paper.jar": "java", "r.0.0.mca": "minecraft",
+                "notes.unknown": FileIconCatalog.plainFile,
+            ]
+            let folders = [
+                "plugins": "folder-plugin", "Logs": "folder-log", "world": "mcv-folder-world",
+                "DIM-1": "mcv-folder-world-nether", "my-stuff": FileIconCatalog.plainFolder,
+            ]
+            for (name, icon) in files { checkIcon(name, isDirectory: false, icon) }
+            for (name, icon) in folders { checkIcon(name, isDirectory: true, icon) }
+        }
+
+        private static func checkIcon(_ name: String, isDirectory: Bool, _ icon: String) {
+            let actual = FileIconCatalog.iconName(for: name, isDirectory: isDirectory)
+            check("file icon \(name)", actual == icon, "got \(actual), expected \(icon)")
+        }
+
         @MainActor
         static func verifyFiles(app: AppState) async {
+            verifyFileIcons()
             // Real file operations through the FFI, logged for capture.sh.
             let server = "server-1"
             func step(_ label: String, expectsError: Bool = false, _ work: () async throws -> Void) async {

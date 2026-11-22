@@ -170,8 +170,7 @@ private struct FileNameCell: View {
             Text(row.name)
                 .lineLimit(1)
         } icon: {
-            Image(systemName: row.isDirectory ? "folder.fill" : FileKind.symbol(for: row.name))
-                .foregroundStyle(row.isDirectory ? Color.accentColor : .secondary)
+            FileIconView(name: row.name, isDirectory: row.isDirectory)
         }
         .opacity(row.isHidden ? 0.55 : 1)
         // A fixed row height keeps size text updates from re-measuring rows.

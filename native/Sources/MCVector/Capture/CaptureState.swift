@@ -453,6 +453,8 @@
             switch id {
             case "SERVERSETTINGS-search": SettingsWindow.captureScript = .init(search: "port")
             case "SETTINGS-search": SettingsWindow.captureScript = .init(search: "update")
+            case "SETTINGS-icons":
+                SettingsWindow.captureScript = .init(search: L10n.language == "ja" ? "アイコン" : "icons")
             case "SERVERSETTINGS-dirty":
                 SettingsWindow.captureScript = .init(values: ["server-port": "70000", "max-players": "40"])
             case "SERVERSETTINGS-secret": SettingsWindow.captureScript = .init(reveal: "rcon.password")

@@ -10037,6 +10037,40 @@
         }
       }
     },
+    "native.help.native.settings.fileIcons.files": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Color shows each kind of file with its own icon, such as configs, logs and jars. Simple shows one gray symbol per kind."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "カラーは、設定ファイル、ログ、jar などの種類ごとに色付きのアイコンで表示します。シンプルは、種類ごとに灰色の記号で表示します。"
+          }
+        }
+      }
+    },
+    "native.help.native.settings.fileIcons.folders": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Color gives folders such as world, plugins and logs their own colored icon. Simple shows every folder in the accent color."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "カラーは、world、plugins、logs などのフォルダを、それぞれ色付きのアイコンで表示します。シンプルは、どのフォルダもアクセントカラーで表示します。"
+          }
+        }
+      }
+    },
     "native.help.native.settings.filesBar": {
       "extractionState": "manual",
       "localizations": {
@@ -12139,6 +12173,74 @@
           "stringUnit": {
             "state": "translated",
             "value": "長い行を折り返す"
+          }
+        }
+      }
+    },
+    "native.settings.fileIcons.color": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Color"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "カラー"
+          }
+        }
+      }
+    },
+    "native.settings.fileIcons.files": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "File icons"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ファイルのアイコン"
+          }
+        }
+      }
+    },
+    "native.settings.fileIcons.folders": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Folder icons"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "フォルダのアイコン"
+          }
+        }
+      }
+    },
+    "native.settings.fileIcons.simple": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Simple"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "シンプル"
           }
         }
       }

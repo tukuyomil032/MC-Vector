@@ -92,8 +92,7 @@ struct FileEditorView: View {
             .help(L10n.t("files.editor.close"))
             .disabled(document.isSaving)
 
-            Image(systemName: FileKind.symbol(for: document.fileName))
-                .foregroundStyle(.secondary)
+            FileIconView(name: document.fileName, isDirectory: false)
             Text(document.fileName)
                 .font(.headline)
                 .lineLimit(1)

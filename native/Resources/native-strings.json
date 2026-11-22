@@ -1149,6 +1149,30 @@
     "en": "Page numbers",
     "ja": "ページ番号"
   },
+  "native.settings.fileIcons.files": {
+    "en": "File icons",
+    "ja": "ファイルのアイコン"
+  },
+  "native.settings.fileIcons.folders": {
+    "en": "Folder icons",
+    "ja": "フォルダのアイコン"
+  },
+  "native.settings.fileIcons.color": {
+    "en": "Color",
+    "ja": "カラー"
+  },
+  "native.settings.fileIcons.simple": {
+    "en": "Simple",
+    "ja": "シンプル"
+  },
+  "native.help.native.settings.fileIcons.files": {
+    "en": "Color shows each kind of file with its own icon, such as configs, logs and jars. Simple shows one gray symbol per kind.",
+    "ja": "カラーは、設定ファイル、ログ、jar などの種類ごとに色付きのアイコンで表示します。シンプルは、種類ごとに灰色の記号で表示します。"
+  },
+  "native.help.native.settings.fileIcons.folders": {
+    "en": "Color gives folders such as world, plugins and logs their own colored icon. Simple shows every folder in the accent color.",
+    "ja": "カラーは、world、plugins、logs などのフォルダを、それぞれ色付きのアイコンで表示します。シンプルは、どのフォルダもアクセントカラーで表示します。"
+  },
   "native.settings.reportIssue": {
     "en": "Report an Issue",
     "ja": "問題を報告"

@@ -25,6 +25,8 @@ struct AppGeneralPane: View {
     @AppStorage(BackupsLayout.storageKey) private var backupsLayout: BackupsLayout = .cards
     @AppStorage(PluginsPaging.storageKey) private var pluginsPaging: PluginsPaging = .infinite
     @AppStorage(FilesBarSettings.hiddenKey) private var hiddenFilesBarGroups = ""
+    @AppStorage(FileIconStyle.filesKey) private var fileIconStyle = FileIconStyle.color
+    @AppStorage(FileIconStyle.foldersKey) private var folderIconStyle = FileIconStyle.color
 
     var body: some View {
         Form {
@@ -49,6 +51,16 @@ struct AppGeneralPane: View {
                     SettingsVisualPicker(
                         options: PluginsPaging.allCases, selection: $pluginsPaging, title: { L10n.t($0.titleKey) },
                         thumbnail: { PluginsPagingThumbnail(paging: $0) })
+                }
+                SettingsRow(key: "native.settings.fileIcons.files", alignment: .top) {
+                    SettingsVisualPicker(
+                        options: FileIconStyle.allCases, selection: $fileIconStyle, title: { L10n.t($0.titleKey) },
+                        thumbnail: { FileIconStyleThumbnail(style: $0, isDirectory: false) })
+                }
+                SettingsRow(key: "native.settings.fileIcons.folders", alignment: .top) {
+                    SettingsVisualPicker(
+                        options: FileIconStyle.allCases, selection: $folderIconStyle, title: { L10n.t($0.titleKey) },
+                        thumbnail: { FileIconStyleThumbnail(style: $0, isDirectory: true) })
                 }
             }
             Section {

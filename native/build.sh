@@ -367,6 +367,9 @@ assemble_app() {
       cp "$NATIVE_DIR/Resources/$folder/"*.json "$staged_app/Contents/Resources/$folder/" || return 1
     fi
   done
+  # Material Icon Theme SVGs (MIT, see ThirdPartyNotices.txt) for the Files view.
+  mkdir -p "$staged_app/Contents/Resources/MaterialIcons" || return 1
+  cp "$NATIVE_DIR/Resources/MaterialIcons/"*.svg "$staged_app/Contents/Resources/MaterialIcons/" || return 1
   if [ "$identity" = "-" ] && [ "$PROFILE" != "release" ]; then
     log_warn "Ad-hoc signed: macOS treats every build as a new app, so privacy grants (Accessibility) do not survive a rebuild. Create the \"$DEFAULT_SIGN_IDENTITY\" code-signing certificate (see native/README.md)."
   fi
