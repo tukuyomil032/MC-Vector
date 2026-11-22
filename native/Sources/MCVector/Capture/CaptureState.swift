@@ -225,6 +225,32 @@
                 "FILES-trash-confirm",
                 "FILES-filter":
                 await showFilesAction(id, app: app)
+            case "FILES-icons":
+                FilesView.capturePreset = .init(selection: ["config"], viewMode: .icons)
+                app.navigate(to: .files)
+            case "FILES-columns":
+                FilesView.capturePreset = .init(path: ["plugins"], selection: ["Essentials.jar"], viewMode: .columns)
+                app.navigate(to: .files)
+            case "FILES-columns-deep":
+                // Opens folders one at a time, as clicks do, from the server folder.
+                FilesView.capturePreset = .init(viewMode: .columns)
+                app.navigate(to: .files)
+                let model = app.files(for: "server-1")
+                try? await Task.sleep(for: .milliseconds(700))
+                model.navigate(to: ["plugins"])
+                try? await Task.sleep(for: .milliseconds(500))
+                model.navigate(to: ["plugins", "Essentials"])
+                try? await Task.sleep(for: .milliseconds(500))
+                model.selection = ["config.yml"]
+            case "FILES-gallery":
+                FilesView.capturePreset = .init(selection: ["server.properties"], viewMode: .gallery)
+                app.navigate(to: .files)
+            case "FILES-grouped":
+                FilesView.capturePreset = .init(viewMode: .icons, grouping: .kind)
+                app.navigate(to: .files)
+            case "FILES-grouped-list":
+                FilesView.capturePreset = .init(viewMode: .list, grouping: .kind)
+                app.navigate(to: .files)
             case "FILES-plugins":
                 FilesView.capturePreset = .init(path: ["plugins"])
                 app.navigate(to: .files)

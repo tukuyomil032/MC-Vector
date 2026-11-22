@@ -38,6 +38,7 @@ enum SettingsSearch {
                     [
                         "settings.language.label", "native.settings.backupsLayout", "native.settings.pluginsPaging",
                         "native.settings.fileIcons.files", "native.settings.fileIcons.folders",
+                        "native.settings.filesView",
                     ]
                 ),
                 ("native.settings.filesBar", FilesBarSettings.Group.allCases.map(\.titleKey)),

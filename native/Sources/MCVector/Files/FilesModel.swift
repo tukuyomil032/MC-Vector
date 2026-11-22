@@ -23,6 +23,8 @@ final class FilesModel {
     private(set) var isLoading = false
     private(set) var folderSizes: [String: FolderSize] = [:]
     var selection: Set<String> = []
+    /// The item a ⇧-click or an arrow key starts from.
+    @ObservationIgnored var selectionAnchor: String?
     var sortOrder = [KeyPathComparator(\FileRow.sortName)]
 
     // MARK: History, filter, hidden files, favorites
@@ -36,6 +38,27 @@ final class FilesModel {
     }
     /// Relative folder paths ("" is the server folder), in the order added.
     private(set) var favorites: [String]
+
+    // MARK: Layout
+
+    /// Column view: the rows of the folders above the current one, keyed by
+    /// their relative path. The current folder's rows are `visibleRows`.
+    var columnListings: [String: [FileRow]] = [:]
+
+    /// The current folder's view. Changing it remembers it for this folder.
+    var viewMode: FilesViewMode {
+        didSet {
+            guard viewMode != oldValue, !isOpeningFolder else { return }
+            FilesViewMode.remember(viewMode, serverID: serverID, folder: currentPath)
+        }
+    }
+    var grouping: FilesGrouping {
+        didSet { UserDefaults.standard.set(grouping.rawValue, forKey: FilesGrouping.storageKey) }
+    }
+    /// Icon view tile size in points.
+    var iconSize: Double {
+        didSet { UserDefaults.standard.set(iconSize, forKey: Self.iconSizeKey) }
+    }
 
     // MARK: Editor, sheets and the running action
 
@@ -53,12 +76,32 @@ final class FilesModel {
     private var sizeTask: Task<Void, Never>?
 
     static let hiddenKey = "files.showHidden"
+    static let iconSizeKey = "files.iconSize"
     private var favoritesKey: String { "files.favorites:\(serverID)" }
 
     init(serverID: String) {
         self.serverID = serverID
-        showsHidden = UserDefaults.standard.bool(forKey: Self.hiddenKey)
-        favorites = UserDefaults.standard.stringArray(forKey: "files.favorites:\(serverID)") ?? []
+        let defaults = UserDefaults.standard
+        showsHidden = defaults.bool(forKey: Self.hiddenKey)
+        favorites = defaults.stringArray(forKey: "files.favorites:\(serverID)") ?? []
+        viewMode = FilesViewMode.remembered(serverID: serverID, folder: "") ?? .preferred
+        grouping = defaults.string(forKey: FilesGrouping.storageKey).flatMap(FilesGrouping.init(rawValue:)) ?? .none
+        let size = defaults.double(forKey: Self.iconSizeKey)
+        iconSize = size == 0 ? 64 : size
+    }
+
+    /// The view a folder opens in: its own, or the default from App Settings.
+    /// Column view stays while browsing, as in Finder.
+    private func viewMode(for newPath: [String]) -> FilesViewMode {
+        if viewMode == .columns { return .columns }
+        return FilesViewMode.remembered(serverID: serverID, folder: newPath.joined(separator: "/")) ?? .preferred
+    }
+
+    /// Sections of the visible rows for the icon, list and gallery views.
+    var sections: [FilesGrouping.Section] {
+        grouping.sections(visibleRows) { [folderSizes, path] name in
+            folderSizes[(path + [name]).joined(separator: "/")]?.bytes
+        }
     }
 
     var currentPath: String { path.joined(separator: "/") }
@@ -86,9 +129,35 @@ final class FilesModel {
             backStack.append(path)
             forwardStack = []
         }
+        // The folder being left stays on screen as a column: keep its rows.
+        columnListings[currentPath] = columnRows(items)
+        columnListings[newPath.joined(separator: "/")] = nil
         selection = []
         filter = ""
+        let mode = viewMode(for: newPath)
         path = newPath
+        // Opening a folder is not choosing its view, so nothing is remembered.
+        isOpeningFolder = true
+        viewMode = mode
+        isOpeningFolder = false
+    }
+
+    @ObservationIgnored private var isOpeningFolder = false
+
+    /// A column's rows: hidden files as set, folders first, then by name.
+    func columnRows(_ rows: [FileRow]) -> [FileRow] {
+        let shown = rows.filter { showsHidden || !$0.isHidden }.sorted { $0.sortName < $1.sortName }
+        return shown.filter(\.isDirectory) + shown.filter { !$0.isDirectory }
+    }
+
+    /// Lists a column that is not kept yet (opening column view deep inside a
+    /// folder, or after the hidden-files setting changed).
+    func loadColumn(_ folder: [String]) async {
+        let key = folder.joined(separator: "/")
+        guard columnListings[key] == nil, folder != path,
+            let listed = try? await CoreClient.listFiles(serverID: serverID, relative: key)
+        else { return }
+        columnListings[key] = columnRows(listed.map(FileRow.init))
     }
 
     func goUp() {

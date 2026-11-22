@@ -17,7 +17,7 @@ struct FilesListView: View {
         // SwiftUI animates and the window's constraint passes never settle.
         ZStack {
             table
-            overlays
+            FilesStateOverlay(model: model, isDropTargeted: isDropTargeted)
         }
     }
 
@@ -77,13 +77,14 @@ struct FilesListView: View {
         } rows: {
             // Drag and drop sit on the rows: per-cell drop targets observe their
             // window geometry and loop with the table's row measuring.
-            ForEach(model.visibleRows) { row in
-                TableRow(row)
-                    .draggable(FileDrag.payload(row.name))
-                    .dropDestination(for: String.self) { dragged in
-                        guard row.isDirectory else { return }
-                        Task { await model.drop(dragged.compactMap(FileDrag.name(from:)), onto: row.name) }
+            ForEach(model.sections) { section in
+                if section.title.isEmpty {
+                    ForEach(section.rows) { row in tableRow(row) }
+                } else {
+                    Section(section.title) {
+                        ForEach(section.rows) { row in tableRow(row) }
                     }
+                }
             }
         }
         .contextMenu(forSelectionType: String.self) { names in
@@ -108,6 +109,15 @@ struct FilesListView: View {
         }
     }
 
+    private func tableRow(_ row: FileRow) -> some TableRowContent<FileRow> {
+        TableRow(row)
+            .draggable(FileDrag.payload(row.name))
+            .dropDestination(for: String.self) { dragged in
+                guard row.isDirectory else { return }
+                Task { await model.drop(dragged.compactMap(FileDrag.name(from:)), onto: row.name) }
+            }
+    }
+
     private func dateText(_ date: Date?) -> some View {
         Group {
             if let date {
@@ -118,33 +128,6 @@ struct FilesListView: View {
         }
         .foregroundStyle(.secondary)
         .monospacedDigit()
-    }
-
-    /// Empty folder, loading and drop highlight, drawn over the table without animation.
-    @ViewBuilder
-    private var overlays: some View {
-        if model.isLoading && model.items.isEmpty {
-            ProgressView(L10n.t("files.loading"))
-        } else if model.visibleRows.isEmpty && !model.isLoading {
-            ContentUnavailableView(
-                L10n.t(model.filter.isEmpty ? "files.emptyFolder" : "native.files.noMatches"),
-                systemImage: model.filter.isEmpty ? "folder" : "magnifyingglass"
-            )
-            .allowsHitTesting(false)
-        }
-        if isDropTargeted {
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .strokeBorder(Color.accentColor, style: StrokeStyle(lineWidth: 2, dash: [6, 4]))
-                .background(Color.accentColor.opacity(0.06), in: RoundedRectangle(cornerRadius: 10))
-                .overlay(alignment: .bottom) {
-                    Label(L10n.t("files.dropHint"), systemImage: "square.and.arrow.down")
-                        .padding(10)
-                        .background(.regularMaterial, in: Capsule())
-                        .padding(16)
-                }
-                .padding(6)
-                .allowsHitTesting(false)
-        }
     }
 
     private func sizeText(_ row: FileRow) -> String {
@@ -175,17 +158,21 @@ private struct FileNameCell: View {
         .opacity(row.isHidden ? 0.55 : 1)
         // A fixed row height keeps size text updates from re-measuring rows.
         .frame(height: 20)
-        .popover(isPresented: isShowingActivity, arrowEdge: .trailing) {
+        .popover(isPresented: model.isShowingActivity(on: row.name), arrowEdge: .trailing) {
             if let activity = model.activity { FileActivityBubble(activity: activity) }
         }
     }
+}
 
-    private var isShowingActivity: Binding<Bool> {
+extension FilesModel {
+    /// Whether the running action's popover points at this entry; dismissing a
+    /// finished one clears it.
+    func isShowingActivity(on name: String) -> Binding<Bool> {
         Binding(
-            get: { model.activity?.anchor == .row(row.name) },
+            get: { self.activity?.anchor == .row(name) },
             set: { shown in
-                if !shown, model.activity?.anchor == .row(row.name), model.activity?.state == .done {
-                    model.activity = nil
+                if !shown, self.activity?.anchor == .row(name), self.activity?.state == .done {
+                    self.activity = nil
                 }
             }
         )

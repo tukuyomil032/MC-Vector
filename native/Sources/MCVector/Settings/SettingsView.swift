@@ -27,6 +27,7 @@ struct AppGeneralPane: View {
     @AppStorage(FilesBarSettings.hiddenKey) private var hiddenFilesBarGroups = ""
     @AppStorage(FileIconStyle.filesKey) private var fileIconStyle = FileIconStyle.color
     @AppStorage(FileIconStyle.foldersKey) private var folderIconStyle = FileIconStyle.color
+    @AppStorage(FilesViewMode.defaultKey) private var filesViewMode = FilesViewMode.list
 
     var body: some View {
         Form {
@@ -61,6 +62,12 @@ struct AppGeneralPane: View {
                     SettingsVisualPicker(
                         options: FileIconStyle.allCases, selection: $folderIconStyle, title: { L10n.t($0.titleKey) },
                         thumbnail: { FileIconStyleThumbnail(style: $0, isDirectory: true) })
+                }
+                SettingsRow(key: "native.settings.filesView", alignment: .top) {
+                    SettingsVisualPicker(
+                        options: FilesViewMode.allCases, selection: $filesViewMode,
+                        size: CGSize(width: 70, height: 50), title: { L10n.t($0.titleKey) },
+                        thumbnail: { FilesViewModeThumbnail(mode: $0) })
                 }
             }
             Section {

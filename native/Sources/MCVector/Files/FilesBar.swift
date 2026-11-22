@@ -102,6 +102,9 @@ struct FilesBar: View {
                         model.showInFinder()
                     },
                 ])
+        case .layout:
+            // Drawn by FilesView next to the bar (a switch, not buttons).
+            return nil
         }
     }
 }
@@ -122,6 +125,9 @@ struct FilesShortcuts: View {
             shortcut("c", [.command, .option]) { model.copyPaths(model.selection) }
             shortcut(".", [.command, .shift]) { model.showsHidden.toggle() }
             shortcut("r", .command) { Task { await model.reload() } }
+            ForEach(FilesViewMode.allCases) { mode in
+                shortcut(KeyEquivalent(mode.shortcut), .command) { model.viewMode = mode }
+            }
         }
         .frame(width: 0, height: 0)
         .opacity(0)
@@ -141,6 +147,8 @@ enum FilesBarSettings {
 
     enum Group: String, CaseIterable, Identifiable {
         case navigation, create, edit, archive, trash, view
+        /// Grouping and the icon, list, column and gallery switch, after the bar.
+        case layout
 
         var id: String { rawValue }
         var titleKey: String { "native.settings.filesBar.\(rawValue)" }

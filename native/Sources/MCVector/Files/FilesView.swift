@@ -14,6 +14,7 @@ struct FilesView: View {
     @Environment(AppState.self) private var app
     @Environment(FeedbackCenter.self) private var feedback
     @FocusState private var filterFocused: Bool
+    @AppStorage(FilesBarSettings.hiddenKey) private var hiddenBarGroupsSetting = ""
 
     private var model: FilesModel { app.files(for: serverID) }
     private var server: ServerProfile? { app.servers.first { $0.id == serverID } }
@@ -35,7 +36,7 @@ struct FilesView: View {
                 VStack(spacing: 0) {
                     pathBar
                     Divider()
-                    FilesListView(model: model)
+                    layout
                 }
                 .transition(.motionFade)
             }
@@ -85,12 +86,57 @@ struct FilesView: View {
             }
 
             FilesBar(model: model)
+
+            if !hiddenBarGroups.contains(FilesBarSettings.Group.layout.rawValue) {
+                layoutControls
+            }
         }
         .frame(height: 40)
         .padding(.horizontal, 12)
         .padding(.vertical, 6)
         .background { FilesShortcuts(model: model) }
         .animation(Motion.snappy, value: model.isFiltering)
+    }
+
+    // MARK: Layouts
+
+    /// The current folder in its view, cross-fading when the view changes.
+    private var layout: some View {
+        ZStack {
+            switch model.viewMode {
+            case .icons: FilesIconGridView(model: model).transition(.motionFade)
+            case .list: FilesListView(model: model).transition(.motionFade)
+            case .columns: FilesColumnView(model: model).transition(.motionFade)
+            case .gallery: FilesGalleryView(model: model).transition(.motionFade)
+            }
+        }
+        .animation(Motion.standard, value: model.viewMode)
+    }
+
+    private var hiddenBarGroups: Set<String> {
+        Set(hiddenBarGroupsSetting.split(separator: ",").map(String.init))
+    }
+
+    /// Grouping (not in column view) and the four views as a sliding switch.
+    private var layoutControls: some View {
+        @Bindable var model = model
+        return HStack(spacing: 8) {
+            if model.viewMode != .columns {
+                GlassChoiceButton(
+                    symbol: "square.grid.3x1.below.line.grid.1x2", selection: $model.grouping,
+                    options: FilesGrouping.allCases, title: { L10n.t($0.titleKey) }
+                )
+                .fixedSize()
+                .help(L10n.t("native.files.groupBy"))
+                .transition(.motionFade)
+            }
+            GlassSegmentedPicker(
+                FilesViewMode.allCases, selection: $model.viewMode, title: { L10n.t($0.titleKey) },
+                symbol: \.symbol, showsTitles: false
+            )
+            .fixedSize()
+        }
+        .animation(Motion.snappy, value: model.viewMode == .columns)
     }
 
     private var folderActivityShown: Binding<Bool> {
@@ -187,6 +233,8 @@ struct FilesView: View {
             var selection: Set<String> = []
             /// A file name inside `path` to open in the editor.
             var openFile: String?
+            var viewMode: FilesViewMode?
+            var grouping: FilesGrouping?
         }
 
         static var capturePreset: CapturePreset?
@@ -196,6 +244,18 @@ struct FilesView: View {
             Self.capturePreset = nil
             let model = model
             model.navigate(to: preset.path, recordHistory: false)
+            // Captures share the app's defaults: show the layout without keeping it.
+            let defaults = UserDefaults.standard
+            let saved = defaults.dictionaryRepresentation().filter {
+                $0.key.hasPrefix("files.view") || $0.key == FilesGrouping.storageKey
+            }
+            if let mode = preset.viewMode { model.viewMode = mode }
+            if let grouping = preset.grouping { model.grouping = grouping }
+            for key in defaults.dictionaryRepresentation().keys
+            where key.hasPrefix("files.view") || key == FilesGrouping.storageKey {
+                defaults.removeObject(forKey: key)
+            }
+            for (key, value) in saved { defaults.set(value, forKey: key) }
             model.pendingOpen = preset.openFile
             Task {
                 try? await Task.sleep(for: .milliseconds(400))

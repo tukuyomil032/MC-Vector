@@ -94,9 +94,59 @@
             check("file icon \(name)", actual == icon, "got \(actual), expected \(icon)")
         }
 
+        /// Each folder keeps the view switched to in it, new folders open in the
+        /// default view, and column view stays while browsing.
+        @MainActor
+        static func verifyViewModes() {
+            let serverID = "e2e-view-modes"
+            let model = FilesModel(serverID: serverID)
+            defer {
+                for folder in ["", "plugins", "config"] {
+                    FilesViewMode.forget(serverID: serverID, folder: folder)
+                }
+            }
+            model.viewMode = .icons
+            model.navigate(to: ["plugins"])
+            check("files view: new folder", model.viewMode == .preferred, "got \(model.viewMode)")
+            model.navigate(to: [])
+            check("files view: remembered", model.viewMode == .icons, "got \(model.viewMode)")
+            model.viewMode = .columns
+            model.navigate(to: ["config"])
+            check("files view: columns stay", model.viewMode == .columns, "got \(model.viewMode)")
+            check(
+                "files view: opening is not choosing",
+                FilesViewMode.remembered(serverID: serverID, folder: "config") == nil)
+        }
+
+        /// Opening folders one by one keeps every folder above as a filled
+        /// column (it used to go blank once it stopped being the current one).
+        @MainActor
+        static func verifyColumns() async {
+            let model = FilesModel(serverID: "server-1")
+            defer {
+                for folder in ["", "plugins", "plugins/Essentials"] {
+                    FilesViewMode.forget(serverID: "server-1", folder: folder)
+                }
+            }
+            await model.reload()
+            model.navigate(to: ["plugins"])
+            await model.reload()
+            model.navigate(to: ["plugins", "Essentials"])
+            await model.reload()
+            let root = model.columnListings[""]?.map(\.name) ?? []
+            let plugins = model.columnListings["plugins"]?.map(\.name) ?? []
+            check("columns: server folder kept", root.contains("plugins"), "got \(root)")
+            check("columns: plugins kept", plugins.contains("Essentials"), "got \(plugins)")
+            check(
+                "columns: current folder not kept", model.columnListings["plugins/Essentials"] == nil,
+                "the current folder should come from its live rows")
+        }
+
         @MainActor
         static func verifyFiles(app: AppState) async {
             verifyFileIcons()
+            verifyViewModes()
+            await verifyColumns()
             // Real file operations through the FFI, logged for capture.sh.
             let server = "server-1"
             func step(_ label: String, expectsError: Bool = false, _ work: () async throws -> Void) async {
