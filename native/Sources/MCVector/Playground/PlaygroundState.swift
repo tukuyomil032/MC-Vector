@@ -18,7 +18,7 @@
 
     /// The parts listed on the left of the UI Playground.
     enum PlaygroundPart: String, CaseIterable, Identifiable {
-        case morphingBar, segmented, search, choice, buttons, textField, numbers, pluginsHeader
+        case morphingBar, segmented, search, choice, buttons, textField, numbers, pluginsHeader, icons, iconsList
 
         var id: String { rawValue }
 
@@ -32,6 +32,8 @@
             case .textField: playgroundText("入力欄", "Text Field")
             case .numbers: playgroundText("数字", "Numbers")
             case .pluginsHeader: playgroundText("プラグイン画面の上", "Plugins Header")
+            case .icons: playgroundText("アイコン", "Icons")
+            case .iconsList: playgroundText("アイコン（一覧）", "Icons in a List")
             }
         }
 
@@ -45,6 +47,8 @@
             case .textField: "character.cursor.ibeam"
             case .numbers: "number"
             case .pluginsHeader: "puzzlepiece.extension"
+            case .icons: "square.grid.3x3"
+            case .iconsList: "list.bullet.rectangle"
             }
         }
     }
@@ -68,6 +72,8 @@
         var player = ""
         var number = 42.0
         var progress = 0.35
+        var iconSize = 32.0
+        var iconStyle: FileIconStyle = .color
 
         /// What is selected in the Files sample.
         enum Selection: String, CaseIterable, Identifiable {

@@ -5,18 +5,24 @@
     import SwiftUI
 
     extension CaptureState {
-        /// PLAYGROUND-<part>[-macos15]: the UI Playground on one part, in front
-        /// of the main window. The morphing bar opens with several items selected.
+        /// PLAYGROUND-<part>[-option…]: the UI Playground on one part, in front of
+        /// the main window. Options, in any order: light (dark otherwise),
+        /// macos15, simple (SF Symbol icons; colored otherwise) and small (20 pt
+        /// icons). The morphing bar opens with several items selected.
         @MainActor
         static func showPlayground(_ id: String) async {
-            var name = String(id.dropFirst("PLAYGROUND-".count))
-            let fallback = name.hasSuffix("-macos15")
-            if fallback { name = String(name.dropLast("-macos15".count)) }
-            guard let part = PlaygroundPart(rawValue: name) else {
-                signal("[capture] unknown playground part: \(name)")
+            let words = id.dropFirst("PLAYGROUND-".count).split(separator: "-").map(String.init)
+            guard let name = words.first, let part = PlaygroundPart(rawValue: name) else {
+                signal("[capture] unknown playground part: \(id)")
                 return
             }
-            PlaygroundWindow.capturePreset = (part, fallback, .many)
+            let options = Set(words.dropFirst())
+            var preset = PlaygroundWindow.CapturePreset(
+                part: part, fallback: options.contains("macos15"), selection: .many,
+                isDark: !options.contains("light"))
+            if options.contains("simple") { preset.iconStyle = .simple }
+            if options.contains("small") { preset.iconSize = 20 }
+            PlaygroundWindow.capturePreset = preset
             let main = NSApp.windows.first { $0.isVisible && $0.canBecomeMain }
             NotificationCenter.default.post(name: .openPlayground, object: nil)
             try? await Task.sleep(for: .milliseconds(1200))

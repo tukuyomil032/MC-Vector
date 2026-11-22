@@ -9,7 +9,16 @@
     struct PlaygroundWindow: View {
         static let windowID = "playground"
         /// Capture tooling: the part, look and selection to open with.
-        static var capturePreset: (part: PlaygroundPart, fallback: Bool, selection: PlaygroundState.Selection)?
+        static var capturePreset: CapturePreset?
+
+        struct CapturePreset {
+            let part: PlaygroundPart
+            let fallback: Bool
+            let selection: PlaygroundState.Selection
+            let isDark: Bool
+            var iconStyle: FileIconStyle = .color
+            var iconSize = 32.0
+        }
         @State private var state = PlaygroundState()
 
         var body: some View {
@@ -41,6 +50,9 @@
                 state.part = preset.part
                 state.forcesFallback = preset.fallback
                 state.selection = preset.selection
+                state.isDark = preset.isDark
+                state.iconStyle = preset.iconStyle
+                state.iconSize = preset.iconSize
             }
         }
 

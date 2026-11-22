@@ -19,6 +19,8 @@
             case .textField: textField
             case .numbers: numbers
             case .pluginsHeader: pluginsHeader
+            case .icons: IconComparisonSample(state: state)
+            case .iconsList: IconListSample(state: state)
             }
         }
 
