@@ -8524,6 +8524,23 @@
         }
       }
     },
+    "native.content.selectServer": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Select a server in the sidebar."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "サイドバーでサーバーを選んでください。"
+          }
+        }
+      }
+    },
     "native.editor.diagnostic.count": {
       "comment": "Placeholders: {count}",
       "extractionState": "manual",

@@ -75,18 +75,21 @@ struct ContentRouter: View {
     }
 
     /// No server yet, or none selected (React CONTENT-noserver-*), as the standard
-    /// empty-state view with Add Server as its action.
+    /// empty-state view. Add Server is offered only when there is no server at
+    /// all; otherwise the sidebar's button is the one way to add.
     private var noServerState: some View {
         ContentUnavailableView {
             Label(
-                app.servers.isEmpty ? L10n.t("server.list.emptyTitle") : L10n.t("server.list.selectOrCreate"),
+                app.servers.isEmpty ? L10n.t("server.list.emptyTitle") : L10n.t("native.content.selectServer"),
                 systemImage: "server.rack"
             )
         } actions: {
-            Button(L10n.t("nav.addServer")) {
-                app.activeSheet = .addServerChoice
+            if app.servers.isEmpty {
+                Button(L10n.t("nav.addServer")) {
+                    app.activeSheet = .addServerChoice
+                }
+                .buttonStyle(.borderedProminent)
             }
-            .buttonStyle(.borderedProminent)
         }
     }
 }

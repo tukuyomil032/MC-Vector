@@ -1201,6 +1201,10 @@
     "en": "Settings…",
     "ja": "設定…"
   },
+  "native.content.selectServer": {
+    "en": "Select a server in the sidebar.",
+    "ja": "サイドバーでサーバーを選んでください。"
+  },
   "native.help.settings.language.label": {
     "en": "The language of every window. Numbers and dates follow it too.",
     "ja": "すべての窓の言語です。数字と日付の書き方も、この言語に合わせます。"
