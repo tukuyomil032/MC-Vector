@@ -26,6 +26,9 @@ struct AppGeneralPane: View {
 
     var body: some View {
         Form {
+            SettingsPreviewSection {
+                AppWindowPreview(backupsLayout: backupsLayout)
+            }
             Section(L10n.t("native.settings.section.appearance")) {
                 SettingsRow(key: "settings.language.label") {
                     Picker(L10n.t("settings.language.label"), selection: language) {
@@ -35,19 +38,15 @@ struct AppGeneralPane: View {
                     .labelsHidden()
                     .fixedSize()
                 }
-                SettingsRow(key: "native.settings.backupsLayout") {
-                    Picker(L10n.t("native.settings.backupsLayout"), selection: $backupsLayout) {
-                        ForEach(BackupsLayout.allCases, id: \.self) { Text(L10n.t($0.titleKey)).tag($0) }
-                    }
-                    .labelsHidden()
-                    .fixedSize()
+                SettingsRow(key: "native.settings.backupsLayout", alignment: .top) {
+                    SettingsVisualPicker(
+                        options: BackupsLayout.allCases, selection: $backupsLayout, title: { L10n.t($0.titleKey) },
+                        thumbnail: { BackupsLayoutThumbnail(layout: $0) })
                 }
-                SettingsRow(key: "native.settings.pluginsPaging") {
-                    Picker(L10n.t("native.settings.pluginsPaging"), selection: $pluginsPaging) {
-                        ForEach(PluginsPaging.allCases, id: \.self) { Text(L10n.t($0.titleKey)).tag($0) }
-                    }
-                    .labelsHidden()
-                    .fixedSize()
+                SettingsRow(key: "native.settings.pluginsPaging", alignment: .top) {
+                    SettingsVisualPicker(
+                        options: PluginsPaging.allCases, selection: $pluginsPaging, title: { L10n.t($0.titleKey) },
+                        thumbnail: { PluginsPagingThumbnail(paging: $0) })
                 }
             }
             Section(L10n.t("settings.update.title")) {

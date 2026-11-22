@@ -11639,6 +11639,60 @@
         }
       }
     },
+    "native.settings.preview.chunks": {
+      "comment": "Placeholders: {chunks}, {blocks}",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "{chunks} chunks · {blocks} blocks"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "{chunks} チャンク（{blocks} ブロック）"
+          }
+        }
+      }
+    },
+    "native.settings.preview.memoryMac": {
+      "comment": "Placeholders: {size}",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This Mac: {size} GB"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "この Mac：{size} GB"
+          }
+        }
+      }
+    },
+    "native.settings.preview.memoryServer": {
+      "comment": "Placeholders: {size}",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Server: {size} GB"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "サーバー：{size} GB"
+          }
+        }
+      }
+    },
     "native.settings.propSection.connection": {
       "extractionState": "manual",
       "localizations": {

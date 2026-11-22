@@ -25,14 +25,35 @@ struct PropertiesPage: View {
             }
         case .loaded:
             Form {
+                if group == .game {
+                    SettingsPreviewSection {
+                        ServerListPreview(
+                            name: serverName, motd: model.values["motd"] ?? "",
+                            maxPlayers: model.values["max-players"] ?? "20")
+                    }
+                }
                 ForEach(model.sections(of: group), id: \.id) { section in
                     Section(section.title) {
+                        if section.id == "distance" { distancePreview }
                         PropertyRows(keys: section.keys, model: model)
                     }
                 }
             }
             .formStyle(.grouped)
         }
+    }
+}
+
+extension PropertiesPage {
+    /// The chunk map above the distance fields.
+    private var distancePreview: some View {
+        let label = { (key: String) in
+            model.layout.categories.flatMap(\.keys).first { $0.key == key }?.label.current ?? key
+        }
+        return ChunkDistancePreview(
+            viewDistance: Int(model.values["view-distance"] ?? "") ?? 10,
+            simulationDistance: Int(model.values["simulation-distance"] ?? "") ?? 10,
+            viewLabel: label("view-distance"), simulationLabel: label("simulation-distance"))
     }
 }
 
@@ -61,9 +82,22 @@ private struct PropertyRow: View {
 
     var body: some View {
         SettingsRow(
-            title: key.label.current, doc: model.docs[key.key], note: model.rangeNote(for: key)
+            title: key.label.current, doc: model.docs[key.key], note: model.rangeNote(for: key),
+            alignment: Self.pictured.keys.contains(key.key) ? .top : .center
         ) {
-            control
+            if let options = Self.pictured[key.key] {
+                SettingsVisualPicker(
+                    options: options, selection: value, size: CGSize(width: 70, height: 48), title: choiceTitle
+                ) { option in
+                    if key.key == "gamemode" {
+                        GameModeThumbnail(mode: option)
+                    } else {
+                        DifficultyThumbnail(difficulty: option)
+                    }
+                }
+            } else {
+                control
+            }
         }
         #if DEBUG
             .onChange(of: model.captureRevealKey) { _, requested in
@@ -128,6 +162,12 @@ private struct PropertyRow: View {
             }
         }
     }
+
+    /// Choices picked from pictures instead of a menu.
+    private static let pictured: [String: [String]] = [
+        "gamemode": ["survival", "creative", "adventure", "spectator"],
+        "difficulty": ["peaceful", "easy", "normal", "hard"],
+    ]
 
     /// The file's value is kept selectable even when it is not one of the choices.
     private var choices: [String] {

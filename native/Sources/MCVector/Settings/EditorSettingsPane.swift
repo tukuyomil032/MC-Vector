@@ -18,6 +18,8 @@ struct EditorSettingsPane: View {
             }
 
             Section(L10n.t("native.settings.editor.text")) {
+                EditorTextPreview(settings: settings)
+                    .listRowInsets(EdgeInsets(top: 10, leading: 10, bottom: 10, trailing: 10))
                 SettingsRow(key: "native.settings.editor.fontSize") {
                     HStack(spacing: 10) {
                         Slider(value: $settings.fontSize, in: EditorSettings.fontSizes, step: 1)

@@ -272,6 +272,7 @@ extension GeneralRows {
                 )
                 .fixedSize()
             }
+            MemoryBar(memoryMB: draft.memoryMb)
             SettingsRow(key: "serverSettings.port") {
                 RollingNumberField(title: L10n.t("serverSettings.port"), text: number(\.port), range: 1...65535)
                     .fixedSize()
@@ -397,6 +398,9 @@ extension GeneralRows {
                         .labelsHidden()
                     }
                 }
+                BackupTimeline(
+                    type: draft.autoBackupScheduleType, intervalMinutes: draft.autoBackupIntervalMin,
+                    weekday: draft.autoBackupWeekday, time: draft.autoBackupTime)
             }
         } header: {
             header("autoBackup")

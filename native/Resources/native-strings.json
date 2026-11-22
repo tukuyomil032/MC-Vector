@@ -1121,6 +1121,18 @@
     "en": "Asking Players",
     "ja": "プレイヤーへの確認"
   },
+  "native.settings.preview.chunks": {
+    "en": "{chunks} chunks · {blocks} blocks",
+    "ja": "{chunks} チャンク（{blocks} ブロック）"
+  },
+  "native.settings.preview.memoryServer": {
+    "en": "Server: {size} GB",
+    "ja": "サーバー：{size} GB"
+  },
+  "native.settings.preview.memoryMac": {
+    "en": "This Mac: {size} GB",
+    "ja": "この Mac：{size} GB"
+  },
   "native.settings.tile.app": {
     "en": "App",
     "ja": "アプリ"
