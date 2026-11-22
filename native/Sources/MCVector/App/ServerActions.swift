@@ -27,9 +27,11 @@ struct ServerActions {
                 feedback.toast(.error, L10n.t("server.toast.deleteFailed"))
             }
         } catch {
-            feedback.toast(.error, L10n.t(
-                error.code == "server.running" ? "server.toast.deleteRunning" : "server.toast.deleteError"
-            ))
+            feedback.toast(
+                .error,
+                L10n.t(
+                    error.code == "server.running" ? "server.toast.deleteRunning" : "server.toast.deleteError"
+                ))
         }
     }
 
@@ -55,12 +57,14 @@ struct ServerActions {
 
     /// Ask for a name, then save the server's settings as a template.
     func saveAsTemplate(_ server: ServerProfile) async {
-        guard let name = await feedback.prompt(
-            title: L10n.t("server.create.templateNamePrompt"),
-            label: L10n.t("server.create.templateNameLabel"),
-            defaultValue: L10n.t("server.create.templateDefaultName", ["name": server.name]),
-            confirmLabel: L10n.t("common.save")
-        ) else { return }
+        guard
+            let name = await feedback.prompt(
+                title: L10n.t("server.create.templateNamePrompt"),
+                label: L10n.t("server.create.templateNameLabel"),
+                defaultValue: L10n.t("server.create.templateDefaultName", ["name": server.name]),
+                confirmLabel: L10n.t("common.save")
+            )
+        else { return }
         do {
             try await CoreClient.saveTemplate(fromServer: server.id, name: name)
             feedback.toast(.success, L10n.t("server.toast.templateSaved"))

@@ -95,7 +95,7 @@ final class ImportServerModel {
     /// and the folder can be imported again; a cancel needs a new pick.
     func importServer() async -> CreatedServerInfo? {
         guard isValid, let analysis, let port = ServerNumbers.port(portText),
-              let memoryGB = ServerNumbers.memoryGB(memoryText), !isCreating
+            let memoryGB = ServerNumbers.memoryGB(memoryText), !isCreating
         else { return nil }
         operationID = UUID().uuidString.lowercased()
         phase = .creating(.resolving)
@@ -144,10 +144,10 @@ final class ImportServerModel {
     }
 
     #if DEBUG
-    /// Capture tooling: shows the progress view without importing anything.
-    func showProgressForCapture(_ stage: CreationStage) {
-        phase = .creating(stage)
-    }
+        /// Capture tooling: shows the progress view without importing anything.
+        func showProgressForCapture(_ stage: CreationStage) {
+            phase = .creating(stage)
+        }
     #endif
 
     private func show(_ stage: CreationStage) {

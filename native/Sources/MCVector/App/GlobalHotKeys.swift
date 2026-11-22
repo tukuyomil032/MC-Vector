@@ -36,25 +36,27 @@ final class GlobalHotKeys {
 
     private func installHandler() {
         var spec = EventTypeSpec(eventClass: OSType(kEventClassKeyboard), eventKind: UInt32(kEventHotKeyPressed))
-        InstallEventHandler(GetApplicationEventTarget(), { _, event, _ in
-            var hotKeyID = EventHotKeyID()
-            GetEventParameter(
-                event, EventParamName(kEventParamDirectObject), EventParamType(typeEventHotKeyID),
-                nil, MemoryLayout<EventHotKeyID>.size, nil, &hotKeyID
-            )
-            let id = hotKeyID.id
-            Task { @MainActor in
-                if let action = Action(rawValue: id) {
-                    GlobalHotKeys.current?.onAction(action)
+        InstallEventHandler(
+            GetApplicationEventTarget(),
+            { _, event, _ in
+                var hotKeyID = EventHotKeyID()
+                GetEventParameter(
+                    event, EventParamName(kEventParamDirectObject), EventParamType(typeEventHotKeyID),
+                    nil, MemoryLayout<EventHotKeyID>.size, nil, &hotKeyID
+                )
+                let id = hotKeyID.id
+                Task { @MainActor in
+                    if let action = Action(rawValue: id) {
+                        GlobalHotKeys.current?.onAction(action)
+                    }
                 }
-            }
-            return noErr
-        }, 1, &spec, nil, &handlerRef)
+                return noErr
+            }, 1, &spec, nil, &handlerRef)
     }
 
     private func register(_ action: Action, keyCode: UInt32) {
         var ref: EventHotKeyRef?
-        let id = EventHotKeyID(signature: OSType(0x4D435643), id: action.rawValue) // "MCVC"
+        let id = EventHotKeyID(signature: OSType(0x4D43_5643), id: action.rawValue)  // "MCVC"
         let status = RegisterEventHotKey(
             keyCode, UInt32(cmdKey | shiftKey), id, GetApplicationEventTarget(), 0, &ref
         )

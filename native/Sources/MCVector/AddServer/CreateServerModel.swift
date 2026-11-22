@@ -154,10 +154,10 @@ final class CreateServerModel {
     }
 
     #if DEBUG
-    /// Capture tooling: shows the progress view without creating anything.
-    func showProgressForCapture(_ stage: CreationStage) {
-        phase = .creating(stage)
-    }
+        /// Capture tooling: shows the progress view without creating anything.
+        func showProgressForCapture(_ stage: CreationStage) {
+            phase = .creating(stage)
+        }
     #endif
 
     // MARK: Bundled versions
@@ -165,15 +165,15 @@ final class CreateServerModel {
     nonisolated static func loadBundledVersions(bundle: Bundle = .main) -> [String] {
         struct File: Decodable { let versions: [String] }
         guard let url = bundle.url(forResource: "minecraft-versions", withExtension: "json"),
-              let data = try? Data(contentsOf: url),
-              let file = try? JSONDecoder().decode(File.self, from: data)
+            let data = try? Data(contentsOf: url),
+            let file = try? JSONDecoder().decode(File.self, from: data)
         else { return [defaultVersion] }
         return file.versions
     }
 }
 
-private extension String {
-    var nilIfBlank: String? {
+extension String {
+    fileprivate var nilIfBlank: String? {
         let trimmed = trimmingCharacters(in: .whitespaces)
         return trimmed.isEmpty ? nil : trimmed
     }

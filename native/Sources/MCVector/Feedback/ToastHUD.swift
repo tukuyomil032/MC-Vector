@@ -18,7 +18,8 @@ struct ToastHUD: View {
                         Motion.isReduced
                             ? .opacity
                             : .asymmetric(
-                                insertion: .move(edge: .top).combined(with: .opacity).combined(with: .scale(scale: 0.92, anchor: .top)),
+                                insertion: .move(edge: .top).combined(with: .opacity).combined(
+                                    with: .scale(scale: 0.92, anchor: .top)),
                                 removal: .move(edge: .top).combined(with: .opacity)
                             )
                     )

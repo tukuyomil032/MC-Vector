@@ -136,7 +136,7 @@ struct MetricChart: View {
                 .contentShape(Rectangle())
                 .onContinuousHover { phase in
                     switch phase {
-                    case let .active(location):
+                    case .active(let location):
                         hoveredX = proxy.value(atX: location.x, as: Double.self)
                     case .ended:
                         hoveredX = nil

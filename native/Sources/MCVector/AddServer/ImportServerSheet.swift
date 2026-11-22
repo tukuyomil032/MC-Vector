@@ -17,7 +17,7 @@ struct ImportServerSheet: View {
 
     var body: some View {
         Group {
-            if case let .creating(stage) = model.phase {
+            if case .creating(let stage) = model.phase {
                 CreationProgressView(
                     title: L10n.t("importServer.title"),
                     downloadingLabel: L10n.t("native.import.copying"),
@@ -104,7 +104,9 @@ private struct ImportServerForm: View {
                             .foregroundStyle(model.analysis == nil ? .secondary : .primary)
                             .lineLimit(1)
                             .truncationMode(.middle)
-                        Button(L10n.t(model.analysis == nil ? "importServer.selectButton" : "native.import.chooseAnother")) {
+                        Button(
+                            L10n.t(model.analysis == nil ? "importServer.selectButton" : "native.import.chooseAnother")
+                        ) {
                             pickFolder()
                         }
                         .disabled(model.phase == .analyzing)
