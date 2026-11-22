@@ -8,7 +8,6 @@ struct RootView: View {
     @Environment(AppState.self) private var app
     @Environment(FeedbackCenter.self) private var feedback
     @Environment(ServerRuntime.self) private var runtime
-    @Environment(\.openSettings) private var openSettings
     @Environment(\.openWindow) private var openWindow
     @FocusState private var isSearchFieldFocused: Bool
     /// Starts with the sidebar shown; the system sidebar button toggles it.
@@ -28,9 +27,9 @@ struct RootView: View {
         .searchable(text: $app.searchText, placement: .toolbar, prompt: Text(L10n.t("commandPalette.placeholder")))
         .searchFocused($isSearchFieldFocused)
         .searchSuggestions { SearchSuggestions() }
-        // The Server Settings window takes the request itself once it is open.
-        .onChange(of: app.serverSettingsRequest) { _, request in
-            if request != nil { openWindow(id: ServerSettingsWindow.windowID) }
+        // The Settings window takes the request itself once it is open.
+        .onChange(of: app.settingsRequest) { _, request in
+            if request != nil { openWindow(id: SettingsWindow.windowID) }
         }
         .onChange(of: app.isSearchFocused) { _, focus in
             if focus {
@@ -86,7 +85,7 @@ struct RootView: View {
             #if DEBUG
                 if let id = CaptureState.requestedID {
                     await CaptureState.apply(
-                        id, app: app, feedback: feedback, runtime: runtime, openSettings: openSettings
+                        id, app: app, feedback: feedback, runtime: runtime
                     )
                 }
             #endif

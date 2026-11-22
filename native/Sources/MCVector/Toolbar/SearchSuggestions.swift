@@ -7,7 +7,6 @@ import SwiftUI
 /// palette offers: jump to a view, switch the server.
 struct SearchSuggestions: View {
     @Environment(AppState.self) private var app
-    @Environment(\.openSettings) private var openSettings
 
     var body: some View {
         let query = app.searchText.trimmingCharacters(in: .whitespaces).lowercased()
@@ -32,7 +31,7 @@ struct SearchSuggestions: View {
                 if showSettings {
                     Button {
                         app.searchText = ""
-                        openSettings()
+                        app.openSettings()
                     } label: {
                         Label(L10n.t("nav.settings"), systemImage: "gearshape")
                     }

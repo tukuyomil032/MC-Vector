@@ -63,18 +63,6 @@ final class PropertiesModel {
         layout.categories.filter { !visibleKeys(of: $0).isEmpty }
     }
 
-    /// Keys whose name, label or description contain `query`, per category.
-    func matches(_ query: String) -> [(category: PropertiesLayout.Category, keys: [PropertiesLayout.Key])] {
-        let needle = query.trimmingCharacters(in: .whitespaces).lowercased()
-        return visibleCategories.compactMap { category in
-            let keys = visibleKeys(of: category).filter { key in
-                [key.key, key.label.en, key.label.ja, docs[key.key]?.doc.text(language: L10n.language)]
-                    .contains { $0?.lowercased().contains(needle) == true }
-            }
-            return keys.isEmpty ? nil : (category, keys)
-        }
-    }
-
     var changedKeys: [String] {
         values.keys.filter { values[$0] != baseline[$0] }.sorted()
     }

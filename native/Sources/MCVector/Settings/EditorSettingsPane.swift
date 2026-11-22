@@ -11,38 +11,40 @@ struct EditorSettingsPane: View {
         Form {
             Section {
                 ThemeGrid(selection: $settings.themeID)
+                    .id(L10n.t("native.settings.editor.theme"))
             } header: {
                 Text(L10n.t("native.settings.editor.theme"))
-            } footer: {
-                Text(L10n.t("native.settings.editor.themeFooter"))
+                    .infoHint(L10n.help("native.settings.editor.theme") ?? "")
             }
 
             Section(L10n.t("native.settings.editor.text")) {
-                LabeledContent(L10n.t("native.settings.editor.fontSize")) {
+                SettingsRow(key: "native.settings.editor.fontSize") {
                     HStack(spacing: 10) {
                         Slider(value: $settings.fontSize, in: EditorSettings.fontSizes, step: 1)
-                            .frame(maxWidth: 220)
+                            .frame(width: 180)
                         Text("\(Int(settings.fontSize)) pt")
                             .monospacedDigit()
-                            .contentTransition(.numericText())
+                            .contentTransition(.numericText(value: settings.fontSize))
                             .animation(Motion.snappy, value: settings.fontSize)
                             .frame(width: 48, alignment: .trailing)
                     }
                 }
-                Toggle(L10n.t("native.settings.editor.wrapLines"), isOn: $settings.wrapLines)
-                Toggle(L10n.t("native.settings.editor.showInvisibles"), isOn: $settings.showInvisibles)
+                toggleRow("native.settings.editor.wrapLines", $settings.wrapLines)
+                toggleRow("native.settings.editor.showInvisibles", $settings.showInvisibles)
             }
 
-            Section {
-                Toggle(L10n.t("native.settings.editor.suggestWhileTyping"), isOn: $settings.suggestWhileTyping)
-                Toggle(L10n.t("native.settings.editor.inlineSuggestions"), isOn: $settings.inlineSuggestions)
-            } header: {
-                Text(L10n.t("native.settings.editor.suggestions"))
-            } footer: {
-                Text(L10n.t("native.settings.editor.suggestionsFooter"))
+            Section(L10n.t("native.settings.editor.suggestions")) {
+                toggleRow("native.settings.editor.suggestWhileTyping", $settings.suggestWhileTyping)
+                toggleRow("native.settings.editor.inlineSuggestions", $settings.inlineSuggestions)
             }
         }
         .formStyle(.grouped)
+    }
+
+    private func toggleRow(_ key: String, _ isOn: Binding<Bool>) -> some View {
+        SettingsRow(key: key) {
+            Toggle(L10n.t(key), isOn: isOn).toggleStyle(.switch).labelsHidden()
+        }
     }
 }
 

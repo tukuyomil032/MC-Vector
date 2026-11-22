@@ -4,12 +4,13 @@ import AppKit
 import MCVectorCore
 import SwiftUI
 
-/// The Server Settings window (UI-014): General Settings and server.properties
-/// for one server, laid out like Snapzy's and Droppy's settings. The sidebar
-/// has search, the server menu, the two section tiles and the section's
-/// categories; the right side is a grouped form with Save at the bottom.
-struct ServerSettingsWindow: View {
-    static let windowID = "server-settings"
+/// The Settings window (UI-014): the app's settings, and a server's General
+/// Settings and server.properties, laid out like Snapzy's settings. The
+/// sidebar has search, the server card, the three section tiles and the
+/// section's pages; the right side is a grouped form, with Save at the bottom
+/// on the server pages.
+struct SettingsWindow: View {
+    static let windowID = "settings"
 
     @Environment(AppState.self) private var app
     @Environment(ServerRuntime.self) private var runtime
@@ -17,11 +18,14 @@ struct ServerSettingsWindow: View {
     @State private var feedback = FeedbackCenter()
 
     @State private var serverID: String?
-    @State private var page: ServerSettingsPage? = .overview(.general)
+    @State private var page: SettingsPage = Self.initialPage
     @State private var history = PageHistory()
-    @State private var search = ""
+    @State private var query = ""
     @State private var properties: PropertiesModel?
     @State private var general: GeneralSettingsModel?
+    /// A row the search asked to show; the detail scrolls to it.
+    @State private var reveal: Reveal?
+    @State private var highlight: String?
     /// A server switch or window close waiting for Save / Discard / Cancel.
     @State private var pendingLeave: PendingLeave?
     @State private var window: NSWindow?
@@ -39,7 +43,18 @@ struct ServerSettingsWindow: View {
         case close
     }
 
-    private var section: ServerSettingsSection { page?.section ?? .general }
+    struct Reveal: Equatable {
+        let id = UUID()
+        let title: String
+    }
+
+    private static var initialPage: SettingsPage {
+        #if DEBUG
+            if let page = CaptureState.requestedSettingsPage { return page }
+        #endif
+        return .app(.general)
+    }
+
     private var server: ServerProfile? { app.servers.first { $0.id == serverID } }
     private var isDirty: Bool { properties?.isDirty == true || general?.isDirty == true }
     private var isSaving: Bool { properties?.isSaving == true || general?.isSaving == true }
@@ -47,16 +62,22 @@ struct ServerSettingsWindow: View {
 
     var body: some View {
         NavigationSplitView {
-            sidebar
-                .searchable(text: $search, placement: .sidebar, prompt: Text(L10n.t("native.serverSettings.search")))
-                .navigationSplitViewColumnWidth(min: 250, ideal: 270, max: 320)
-                .toolbar(removing: .sidebarToggle)
+            SettingsSidebar(
+                page: $page, query: $query, servers: app.servers, serverID: serverID,
+                status: { runtime.status(of: $0) }, properties: properties,
+                selectServer: requestServer, reveal: open
+            )
+            // The split view restores a too narrow sidebar without the frame.
+            .frame(width: 268)
+            .navigationSplitViewColumnWidth(min: 268, ideal: 268, max: 268)
+            .toolbar(removing: .sidebarToggle)
         } detail: {
             detail
-                .navigationTitle(title)
+                .navigationTitle(page.title)
+                .navigationSplitViewColumnWidth(min: 480, ideal: 620)
                 .toolbar { navigationArrows }
         }
-        .frame(minWidth: 760, minHeight: 520)
+        .frame(minWidth: 780, minHeight: 560)
         .overlay(alignment: .top) { ToastHUD(feedback: feedback) }
         .feedbackHost(feedback)
         .environment(feedback)
@@ -72,11 +93,14 @@ struct ServerSettingsWindow: View {
                 }
             }
         )
-        .onAppear { take(app.serverSettingsRequest) }
-        .onChange(of: app.serverSettingsRequest) { _, request in take(request) }
+        .onAppear {
+            history.visit(page)
+            take(app.settingsRequest)
+        }
+        .onChange(of: app.settingsRequest) { _, request in take(request) }
         .onChange(of: isDirty) { _, dirty in closeState.isDirty = dirty }
-        .onChange(of: page) { _, newPage in if let newPage { history.visit(newPage) } }
-        .task(id: serverID) { await loadProperties() }
+        .onChange(of: page) { _, newPage in history.visit(newPage) }
+        .task(id: serverID) { await loadModels() }
         .alert(
             L10n.t("files.confirm.discardChangesTitle"),
             isPresented: Binding(get: { pendingLeave != nil }, set: { if !$0 { pendingLeave = nil } }),
@@ -94,137 +118,55 @@ struct ServerSettingsWindow: View {
         }
     }
 
-    // MARK: Sidebar
-
-    private var sidebar: some View {
-        List(selection: $page) {
-            Section {
-                serverMenu
-                    .selectionDisabled()
-                HStack(spacing: 8) {
-                    ForEach(ServerSettingsSection.allCases, id: \.self) { tile in
-                        SettingsBigTile(
-                            title: L10n.t(tile.tileTitleKey), symbol: tile.symbol, isSelected: section == tile
-                        ) {
-                            withAnimation(Motion.standard) { page = .overview(tile) }
-                        }
-                    }
-                }
-                .selectionDisabled()
-                .listRowInsets(EdgeInsets(top: 6, leading: 8, bottom: 10, trailing: 8))
-            }
-            Section {
-                ForEach(categories, id: \.id) { category in
-                    Label {
-                        Text(category.title)
-                    } icon: {
-                        SettingsIconTile(symbol: category.symbol, color: category.tint)
-                    }
-                    .tag(ServerSettingsPage.category(section, category.id))
-                }
-            }
-            .id(section)
-            .transition(.motionFade)
-        }
-        .listStyle(.sidebar)
-        // The split view restores a too narrow sidebar otherwise.
-        .frame(minWidth: 250, idealWidth: 270)
-        .animation(Motion.standard, value: section)
-    }
-
-    private var serverMenu: some View {
-        Menu {
-            ForEach(app.servers, id: \.id) { candidate in
-                Button {
-                    requestServer(candidate.id)
-                } label: {
-                    if candidate.id == serverID {
-                        Label(candidate.name, systemImage: "checkmark")
-                    } else {
-                        Text(candidate.name)
-                    }
-                }
-            }
-        } label: {
-            HStack(spacing: 10) {
-                SettingsIconTile(symbol: "server.rack", color: .green, size: 34)
-                VStack(alignment: .leading, spacing: 1) {
-                    Text(server?.name ?? L10n.t("native.serverSettings.noServer"))
-                        .font(.headline)
-                        .lineLimit(1)
-                    Text(server.map { "\($0.software) \($0.version)" } ?? "")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                }
-                Spacer(minLength: 4)
-                Image(systemName: "chevron.up.chevron.down")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.secondary)
-            }
-            .contentShape(Rectangle())
-        }
-        .menuStyle(.button)
-        .buttonStyle(.plain)
-        .menuIndicator(.hidden)
-        .padding(.vertical, 4)
-    }
-
-    private struct SidebarCategory: Identifiable {
-        let id: String
-        let title: String
-        let symbol: String
-        let tint: Color
-    }
-
-    private var categories: [SidebarCategory] {
-        switch section {
-        case .properties:
-            (properties?.visibleCategories ?? PropertiesLayout.bundled.categories).map {
-                SidebarCategory(id: $0.id, title: $0.title.current, symbol: $0.symbol, tint: $0.tint)
-            }
-        case .general:
-            GeneralSettingsCategory.allCases.map {
-                SidebarCategory(id: $0.rawValue, title: L10n.t($0.titleKey), symbol: $0.symbol, tint: $0.tint)
-            }
-        }
-    }
-
     // MARK: Detail
 
-    private var title: String {
-        if case .category(_, let id) = page, let category = categories.first(where: { $0.id == id }) {
-            return category.title
+    private var detail: some View {
+        ScrollViewReader { proxy in
+            pageView
+                .id(page)
+                .transition(.opacity)
+                .animation(Motion.standard, value: page)
+                .environment(\.settingsHighlight, highlight)
+                .safeAreaInset(edge: .bottom) { if page.needsServer { saveBar } }
+                .task(id: reveal) {
+                    guard let reveal else { return }
+                    // Let the page lay out before scrolling into it.
+                    try? await Task.sleep(for: .milliseconds(180))
+                    withAnimation(Motion.standard) { proxy.scrollTo(reveal.title, anchor: .center) }
+                    highlight = reveal.title
+                    try? await Task.sleep(for: .seconds(1.6))
+                    if highlight == reveal.title { highlight = nil }
+                }
         }
-        return L10n.t(section.titleKey)
     }
 
     @ViewBuilder
-    private var detail: some View {
-        Group {
+    private var pageView: some View {
+        switch page {
+        case .app(let pane):
+            switch pane {
+            case .general: AppGeneralPane()
+            case .java: JavaPane()
+            case .editor: EditorSettingsPane()
+            case .about: AboutPane()
+            }
+        case .server(let serverPage):
             if server == nil {
-                ContentUnavailableView(L10n.t("native.serverSettings.noServer"), systemImage: "server.rack")
-            } else {
-                switch section {
-                case .properties:
-                    if let properties {
-                        PropertiesPage(page: page ?? .overview(.properties), search: search, model: properties) {
-                            page = $0
-                        }
-                    }
-                case .general:
-                    if let general {
-                        GeneralSettingsPage(page: page ?? .overview(.general), search: search, model: general) {
-                            page = $0
-                        }
-                    }
-                }
+                noServer
+            } else if let general {
+                GeneralSettingsPage(page: serverPage, model: general)
+            }
+        case .properties(let group):
+            if server == nil {
+                noServer
+            } else if let properties {
+                PropertiesPage(group: group, model: properties, serverName: server?.name ?? "")
             }
         }
-        .id(page)
-        .transition(.motionFade)
-        .animation(Motion.standard, value: page)
-        .safeAreaInset(edge: .bottom) { saveBar }
+    }
+
+    private var noServer: some View {
+        ContentUnavailableView(L10n.t("native.serverSettings.noServer"), systemImage: "server.rack")
     }
 
     @ViewBuilder
@@ -278,28 +220,37 @@ struct ServerSettingsWindow: View {
                 Label(L10n.t("native.serverSettings.back"), systemImage: "chevron.left")
             }
             .disabled(!history.canGoBack)
+            .keyboardShortcut("[", modifiers: .command)
             Button {
                 if let next = history.forward() { page = next }
             } label: {
                 Label(L10n.t("native.serverSettings.forward"), systemImage: "chevron.right")
             }
             .disabled(!history.canGoForward)
+            .keyboardShortcut("]", modifiers: .command)
         }
     }
 
     // MARK: Actions
 
-    private func take(_ request: ServerSettingsRequest?) {
+    private func take(_ request: SettingsRequest?) {
         guard let request else { return }
-        app.serverSettingsRequest = nil
+        app.settingsRequest = nil
         let target = request.serverID ?? app.selectedServerID ?? app.servers.first?.id
         if serverID == nil {
             serverID = target
-        } else if let target, target != serverID {
+        } else if let target, target != serverID, request.page.needsServer {
             requestServer(target)
         }
-        page = request.page ?? .overview(request.section)
+        page = request.page
+        if let title = request.reveal { reveal = Reveal(title: title) }
         window?.makeKeyAndOrderFront(nil)
+    }
+
+    private func open(_ entry: SettingsSearchEntry) {
+        page = entry.page
+        // A page result opens the page; a row result also scrolls to the row.
+        reveal = entry.section == nil ? nil : Reveal(title: entry.title)
     }
 
     private func requestServer(_ id: String) {
@@ -321,7 +272,7 @@ struct ServerSettingsWindow: View {
         }
     }
 
-    private func loadProperties() async {
+    private func loadModels() async {
         guard let serverID, let server else {
             properties = nil
             general = nil
@@ -339,7 +290,7 @@ struct ServerSettingsWindow: View {
         #if DEBUG
             if let script = Self.captureScript {
                 Self.captureScript = nil
-                if let query = script.search { search = query }
+                if let search = script.search { query = search }
                 for (key, value) in script.values { model.values[key] = value }
                 if let key = script.reveal { model.captureRevealKey = key }
             }

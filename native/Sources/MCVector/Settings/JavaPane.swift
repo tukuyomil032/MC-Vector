@@ -124,6 +124,8 @@ struct JavaPane: View {
                 }
             } header: {
                 Text(L10n.t("javaManager.availableVersions"))
+                    .infoHint(L10n.help("javaManager.availableVersions") ?? "")
+                    .id(L10n.t("javaManager.availableVersions"))
             } footer: {
                 if model.offline {
                     Label(L10n.t("native.java.offline"), systemImage: "wifi.slash")
@@ -138,13 +140,14 @@ struct JavaPane: View {
                     runtimeRow(runtime)
                 }
             } header: {
-                Text(L10n.t("javaManager.installedRuntimes"))
-            } footer: {
                 HStack {
-                    Text(L10n.t("javaManager.manualSelect.description"))
+                    Text(L10n.t("javaManager.installedRuntimes"))
+                        .infoHint(L10n.help("javaManager.installedRuntimes") ?? "")
+                        .id(L10n.t("javaManager.installedRuntimes"))
                     Spacer()
                     Button(L10n.t("javaManager.manualSelect.button"), action: chooseExisting)
                         .disabled(model.isBusy)
+                        .help(L10n.t("javaManager.manualSelect.description"))
                 }
             }
         }

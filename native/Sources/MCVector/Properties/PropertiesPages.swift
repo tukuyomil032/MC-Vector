@@ -3,13 +3,12 @@
 import MCVectorEditorKit
 import SwiftUI
 
-/// The Properties half of the Server Settings window: the overview with links
-/// to each category, one category, or search results across categories.
+/// A page of the Properties tile: its server.properties keys in small titled sections.
 struct PropertiesPage: View {
-    let page: ServerSettingsPage
-    let search: String
+    let group: PropertiesGroup
     let model: PropertiesModel
-    let open: (ServerSettingsPage) -> Void
+    /// The server's name, for the server list preview.
+    let serverName: String
 
     var body: some View {
         switch model.load {
@@ -25,53 +24,10 @@ struct PropertiesPage: View {
                 Button(L10n.t("properties.retry")) { Task { await model.reloadAgain() } }
             }
         case .loaded:
-            if !search.isEmpty {
-                results
-            } else if case .category(_, let id) = page, let category = model.category(id) {
-                Form {
-                    Section {
-                        PropertyRows(keys: model.visibleKeys(of: category), model: model)
-                    }
-                }
-                .formStyle(.grouped)
-            } else {
-                overview
-            }
-        }
-    }
-
-    private var overview: some View {
-        Form {
-            Section {
-                SettingsHero(
-                    symbol: ServerSettingsSection.properties.symbol, color: ServerSettingsSection.properties.color,
-                    title: L10n.t("nav.properties"), subtitle: L10n.t("native.serverSettings.propertiesSubtitle"))
-            }
-            .listRowBackground(Color.clear)
-            Section {
-                ForEach(model.visibleCategories) { category in
-                    SettingsLinkRow(
-                        title: category.title.current,
-                        subtitle: model.visibleKeys(of: category).prefix(3).map(\.label.current)
-                            .joined(separator: "、"),
-                        symbol: category.symbol, color: category.tint
-                    ) { open(.category(.properties, category.id)) }
-                }
-            }
-        }
-        .formStyle(.grouped)
-    }
-
-    @ViewBuilder
-    private var results: some View {
-        let matches = model.matches(search)
-        if matches.isEmpty {
-            ContentUnavailableView.search(text: search)
-        } else {
             Form {
-                ForEach(matches, id: \.category.id) { match in
-                    Section(match.category.title.current) {
-                        PropertyRows(keys: match.keys, model: model)
+                ForEach(model.sections(of: group), id: \.id) { section in
+                    Section(section.title) {
+                        PropertyRows(keys: section.keys, model: model)
                     }
                 }
             }
@@ -104,7 +60,9 @@ private struct PropertyRow: View {
     }
 
     var body: some View {
-        SettingsRow(title: key.label.current, doc: model.docs[key.key], note: model.rangeNote(for: key)) {
+        SettingsRow(
+            title: key.label.current, doc: model.docs[key.key], note: model.rangeNote(for: key)
+        ) {
             control
         }
         #if DEBUG

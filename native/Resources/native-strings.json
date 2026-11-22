@@ -733,10 +733,6 @@
     "en": "General Settings are being moved here.",
     "ja": "全般設定は、ここに移している途中です。"
   },
-  "native.serverSettings.generalSubtitle": {
-    "en": "Name, software, Java and memory, automatic restarts and backups, and notifications for this server.",
-    "ja": "このサーバーの名前、ソフトウェア、Java とメモリ、自動再起動と自動バックアップ、通知を設定します。"
-  },
   "native.serverSettings.jvmCustom": {
     "en": "Custom",
     "ja": "カスタム"
@@ -749,10 +745,6 @@
     "en": "The settings could not be read",
     "ja": "設定を読み込めませんでした"
   },
-  "native.serverSettings.menu": {
-    "en": "Server Settings…",
-    "ja": "サーバー設定…"
-  },
   "native.serverSettings.noServer": {
     "en": "No server selected",
     "ja": "サーバーが選ばれていません"
@@ -760,18 +752,6 @@
   "native.serverSettings.open": {
     "en": "Open the selected server's settings (⌘;)",
     "ja": "選んでいるサーバーの設定を開きます（⌘;）"
-  },
-  "native.serverSettings.propertiesSubtitle": {
-    "en": "The values in server.properties. Saved changes apply the next time the server starts.",
-    "ja": "server.properties の値を設定します。保存した変更は、次にサーバーを起動したときに反映されます。"
-  },
-  "native.serverSettings.restartFooter": {
-    "en": "Java, memory and port take effect the next time the server starts.",
-    "ja": "Java、メモリ、ポートは、次にサーバーを起動したときに反映されます。"
-  },
-  "native.serverSettings.retainFooter": {
-    "en": "0 keeps every backup.",
-    "ja": "0 にすると、すべてのバックアップを残します。"
   },
   "native.serverSettings.saveFailed": {
     "en": "The settings could not be saved",
@@ -785,21 +765,9 @@
     "en": "Settings saved. Restart the server to apply them.",
     "ja": "設定を保存しました。反映するにはサーバーを再起動してください。"
   },
-  "native.serverSettings.search": {
-    "en": "Search Settings",
-    "ja": "設定を検索"
-  },
   "native.serverSettings.showInFinder": {
     "en": "Show in Finder",
     "ja": "Finder で表示"
-  },
-  "native.serverSettings.tile.general": {
-    "en": "General",
-    "ja": "全般"
-  },
-  "native.serverSettings.title": {
-    "en": "Server Settings",
-    "ja": "サーバー設定"
   },
   "native.settings.about": {
     "en": "About",
@@ -820,14 +788,6 @@
   "native.settings.backupsLayout.table": {
     "en": "Table",
     "ja": "表"
-  },
-  "native.settings.backupsLayoutFooter": {
-    "en": "Cards show tags and notes in each row. The table sorts by column.",
-    "ja": "カードは、各行にタグとメモを出します。表は、列ごとに並べ替えられます。"
-  },
-  "native.settings.display": {
-    "en": "Display",
-    "ja": "表示"
   },
   "native.settings.editor": {
     "en": "Editor",
@@ -857,10 +817,6 @@
     "en": "Suggestions",
     "ja": "入力候補"
   },
-  "native.settings.editor.suggestionsFooter": {
-    "en": "Press ⌃Space to show suggestions at any time. Config files that the server software creates are completed from their documented settings.",
-    "ja": "⌃Space で、いつでも候補を表示できます。サーバーソフトが作る設定ファイルでは、公式の設定項目から候補を出します。"
-  },
   "native.settings.editor.text": {
     "en": "Text",
     "ja": "テキスト"
@@ -868,10 +824,6 @@
   "native.settings.editor.theme": {
     "en": "Theme",
     "ja": "テーマ"
-  },
-  "native.settings.editor.themeFooter": {
-    "en": "Themes marked Automatic follow the system's Light and Dark appearance.",
-    "ja": "「自動」の付いたテーマは、システムのライトとダークに合わせて切り替わります。"
   },
   "native.settings.editor.wrapLines": {
     "en": "Wrap long lines",
@@ -1001,10 +953,6 @@
     "en": "Page numbers",
     "ja": "ページ番号"
   },
-  "native.settings.pluginsPagingFooter": {
-    "en": "How the plugin browser shows more results than fit on one page.",
-    "ja": "1ページに入りきらない検索結果の見せ方です。"
-  },
   "native.settings.reportIssue": {
     "en": "Report an Issue",
     "ja": "問題を報告"
@@ -1044,5 +992,353 @@
   "startup.failed": {
     "en": "MC-Vector could not start",
     "ja": "MC-Vector を起動できませんでした"
+  },
+  "native.serverSettings.manageJavaShort": {
+    "en": "Manage…",
+    "ja": "管理…"
+  },
+  "native.settings.serverSection.name": {
+    "en": "Name",
+    "ja": "名前"
+  },
+  "native.settings.serverSection.version": {
+    "en": "Software and Version",
+    "ja": "ソフトウェアとバージョン"
+  },
+  "native.settings.serverSection.location": {
+    "en": "Location",
+    "ja": "保存先"
+  },
+  "native.settings.serverSection.java": {
+    "en": "Java",
+    "ja": "Java"
+  },
+  "native.settings.serverSection.memoryPort": {
+    "en": "Memory and Port",
+    "ja": "メモリとポート"
+  },
+  "native.settings.serverSection.jvm": {
+    "en": "JVM Arguments",
+    "ja": "JVM 引数"
+  },
+  "native.settings.serverSection.autoRestart": {
+    "en": "Restart After a Crash",
+    "ja": "クラッシュ後の再起動"
+  },
+  "native.settings.serverSection.autoBackup": {
+    "en": "Automatic Backups",
+    "ja": "自動バックアップ"
+  },
+  "native.settings.serverSection.retention": {
+    "en": "Keeping Backups",
+    "ja": "バックアップの保持"
+  },
+  "native.settings.serverSection.notifyEvents": {
+    "en": "Notifications",
+    "ja": "通知"
+  },
+  "native.settings.serverSection.notifyCpu": {
+    "en": "CPU Usage",
+    "ja": "CPU 使用率"
+  },
+  "native.settings.propSection.rules": {
+    "en": "Game Rules",
+    "ja": "ゲームの基本"
+  },
+  "native.settings.propSection.play": {
+    "en": "Play",
+    "ja": "プレイ"
+  },
+  "native.settings.propSection.spawnIdle": {
+    "en": "Spawn and Idle Players",
+    "ja": "スポーンと放置"
+  },
+  "native.settings.propSection.permissions": {
+    "en": "Permissions",
+    "ja": "権限"
+  },
+  "native.settings.propSection.other": {
+    "en": "Other",
+    "ja": "その他"
+  },
+  "native.settings.propSection.world": {
+    "en": "World",
+    "ja": "ワールド"
+  },
+  "native.settings.propSection.distance": {
+    "en": "Distance",
+    "ja": "距離"
+  },
+  "native.settings.propSection.generation": {
+    "en": "Generation and Saving",
+    "ja": "生成と保存"
+  },
+  "native.settings.propSection.datapacks": {
+    "en": "Data Packs",
+    "ja": "データパック"
+  },
+  "native.settings.propSection.textFilter": {
+    "en": "Text Filtering",
+    "ja": "テキストフィルタ"
+  },
+  "native.settings.propSection.connection": {
+    "en": "Connection",
+    "ja": "接続"
+  },
+  "native.settings.propSection.joining": {
+    "en": "Who Can Join",
+    "ja": "参加の制限"
+  },
+  "native.settings.propSection.traffic": {
+    "en": "Traffic",
+    "ja": "通信"
+  },
+  "native.settings.propSection.status": {
+    "en": "Server List Status",
+    "ja": "サーバーリストの表示"
+  },
+  "native.settings.propSection.rcon": {
+    "en": "RCON",
+    "ja": "RCON"
+  },
+  "native.settings.propSection.query": {
+    "en": "Query",
+    "ja": "Query"
+  },
+  "native.settings.propSection.managementServer": {
+    "en": "Management Server",
+    "ja": "管理サーバー"
+  },
+  "native.settings.propSection.tls": {
+    "en": "TLS",
+    "ja": "TLS"
+  },
+  "native.settings.propSection.resourcePack": {
+    "en": "Resource Pack",
+    "ja": "リソースパック"
+  },
+  "native.settings.propSection.resourcePackPrompt": {
+    "en": "Asking Players",
+    "ja": "プレイヤーへの確認"
+  },
+  "native.settings.tile.app": {
+    "en": "App",
+    "ja": "アプリ"
+  },
+  "native.settings.tile.server": {
+    "en": "Server",
+    "ja": "サーバー"
+  },
+  "native.settings.page.server": {
+    "en": "Server",
+    "ja": "サーバー"
+  },
+  "native.settings.page.automation": {
+    "en": "Automation",
+    "ja": "自動化"
+  },
+  "native.settings.page.game": {
+    "en": "Game",
+    "ja": "ゲーム"
+  },
+  "native.settings.page.world": {
+    "en": "World",
+    "ja": "ワールド"
+  },
+  "native.settings.page.network": {
+    "en": "Network",
+    "ja": "ネットワーク"
+  },
+  "native.settings.page.management": {
+    "en": "Management",
+    "ja": "管理"
+  },
+  "native.settings.section.appearance": {
+    "en": "Appearance",
+    "ja": "外観"
+  },
+  "native.settings.updateCheck": {
+    "en": "Software Update",
+    "ja": "ソフトウェア・アップデート"
+  },
+  "native.settings.betaWarning": {
+    "en": "Beta builds can have bugs and unfinished features.",
+    "ja": "ベータ版には、バグや作りかけの機能が含まれることがあります。"
+  },
+  "native.settings.support": {
+    "en": "Support",
+    "ja": "サポート"
+  },
+  "native.settings.moreInfo": {
+    "en": "More Info",
+    "ja": "詳しい説明"
+  },
+  "native.settings.clearSearch": {
+    "en": "Clear Search",
+    "ja": "検索を消去"
+  },
+  "native.settings.noResults": {
+    "en": "No Results",
+    "ja": "見つかりません"
+  },
+  "native.settings.serverCard": {
+    "en": "Server",
+    "ja": "サーバー"
+  },
+  "native.menu.settings": {
+    "en": "Settings…",
+    "ja": "設定…"
+  },
+  "native.help.settings.language.label": {
+    "en": "The language of every window. Numbers and dates follow it too.",
+    "ja": "すべての窓の言語です。数字と日付の書き方も、この言語に合わせます。"
+  },
+  "native.help.native.settings.backupsLayout": {
+    "en": "Cards show tags and notes in each row. The table sorts by column.",
+    "ja": "カードは、各行にタグとメモを出します。表は、列ごとに並べ替えられます。"
+  },
+  "native.help.native.settings.pluginsPaging": {
+    "en": "How the plugin browser shows more results than fit on one page: load more while scrolling, or turn pages.",
+    "ja": "1ページに入りきらないプラグインの検索結果を、スクロールで続けて読み込むか、ページを切り替えて見るかを選びます。"
+  },
+  "native.help.native.settings.updateCheck": {
+    "en": "Looks for a newer version of MC-Vector.",
+    "ja": "MC-Vector の新しい版があるかを確かめます。"
+  },
+  "native.help.settings.update.channelLabel": {
+    "en": "Stable gets tested releases. Beta gets upcoming changes earlier, before they are released.",
+    "ja": "安定版は、確かめ終えたリリースを受け取ります。ベータ版は、公開前の変更を先に受け取ります。"
+  },
+  "native.help.settings.security.label": {
+    "en": "Allows plugin downloads whose files cannot be checked against the source's hash. Turn it on only if you trust the source.",
+    "ja": "配布元のハッシュと照らし合わせられないプラグインも、ダウンロードできるようにします。配布元を信頼できるときだけ、オンにしてください。"
+  },
+  "native.help.javaManager.availableVersions": {
+    "en": "Long-term support releases from Adoptium. MC-Vector downloads them into its own folder; the system Java is left alone.",
+    "ja": "Adoptium の長期サポート版です。MC-Vector は自分のフォルダに入れるので、システムの Java には触りません。"
+  },
+  "native.help.javaManager.installedRuntimes": {
+    "en": "Java runtimes the servers can use. Automatic servers pick the one their Minecraft version needs.",
+    "ja": "サーバーが使える Java です。自動のサーバーは、Minecraft のバージョンに合うものを選びます。"
+  },
+  "native.help.native.settings.editor.theme": {
+    "en": "The colors of the file editor. Themes marked Automatic follow the system's Light and Dark appearance.",
+    "ja": "ファイルのエディタの色です。「自動」の付いたテーマは、システムのライトとダークに合わせて切り替わります。"
+  },
+  "native.help.native.settings.editor.fontSize": {
+    "en": "The text size in the file editor.",
+    "ja": "ファイルのエディタの文字の大きさです。"
+  },
+  "native.help.native.settings.editor.wrapLines": {
+    "en": "Long lines continue on the next line instead of scrolling sideways.",
+    "ja": "長い行を、横にスクロールさせずに、次の行へ折り返します。"
+  },
+  "native.help.native.settings.editor.showInvisibles": {
+    "en": "Shows spaces, tabs and line ends as faint marks.",
+    "ja": "空白、タブ、行の終わりを、薄い記号で表示します。"
+  },
+  "native.help.native.settings.editor.suggestWhileTyping": {
+    "en": "Shows completions as you type. Press ⌃Space to show them at any time.",
+    "ja": "入力に合わせて候補を出します。⌃Space で、いつでも候補を表示できます。"
+  },
+  "native.help.native.settings.editor.inlineSuggestions": {
+    "en": "Shows the top suggestion as grey text after the cursor; press Tab to accept it. Config files that the server software creates are completed from their documented settings.",
+    "ja": "一番の候補を、カーソルの後ろに薄い文字で出します。Tab で確定します。サーバーソフトが作る設定ファイルでは、公式の設定項目から候補を出します。"
+  },
+  "native.help.serverSettings.profileName": {
+    "en": "A short label for this setup, such as Survival or Creative.",
+    "ja": "この構成を見分けるための短い名前です。たとえば「サバイバル」や「クリエイティブ」です。"
+  },
+  "native.help.serverSettings.groupName": {
+    "en": "Servers with the same group are listed together in the sidebar.",
+    "ja": "同じグループのサーバーは、サイドバーでまとめて表示します。"
+  },
+  "native.help.serverSettings.serverSoftware": {
+    "en": "The server software in the server JAR. Change it with Change Version.",
+    "ja": "サーバー JAR のソフトウェアです。「バージョンを変更」で変えられます。"
+  },
+  "native.help.serverSettings.version": {
+    "en": "The Minecraft version in the server JAR. Change Version replaces the JAR, so the version shown always matches what runs.",
+    "ja": "サーバー JAR の Minecraft のバージョンです。「バージョンを変更」は JAR を入れ替えるので、表示と実際に動く版がずれません。"
+  },
+  "native.help.serverSettings.savePath": {
+    "en": "The folder that holds this server's worlds, plugins and settings.",
+    "ja": "このサーバーのワールド、プラグイン、設定が入っているフォルダです。"
+  },
+  "native.help.serverSettings.javaRuntime": {
+    "en": "The Java that runs the server. Automatic picks one that suits the Minecraft version. Takes effect the next time the server starts.",
+    "ja": "サーバーを動かす Java です。「自動」は、Minecraft のバージョンに合う Java を選びます。次にサーバーを起動したときに反映されます。"
+  },
+  "native.help.serverSettings.memory": {
+    "en": "The most memory the server may use (-Xmx). Leave room for the system. Takes effect the next time the server starts.",
+    "ja": "サーバーが使えるメモリの上限（-Xmx）です。システムの分も残してください。次にサーバーを起動したときに反映されます。"
+  },
+  "native.help.serverSettings.port": {
+    "en": "The port players connect to. It is also written to server.properties. Takes effect the next time the server starts.",
+    "ja": "プレイヤーが接続するポートです。server.properties にも書き込みます。次にサーバーを起動したときに反映されます。"
+  },
+  "native.help.serverSettings.jvmArgs.presetsLabel": {
+    "en": "Tuned garbage collector flags. Aikar's flags suit most servers; ZGC suits large heaps on recent Java.",
+    "ja": "調整済みのガベージコレクタの設定です。Aikar's Flags はほとんどのサーバーに向いています。ZGC は、新しい Java でメモリを多く割り当てるときに向いています。"
+  },
+  "native.help.serverSettings.jvmArgs.customLabel": {
+    "en": "Extra JVM flags placed before -jar. Each flag starts with “-”.",
+    "ja": "-jar の前に入れる追加の JVM の設定です。どれも「-」で始めてください。"
+  },
+  "native.help.serverSettings.autoRestart.title": {
+    "en": "Starts the server again when it stops because of a crash. A stop you ask for is not restarted.",
+    "ja": "クラッシュで止まったサーバーを、もう一度起動します。自分で止めたときは起動しません。"
+  },
+  "native.help.serverSettings.autoRestart.maxRetries": {
+    "en": "How many times in a row to try before giving up.",
+    "ja": "続けて何回まで起動し直すかです。"
+  },
+  "native.help.serverSettings.autoRestart.delaySeconds": {
+    "en": "How long to wait after the crash before starting again.",
+    "ja": "クラッシュしてから、起動し直すまでの待ち時間です。"
+  },
+  "native.help.serverSettings.autoBackup.title": {
+    "en": "Backs the server up on a schedule while MC-Vector is open.",
+    "ja": "MC-Vector を開いている間、決まった時間にサーバーをバックアップします。"
+  },
+  "native.help.serverSettings.autoBackup.scheduleType": {
+    "en": "Every few minutes, once a day, or once a week.",
+    "ja": "数分ごと、毎日、毎週のどれかで取ります。"
+  },
+  "native.help.serverSettings.autoBackup.intervalMinutes": {
+    "en": "Minutes between two automatic backups.",
+    "ja": "自動バックアップの間隔です。"
+  },
+  "native.help.serverSettings.autoBackup.weekday": {
+    "en": "The day of the week to back up.",
+    "ja": "バックアップを取る曜日です。"
+  },
+  "native.help.serverSettings.autoBackup.executionTime": {
+    "en": "The time of day to back up.",
+    "ja": "バックアップを取る時刻です。"
+  },
+  "native.help.serverSettings.autoBackup.retainCount": {
+    "en": "Older automatic backups beyond this count are removed. 0 keeps every backup.",
+    "ja": "この数を超えた古い自動バックアップを消します。0 にすると、すべて残します。"
+  },
+  "native.help.serverSettings.autoBackup.retainDays": {
+    "en": "Automatic backups older than this are removed. 0 keeps every backup.",
+    "ja": "この日数より古い自動バックアップを消します。0 にすると、すべて残します。"
+  },
+  "native.help.serverSettings.notifications.onCrash": {
+    "en": "Sends a macOS notification when the server stops unexpectedly.",
+    "ja": "サーバーが思わぬ形で止まったときに、macOS の通知を出します。"
+  },
+  "native.help.serverSettings.notifications.onStart": {
+    "en": "Sends a macOS notification when the server has finished starting.",
+    "ja": "サーバーの起動が終わったときに、macOS の通知を出します。"
+  },
+  "native.help.serverSettings.notifications.onHighCpu": {
+    "en": "Sends a macOS notification when the server's CPU use stays above the threshold.",
+    "ja": "サーバーの CPU 使用率が、しきい値を超え続けたときに、macOS の通知を出します。"
+  },
+  "native.help.serverSettings.notifications.cpuThreshold": {
+    "en": "The CPU use that counts as high.",
+    "ja": "高いとみなす CPU 使用率です。"
   }
 }

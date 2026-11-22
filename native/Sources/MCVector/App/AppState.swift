@@ -34,8 +34,8 @@ final class AppState {
     func navigate(to newRoute: AppRoute) {
         // Properties and General Settings live in the Server Settings window.
         switch newRoute {
-        case .properties: return openServerSettings(section: .properties)
-        case .generalSettings: return openServerSettings(section: .general)
+        case .properties: return openSettings(.properties(.game))
+        case .generalSettings: return openServerSettings(section: .server)
         default: break
         }
         guard newRoute != route, !holdForUnsavedEditor(.route(newRoute)) else { return }
@@ -118,11 +118,17 @@ final class AppState {
         backupsRevision[serverID, default: 0] += 1
     }
 
-    /// Set to open (or bring forward) the Server Settings window; the window clears it.
-    var serverSettingsRequest: ServerSettingsRequest?
+    /// Set to open (or bring forward) the Settings window; the window clears it.
+    var settingsRequest: SettingsRequest?
 
-    func openServerSettings(serverID: String? = nil, section: ServerSettingsSection = .general) {
-        serverSettingsRequest = ServerSettingsRequest(serverID: serverID ?? selectedServerID, section: section)
+    /// Opens the Settings window on `page` (⌘, opens the App tile).
+    func openSettings(_ page: SettingsPage = .app(.general), serverID: String? = nil) {
+        settingsRequest = SettingsRequest(serverID: serverID ?? selectedServerID, page: page)
+    }
+
+    /// Opens the Settings window on a server's settings (⌘;, the toolbar gear).
+    func openServerSettings(serverID: String? = nil, section: SettingsSection = .server) {
+        openSettings(section.firstPage, serverID: serverID)
     }
 
     /// The one sheet shown at a time.

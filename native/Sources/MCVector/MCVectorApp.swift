@@ -81,25 +81,16 @@ struct MCVectorApp: App {
             EditorCommands()
         }
 
-        // Properties and General Settings of one server (opened from the toolbar gear, ⌘;).
-        Window(L10n.t("native.serverSettings.title"), id: ServerSettingsWindow.windowID) {
-            ServerSettingsWindow()
+        // The app's settings and one server's General Settings and properties
+        // (⌘, opens the App tile, ⌘; the Server tile).
+        Window(L10n.t("nav.settings"), id: SettingsWindow.windowID) {
+            SettingsWindow()
                 .environment(app)
                 .environment(runtime)
                 .environment(\.locale, Locale(identifier: L10n.language))
         }
-        .defaultSize(width: 980, height: 700)
+        .defaultSize(width: 900, height: 680)
         .windowToolbarStyle(.unified)
-
-        // The standard Settings window: ⌘, and "Settings…" in the app menu.
-        Settings {
-            SettingsView()
-                .environment(feedback)
-                .environment(\.locale, Locale(identifier: L10n.language))
-        }
-        // Without these the window opened at a few hundred points, ignoring the
-        // view's minimum size.
-        .defaultSize(width: 760, height: 520)
         .windowResizability(.contentMinSize)
     }
 }
@@ -109,6 +100,11 @@ struct ShellCommands: Commands {
     let app: AppState
 
     var body: some Commands {
+        // One Settings window holds the app's and the servers' settings.
+        CommandGroup(replacing: .appSettings) {
+            Button(L10n.t("native.menu.settings")) { app.openSettings() }
+                .keyboardShortcut(",", modifiers: .command)
+        }
         CommandGroup(after: .sidebar) {
             // React's ⌘K palette is the toolbar search field here.
             Button(L10n.t("commandPalette.label")) { app.isSearchFocused = true }

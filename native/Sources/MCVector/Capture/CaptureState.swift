@@ -27,8 +27,7 @@
             _ id: String,
             app: AppState,
             feedback: FeedbackCenter,
-            runtime: ServerRuntime,
-            openSettings: OpenSettingsAction
+            runtime: ServerRuntime
         ) async {
             resizeMainWindow(to: CGSize(width: 1200, height: 800))
             // Captures show the active window, the way people see it while using the app.
@@ -40,25 +39,8 @@
                 app.navigate(to: .dashboard)
             case "CONTENT-noserver-empty", "CONTENT-noserver-select":
                 app.selectedServerID = nil
-            case let id where id.hasPrefix("SERVERSETTINGS-"):
-                await showServerSettings(id, app: app)
-            case "SETTINGS-root", "SETTINGS-general", "SETTINGS-java", "SETTINGS-editor", "SETTINGS-updates",
-                "SETTINGS-security", "SETTINGS-about":
-                // SettingsView picks the pane from the ID. capture.sh takes the first
-                // window of the app, so hide the main window once Settings is open.
-                let main = NSApp.windows.first(where: { $0.isVisible && $0.canBecomeMain })
-                openSettings()
-                try? await Task.sleep(for: .milliseconds(800))
-                if let settings = NSApp.windows.first(where: { $0.isVisible && $0 !== main && $0.frame.width > 300 }) {
-                    main?.orderOut(nil)
-                    NSApp.activate()
-                    settings.makeKeyAndOrderFront(nil)
-                } else {
-                    signal("[capture] Settings window did not open")
-                }
-                // Give the window time to finish opening and the pane to draw (the
-                // Java pane asks Adoptium first).
-                try? await Task.sleep(for: .milliseconds(id == "SETTINGS-java" ? 4000 : 2500))
+            case let id where id.hasPrefix("SERVERSETTINGS-") || id.hasPrefix("SETTINGS-"):
+                await showSettings(id, app: app)
             case "SEARCH-open":
                 app.isSearchFocused = true
             case "SEARCH-filtered":
@@ -705,44 +687,67 @@
             try? await Task.sleep(for: .milliseconds(300))
         }
 
-        /// Opens the Server Settings window in the state the ID names and hides
-        /// the main window, so capture.sh photographs the settings window.
-        private static func showServerSettings(_ id: String, app: AppState) async {
+        /// The Settings page a `SETTINGS-*` or `SERVERSETTINGS-*` ID opens.
+        static var requestedSettingsPage: SettingsPage? {
+            requestedID.flatMap(settingsPage(for:))
+        }
+
+        private static func settingsPage(for id: String) -> SettingsPage? {
+            if id.hasPrefix("SETTINGS-") {
+                switch String(id.dropFirst("SETTINGS-".count)) {
+                case "java": return .app(.java)
+                case "editor": return .app(.editor)
+                case "about": return .app(.about)
+                case "search": return .app(.general)
+                default: return .app(.general)
+                }
+            }
+            guard id.hasPrefix("SERVERSETTINGS-") else { return nil }
             let name = String(id.dropFirst("SERVERSETTINGS-".count))
-            var page: ServerSettingsPage?
-            var section = ServerSettingsSection.properties
             switch name {
-            case "general": section = .general
-            case "properties": break
-            case "search": ServerSettingsWindow.captureScript = .init(search: "port")
-            case "dirty":
-                page = .category(.properties, "network")
-                ServerSettingsWindow.captureScript = .init(values: ["server-port": "70000", "max-players": "40"])
-            case "secret":
-                page = .category(.properties, "remote")
-                ServerSettingsWindow.captureScript = .init(reveal: "rcon.password")
-            case "upgrade":
-                // GeneralRows opens the upgrade wizard for this ID.
-                section = .general
-                page = .category(.general, "basic")
-            case let general where general.hasPrefix("general-"):
-                section = .general
-                page = .category(.general, String(general.dropFirst("general-".count)))
-            default: page = .category(.properties, name)
+            case "general", "search", "upgrade": return .server(.server)
+            case "properties": return .properties(.game)
+            case "dirty", "secret": return .properties(.network)
+            default:
+                if let page = SettingsPage(id: name) { return page }
+                let category = name.hasPrefix("general-") ? String(name.dropFirst("general-".count)) : name
+                if let general = GeneralSettingsCategory(rawValue: category) {
+                    return .server(ServerPage.allCases.first { $0.categories.contains(general) } ?? .server)
+                }
+                return .properties(PropertiesGroup.allCases.first { $0.categoryIDs.contains(category) } ?? .game)
+            }
+        }
+
+        /// Opens the Settings window in the state the ID names and hides the
+        /// main window, so capture.sh photographs the settings window.
+        private static func showSettings(_ id: String, app: AppState) async {
+            switch id {
+            case "SERVERSETTINGS-search": SettingsWindow.captureScript = .init(search: "port")
+            case "SETTINGS-search": SettingsWindow.captureScript = .init(search: "update")
+            case "SERVERSETTINGS-dirty":
+                SettingsWindow.captureScript = .init(values: ["server-port": "70000", "max-players": "40"])
+            case "SERVERSETTINGS-secret": SettingsWindow.captureScript = .init(reveal: "rcon.password")
+            default: break
             }
             let main = NSApp.windows.first(where: { $0.isVisible && $0.canBecomeMain })
-            app.openServerSettings(section: section)
-            if let page { app.serverSettingsRequest?.page = page }
+            app.openSettings(settingsPage(for: id) ?? .app(.general))
             try? await Task.sleep(for: .milliseconds(1200))
             if let settings = NSApp.windows.first(where: { $0.isVisible && $0 !== main && $0.frame.width > 500 }) {
                 main?.orderOut(nil)
                 NSApp.activate()
                 settings.makeKeyAndOrderFront(nil)
             } else {
-                signal("[capture] Server Settings window did not open")
+                signal("[capture] Settings window did not open")
             }
-            // The upgrade wizard asks the providers for versions first.
-            try? await Task.sleep(for: .milliseconds(name == "upgrade" ? 5000 : 1000))
+            // The upgrade wizard asks the providers for versions first; the Java
+            // page asks Adoptium.
+            let wait =
+                switch id {
+                case "SERVERSETTINGS-upgrade": 5000
+                case "SETTINGS-java": 4000
+                default: 1500
+                }
+            try? await Task.sleep(for: .milliseconds(wait))
         }
 
         /// Two real backups of the fixture server, one tagged with a note.

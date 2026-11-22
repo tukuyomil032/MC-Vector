@@ -17,68 +17,53 @@ enum GeneralSettingsCategory: String, CaseIterable, Identifiable, Sendable {
 
     var titleKey: String { "native.serverSettings.general.\(rawValue)" }
 
-    var symbol: String {
-        switch self {
-        case .basic: "server.rack"
-        case .runtime: "memorychip"
-        case .jvm: "cpu"
-        case .autoRestart: "arrow.clockwise"
-        case .autoBackup: "clock.arrow.circlepath"
-        case .notifications: "bell.badge"
-        }
-    }
-
-    var tint: Color {
-        switch self {
-        case .basic: .blue
-        case .runtime: .orange
-        case .jvm: .indigo
-        case .autoRestart: .green
-        case .autoBackup: .teal
-        case .notifications: .red
-        }
-    }
-
-    /// Row titles, for the overview subtitle and for search.
-    var rowKeys: [String] {
+    /// Sections (title key suffix, row title keys) of the rows always shown,
+    /// in page order; the settings search lists rows under these titles.
+    var sections: [(id: String, rows: [String])] {
         switch self {
         case .basic:
             [
-                "serverSettings.serverName", "serverSettings.profileName", "serverSettings.groupName",
-                "serverSettings.serverSoftware", "serverSettings.version", "serverSettings.savePath",
+                ("name", ["serverSettings.serverName", "serverSettings.profileName", "serverSettings.groupName"]),
+                ("version", ["serverSettings.serverSoftware", "serverSettings.version"]),
+                ("location", ["serverSettings.savePath"]),
             ]
-        case .runtime: ["serverSettings.javaRuntime", "serverSettings.memory", "serverSettings.port"]
-        case .jvm: ["serverSettings.jvmArgs.presetsLabel", "serverSettings.jvmArgs.customLabel"]
+        case .runtime:
+            [
+                ("java", ["serverSettings.javaRuntime"]),
+                ("memoryPort", ["serverSettings.memory", "serverSettings.port"]),
+            ]
+        case .jvm: [("jvm", ["serverSettings.jvmArgs.presetsLabel", "serverSettings.jvmArgs.customLabel"])]
         case .autoRestart:
             [
-                "serverSettings.autoRestart.title", "serverSettings.autoRestart.maxRetries",
-                "serverSettings.autoRestart.delaySeconds",
+                (
+                    "autoRestart",
+                    [
+                        "serverSettings.autoRestart.title", "serverSettings.autoRestart.maxRetries",
+                        "serverSettings.autoRestart.delaySeconds",
+                    ]
+                )
             ]
         case .autoBackup:
             [
-                "serverSettings.autoBackup.title", "serverSettings.autoBackup.scheduleType",
-                "serverSettings.autoBackup.retainCount", "serverSettings.autoBackup.retainDays",
+                ("autoBackup", ["serverSettings.autoBackup.title", "serverSettings.autoBackup.scheduleType"]),
+                ("retention", ["serverSettings.autoBackup.retainCount", "serverSettings.autoBackup.retainDays"]),
             ]
         case .notifications:
             [
-                "serverSettings.notifications.onCrash", "serverSettings.notifications.onStart",
-                "serverSettings.notifications.onHighCpu", "serverSettings.notifications.cpuThreshold",
+                ("notifyEvents", ["serverSettings.notifications.onCrash", "serverSettings.notifications.onStart"]),
+                (
+                    "notifyCpu",
+                    ["serverSettings.notifications.onHighCpu", "serverSettings.notifications.cpuThreshold"]
+                ),
             ]
         }
     }
-
-    func matches(_ query: String) -> Bool {
-        let needle = query.trimmingCharacters(in: .whitespaces).lowercased()
-        return ([titleKey] + rowKeys).contains { L10n.t($0).lowercased().contains(needle) }
-    }
 }
 
-/// The General half of the Server Settings window.
+/// A page of the Server tile: its General Settings categories, each as titled sections.
 struct GeneralSettingsPage: View {
-    let page: ServerSettingsPage
-    let search: String
+    let page: ServerPage
     let model: GeneralSettingsModel
-    let open: (ServerSettingsPage) -> Void
 
     var body: some View {
         switch model.load {
@@ -93,48 +78,13 @@ struct GeneralSettingsPage: View {
                 Button(L10n.t("properties.retry")) { Task { await model.reload() } }
             }
         case .loaded:
-            if !search.isEmpty {
-                let found = GeneralSettingsCategory.allCases.filter { $0.matches(search) }
-                if found.isEmpty {
-                    ContentUnavailableView.search(text: search)
-                } else {
-                    Form {
-                        ForEach(found) { category in
-                            Section(L10n.t(category.titleKey)) { GeneralRows(category: category, model: model) }
-                        }
-                    }
-                    .formStyle(.grouped)
-                }
-            } else if case .category(_, let id) = page, let category = GeneralSettingsCategory(rawValue: id) {
-                Form {
+            Form {
+                ForEach(page.categories) { category in
                     GeneralRows(category: category, model: model)
                 }
-                .formStyle(.grouped)
-            } else {
-                overview
             }
+            .formStyle(.grouped)
         }
-    }
-
-    private var overview: some View {
-        Form {
-            Section {
-                SettingsHero(
-                    symbol: ServerSettingsSection.general.symbol, color: ServerSettingsSection.general.color,
-                    title: L10n.t("nav.generalSettings"), subtitle: L10n.t("native.serverSettings.generalSubtitle"))
-            }
-            .listRowBackground(Color.clear)
-            Section {
-                ForEach(GeneralSettingsCategory.allCases) { category in
-                    SettingsLinkRow(
-                        title: L10n.t(category.titleKey),
-                        subtitle: category.rowKeys.prefix(3).map { L10n.t($0) }.joined(separator: "、"),
-                        symbol: category.symbol, color: category.tint
-                    ) { open(.category(.general, category.id)) }
-                }
-            }
-        }
-        .formStyle(.grouped)
     }
 }
 
@@ -142,7 +92,7 @@ struct GeneralSettingsPage: View {
 private struct GeneralRows: View {
     let category: GeneralSettingsCategory
     let model: GeneralSettingsModel
-    @Environment(\.openSettings) private var openSettings
+    @Environment(AppState.self) private var app
     @State private var showsUpgrade = false
     @State private var versionStatus: ServerJarVersionStatus?
     @State private var javaRuntimes: [JavaRuntimeRecord] = []
@@ -190,37 +140,50 @@ private struct GeneralRows: View {
 
     // MARK: Sections
 
+    private func header(_ id: String) -> some View {
+        Text(L10n.t("native.settings.serverSection.\(id)"))
+    }
+
     @ViewBuilder
     private var basic: some View {
         Section {
-            SettingsRow(title: L10n.t("serverSettings.serverName")) {
+            SettingsRow(key: "serverSettings.serverName") {
                 TextField(L10n.t("serverSettings.serverName"), text: field(\.name, ""))
                     .textFieldStyle(.roundedBorder).labelsHidden().frame(width: 260)
             }
-            SettingsRow(title: L10n.t("serverSettings.profileName")) {
+            SettingsRow(key: "serverSettings.profileName") {
                 TextField(
                     L10n.t("serverSettings.profileName"), text: field(\.profileName, ""),
                     prompt: Text(L10n.t("serverSettings.profileNamePlaceholder"))
                 )
                 .textFieldStyle(.roundedBorder).labelsHidden().frame(width: 260)
             }
-            SettingsRow(title: L10n.t("serverSettings.groupName")) {
+            SettingsRow(key: "serverSettings.groupName") {
                 TextField(
                     L10n.t("serverSettings.groupName"), text: field(\.groupName, ""),
                     prompt: Text(L10n.t("serverSettings.groupNamePlaceholder"))
                 )
                 .textFieldStyle(.roundedBorder).labelsHidden().frame(width: 260)
             }
+        } header: {
+            header("name")
         }
         Section {
             // Software and version change only through the wizard, which
             // replaces the server JAR; here they are read-only.
-            SettingsRow(title: L10n.t("serverSettings.serverSoftware")) {
+            SettingsRow(key: "serverSettings.serverSoftware") {
                 Text(draft.software).foregroundStyle(.secondary)
             }
-            SettingsRow(title: L10n.t("serverSettings.version")) {
+            SettingsRow(
+                key: "serverSettings.version",
+                note: versionMismatch.map { L10n.t("native.upgrade.mismatch", ["version": $0]) }
+            ) {
                 HStack(spacing: 10) {
                     Text(draft.version).monospacedDigit().foregroundStyle(.secondary)
+                    if versionMismatch != nil {
+                        Button(L10n.t("native.upgrade.syncFromJar")) { Task { await syncVersion() } }
+                            .transition(.opacity)
+                    }
                     Button(L10n.t("native.upgrade.changeButton")) { showsUpgrade = true }
                         .sheet(isPresented: $showsUpgrade) {
                             UpgradeWizard(serverID: model.serverID) {
@@ -240,41 +203,28 @@ private struct GeneralRows: View {
                         #endif
                 }
             }
-            if let status = versionStatus, status.mismatch, let detected = status.detectedVersion {
-                SettingsRow(title: "") {
-                    HStack(spacing: 10) {
-                        Label(
-                            L10n.t("native.upgrade.mismatch", ["version": detected]),
-                            systemImage: "exclamationmark.triangle.fill"
-                        )
-                        .foregroundStyle(.orange)
-                        Button(L10n.t("native.upgrade.syncFromJar")) { Task { await syncVersion() } }
+        } header: {
+            header("version")
+        }
+        Section {
+            SettingsRow(key: "serverSettings.savePath", subtitle: model.saved?.serverPath) {
+                Button(L10n.t("native.serverSettings.showInFinder")) {
+                    if let path = model.saved?.serverPath {
+                        NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: path)])
                     }
                 }
-                .transition(.opacity)
             }
+        } header: {
+            header("location")
         }
         .task(id: model.serverID) { await loadVersionStatus() }
-
-        Section {
-            SettingsRow(title: L10n.t("serverSettings.savePath")) {
-                HStack(spacing: 8) {
-                    Text(model.saved?.serverPath ?? "")
-                        .font(.callout.monospaced())
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                        .truncationMode(.middle)
-                        .textSelection(.enabled)
-                    Button(L10n.t("native.serverSettings.showInFinder")) {
-                        if let path = model.saved?.serverPath {
-                            NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: path)])
-                        }
-                    }
-                }
-            }
-        }
     }
 
+    /// The version the JAR reports, when it differs from the registered one.
+    private var versionMismatch: String? {
+        guard let status = versionStatus, status.mismatch else { return nil }
+        return status.detectedVersion
+    }
 }
 
 // The remaining sections and the Java runtime choice, apart so the struct
@@ -283,66 +233,58 @@ extension GeneralRows {
     @ViewBuilder
     private var runtime: some View {
         Section {
-            SettingsRow(title: L10n.t("serverSettings.javaRuntime")) {
-                VStack(alignment: .trailing, spacing: 4) {
-                    HStack(spacing: 8) {
-                        Picker(L10n.t("serverSettings.javaRuntime"), selection: javaSelection) {
-                            Text(L10n.t("native.serverSettings.javaAutomatic")).tag(String?.none)
-                            if !javaRuntimes.isEmpty { Divider() }
-                            ForEach(javaRuntimes, id: \.path) { runtime in
-                                Text(Self.runtimeLabel(runtime)).tag(String?.some(runtime.path))
-                            }
-                            Divider()
-                            Text(L10n.t("serverSettings.javaSystemDefault"))
-                                .tag(String?.some(CoreClient.systemJavaSentinel))
-                            if let path = draft.javaPath, path != CoreClient.systemJavaSentinel,
-                                !javaRuntimes.contains(where: { $0.path == path })
-                            {
-                                Text(path).tag(String?.some(path))
-                            }
+            SettingsRow(
+                key: "serverSettings.javaRuntime", note: javaCaption,
+                noteColor: javaMissing ? .orange : .secondary
+            ) {
+                HStack(spacing: 8) {
+                    Picker(L10n.t("serverSettings.javaRuntime"), selection: javaSelection) {
+                        Text(L10n.t("native.serverSettings.javaAutomatic")).tag(String?.none)
+                        if !javaRuntimes.isEmpty { Divider() }
+                        ForEach(javaRuntimes, id: \.path) { runtime in
+                            Text(Self.runtimeLabel(runtime)).tag(String?.some(runtime.path))
                         }
-                        .labelsHidden()
-                        .fixedSize()
-                        Button(L10n.t("native.serverSettings.chooseJava")) { chooseJava() }
+                        Divider()
+                        Text(L10n.t("serverSettings.javaSystemDefault"))
+                            .tag(String?.some(CoreClient.systemJavaSentinel))
+                        if let path = draft.javaPath, path != CoreClient.systemJavaSentinel,
+                            !javaRuntimes.contains(where: { $0.path == path })
+                        {
+                            Text(path).tag(String?.some(path))
+                        }
                     }
-                    if let caption = javaCaption {
-                        Text(caption)
-                            .font(.caption)
-                            .foregroundStyle(javaMissing ? AnyShapeStyle(.orange) : AnyShapeStyle(.secondary))
-                            .contentTransition(.opacity)
-                    }
+                    .labelsHidden()
+                    .fixedSize()
+                    Button(L10n.t("native.serverSettings.chooseJava")) { chooseJava() }
+                    Button(L10n.t("native.serverSettings.manageJavaShort")) { app.openSettings(.app(.java)) }
+                        .help(L10n.t("serverSettings.manageJava"))
                 }
-                .animation(Motion.standard, value: javaCaption)
                 .task(id: "\(draft.javaPath ?? "auto")-\(draft.version)-\(draft.software)") { await loadJava() }
             }
-            SettingsRow(title: L10n.t("serverSettings.manageJava")) {
-                Button(L10n.t("serverSettings.manageJava")) {
-                    SettingsNavigation.shared.open(.java)
-                    openSettings()
-                }
-            }
+        } header: {
+            header("java")
         }
         Section {
-            SettingsRow(title: L10n.t("serverSettings.memory")) {
+            SettingsRow(key: "serverSettings.memory") {
                 RollingNumberField(
                     title: L10n.t("serverSettings.memory"), text: number(\.memoryMb), range: 1024...1_048_576,
                     unit: "MB", step: 512
                 )
                 .fixedSize()
             }
-            SettingsRow(title: L10n.t("serverSettings.port")) {
+            SettingsRow(key: "serverSettings.port") {
                 RollingNumberField(title: L10n.t("serverSettings.port"), text: number(\.port), range: 1...65535)
                     .fixedSize()
             }
-        } footer: {
-            Text(L10n.t("native.serverSettings.restartFooter"))
+        } header: {
+            header("memoryPort")
         }
     }
 
     @ViewBuilder
     private var jvm: some View {
         Section {
-            SettingsRow(title: L10n.t("serverSettings.jvmArgs.presetsLabel")) {
+            SettingsRow(key: "serverSettings.jvmArgs.presetsLabel") {
                 Picker(L10n.t("serverSettings.jvmArgs.presetsLabel"), selection: preset) {
                     Text(L10n.t("native.serverSettings.jvmCustom")).tag(JvmPreset?.none)
                     ForEach(JvmPreset.allCases) { preset in
@@ -355,6 +297,7 @@ extension GeneralRows {
             }
             VStack(alignment: .leading, spacing: 6) {
                 Text(L10n.t("serverSettings.jvmArgs.customLabel"))
+                    .infoHint(L10n.help("serverSettings.jvmArgs.customLabel") ?? "")
                 TextEditor(text: field(\.jvmArgs, ""))
                     .font(.callout.monospaced())
                     .frame(minHeight: 90)
@@ -363,29 +306,27 @@ extension GeneralRows {
                     .background(.background.secondary, in: RoundedRectangle(cornerRadius: 6))
                     .overlay(RoundedRectangle(cornerRadius: 6).strokeBorder(.separator))
             }
-        } footer: {
-            Text(L10n.t("serverSettings.jvmArgs.help"))
+            .id(L10n.t("serverSettings.jvmArgs.customLabel"))
+        } header: {
+            header("jvm")
         }
     }
 
     @ViewBuilder
     private var autoRestart: some View {
         Section {
-            SettingsRow(
-                title: L10n.t("serverSettings.autoRestart.title"),
-                help: L10n.t("serverSettings.autoRestart.enableDescription")
-            ) {
+            SettingsRow(key: "serverSettings.autoRestart.title") {
                 Toggle("", isOn: toggle(\.autoRestartOnCrash)).toggleStyle(.switch).labelsHidden()
             }
             if draft.autoRestartOnCrash {
-                SettingsRow(title: L10n.t("serverSettings.autoRestart.maxRetries")) {
+                SettingsRow(key: "serverSettings.autoRestart.maxRetries") {
                     RollingNumberField(
                         title: L10n.t("serverSettings.autoRestart.maxRetries"), text: number(\.maxAutoRestarts),
                         range: 0...20
                     )
                     .fixedSize()
                 }
-                SettingsRow(title: L10n.t("serverSettings.autoRestart.delaySeconds")) {
+                SettingsRow(key: "serverSettings.autoRestart.delaySeconds") {
                     RollingNumberField(
                         title: L10n.t("serverSettings.autoRestart.delaySeconds"),
                         text: number(\.autoRestartDelaySec), range: 1...300, unit: L10n.t("native.unit.seconds")
@@ -393,20 +334,19 @@ extension GeneralRows {
                     .fixedSize()
                 }
             }
+        } header: {
+            header("autoRestart")
         }
     }
 
     @ViewBuilder
     private var autoBackup: some View {
         Section {
-            SettingsRow(
-                title: L10n.t("serverSettings.autoBackup.title"),
-                help: L10n.t("serverSettings.autoBackup.enableDescription")
-            ) {
+            SettingsRow(key: "serverSettings.autoBackup.title") {
                 Toggle("", isOn: toggle(\.autoBackupEnabled)).toggleStyle(.switch).labelsHidden()
             }
             if draft.autoBackupEnabled {
-                SettingsRow(title: L10n.t("serverSettings.autoBackup.scheduleType")) {
+                SettingsRow(key: "serverSettings.autoBackup.scheduleType") {
                     Picker(
                         L10n.t("serverSettings.autoBackup.scheduleType"),
                         selection: Binding(
@@ -428,7 +368,7 @@ extension GeneralRows {
                 }
                 switch draft.autoBackupScheduleType {
                 case .interval:
-                    SettingsRow(title: L10n.t("serverSettings.autoBackup.intervalMinutes")) {
+                    SettingsRow(key: "serverSettings.autoBackup.intervalMinutes") {
                         RollingNumberField(
                             title: L10n.t("serverSettings.autoBackup.intervalMinutes"),
                             text: number(\.autoBackupIntervalMin), range: 1...1440, unit: L10n.t("native.unit.minutes")
@@ -437,7 +377,7 @@ extension GeneralRows {
                     }
                 case .daily, .weekly:
                     if draft.autoBackupScheduleType == .weekly {
-                        SettingsRow(title: L10n.t("serverSettings.autoBackup.weekday")) {
+                        SettingsRow(key: "serverSettings.autoBackup.weekday") {
                             Picker(
                                 L10n.t("serverSettings.autoBackup.weekday"), selection: field(\.autoBackupWeekday, 0)
                             ) {
@@ -449,7 +389,7 @@ extension GeneralRows {
                             .fixedSize()
                         }
                     }
-                    SettingsRow(title: L10n.t("serverSettings.autoBackup.executionTime")) {
+                    SettingsRow(key: "serverSettings.autoBackup.executionTime") {
                         DatePicker(
                             L10n.t("serverSettings.autoBackup.executionTime"), selection: backupTime,
                             displayedComponents: .hourAndMinute
@@ -458,25 +398,27 @@ extension GeneralRows {
                     }
                 }
             }
+        } header: {
+            header("autoBackup")
         }
         if draft.autoBackupEnabled {
             Section {
-                SettingsRow(title: L10n.t("serverSettings.autoBackup.retainCount")) {
+                SettingsRow(key: "serverSettings.autoBackup.retainCount") {
                     RollingNumberField(
                         title: L10n.t("serverSettings.autoBackup.retainCount"),
                         text: number(\.autoBackupRetainCount), range: 0...999
                     )
                     .fixedSize()
                 }
-                SettingsRow(title: L10n.t("serverSettings.autoBackup.retainDays")) {
+                SettingsRow(key: "serverSettings.autoBackup.retainDays") {
                     RollingNumberField(
                         title: L10n.t("serverSettings.autoBackup.retainDays"), text: number(\.autoBackupRetainDays),
                         range: 0...365, unit: L10n.t("native.unit.days")
                     )
                     .fixedSize()
                 }
-            } footer: {
-                Text(L10n.t("native.serverSettings.retainFooter"))
+            } header: {
+                header("retention")
             }
         }
     }
@@ -484,17 +426,21 @@ extension GeneralRows {
     @ViewBuilder
     private var notifications: some View {
         Section {
-            SettingsRow(title: L10n.t("serverSettings.notifications.onCrash")) {
+            SettingsRow(key: "serverSettings.notifications.onCrash") {
                 Toggle("", isOn: toggle(\.notifyOnCrash)).toggleStyle(.switch).labelsHidden()
             }
-            SettingsRow(title: L10n.t("serverSettings.notifications.onStart")) {
+            SettingsRow(key: "serverSettings.notifications.onStart") {
                 Toggle("", isOn: toggle(\.notifyOnStart)).toggleStyle(.switch).labelsHidden()
             }
-            SettingsRow(title: L10n.t("serverSettings.notifications.onHighCpu")) {
+        } header: {
+            header("notifyEvents")
+        }
+        Section {
+            SettingsRow(key: "serverSettings.notifications.onHighCpu") {
                 Toggle("", isOn: toggle(\.notifyOnHighCpu)).toggleStyle(.switch).labelsHidden()
             }
             if draft.notifyOnHighCpu {
-                SettingsRow(title: L10n.t("serverSettings.notifications.cpuThreshold")) {
+                SettingsRow(key: "serverSettings.notifications.cpuThreshold") {
                     HStack(spacing: 10) {
                         Slider(value: cpuThreshold, in: 1...100, step: 1).frame(width: 180)
                         Text("\(draft.notifyHighCpuThreshold)%")
@@ -505,6 +451,8 @@ extension GeneralRows {
                     }
                 }
             }
+        } header: {
+            header("notifyCpu")
         }
     }
 

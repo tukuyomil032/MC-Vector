@@ -40,6 +40,20 @@ enum L10n {
         return text
     }
 
+    /// The text for `key`, or nil when no language has it.
+    static func optional(_ key: String) -> String? {
+        let text = t(key)
+        return text == key ? nil : text
+    }
+
+    /// The English text for `key`, so a search in either language finds it.
+    static func english(_ key: String) -> String {
+        LanguageState.shared.englishBundle.localizedString(forKey: key, value: key, table: nil)
+    }
+
+    /// The description of a settings row titled by `key` (`native.help.<key>`), if one is written.
+    static func help(_ key: String) -> String? { optional("native.help.\(key)") }
+
     private static let missing = "\u{0}missing"
 }
 
@@ -54,7 +68,8 @@ final class LanguageState: @unchecked Sendable {
     @ObservationIgnored private(set) var englishBundle: Bundle = .main
 
     func apply(locale: String?) {
-        let preferred = locale.flatMap { L10n.supported.contains($0) ? $0 : nil }
+        let preferred =
+            locale.flatMap { L10n.supported.contains($0) ? $0 : nil }
             ?? Bundle.preferredLocalizations(from: L10n.supported).first
             ?? "en"
         englishBundle = Self.bundle(for: "en") ?? .main
