@@ -24,6 +24,7 @@ struct AppGeneralPane: View {
     @State private var model = AppSettingsModel()
     @AppStorage(BackupsLayout.storageKey) private var backupsLayout: BackupsLayout = .cards
     @AppStorage(PluginsPaging.storageKey) private var pluginsPaging: PluginsPaging = .infinite
+    @AppStorage(FilesBarSettings.hiddenKey) private var hiddenFilesBarGroups = ""
 
     var body: some View {
         Form {
@@ -49,6 +50,18 @@ struct AppGeneralPane: View {
                         options: PluginsPaging.allCases, selection: $pluginsPaging, title: { L10n.t($0.titleKey) },
                         thumbnail: { PluginsPagingThumbnail(paging: $0) })
                 }
+            }
+            Section {
+                ForEach(FilesBarSettings.Group.allCases) { group in
+                    SettingsRow(title: L10n.t(group.titleKey)) {
+                        Toggle(L10n.t(group.titleKey), isOn: filesBarGroupShown(group))
+                            .toggleStyle(.switch)
+                            .labelsHidden()
+                    }
+                }
+            } header: {
+                Text(L10n.t("native.settings.filesBar"))
+                    .infoHint(L10n.help("native.settings.filesBar") ?? "")
             }
             Section(L10n.t("settings.update.title")) {
                 SettingsRow(key: "native.settings.updateCheck", subtitle: L10n.t("settings.update.idle")) {
@@ -86,6 +99,17 @@ struct AppGeneralPane: View {
 
     // MARK: Bindings that save at once
 
+    /// One group of the Files bar, shown or hidden.
+    private func filesBarGroupShown(_ group: FilesBarSettings.Group) -> Binding<Bool> {
+        Binding(
+            get: { !hiddenFilesBarGroups.split(separator: ",").contains(Substring(group.rawValue)) },
+            set: { shown in
+                var hidden = Set(hiddenFilesBarGroups.split(separator: ",").map(String.init))
+                if shown { hidden.remove(group.rawValue) } else { hidden.insert(group.rawValue) }
+                hiddenFilesBarGroups = hidden.sorted().joined(separator: ",")
+            }
+        )
+    }
     private var language: Binding<String> {
         Binding(
             get: { model.settings.locale ?? L10n.language },

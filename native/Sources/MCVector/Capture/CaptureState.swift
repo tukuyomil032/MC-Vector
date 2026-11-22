@@ -389,6 +389,10 @@
                 app.navigate(to: .files)
             case let playground where playground.hasPrefix("PLAYGROUND-"):
                 await showPlayground(playground)
+            case "FILES-zip", "FILES-new", "FILES-move", "FILES-activity", "FILES-trashed", "FILES-rename",
+                "FILES-trash-confirm",
+                "FILES-filter":
+                await showFilesAction(id, app: app)
             case "FILES-plugins":
                 FilesView.capturePreset = .init(path: ["plugins"])
                 app.navigate(to: .files)

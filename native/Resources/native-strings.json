@@ -569,10 +569,6 @@
     "en": "Zoom Out",
     "ja": "縮小"
   },
-  "native.files.archiveLater": {
-    "en": "Compress and Extract arrive with the Backups screen.",
-    "ja": "圧縮と展開は、バックアップの画面と一緒に使えるようになります。"
-  },
   "native.files.editor.discardAndQuit": {
     "en": "Discard and Quit",
     "ja": "破棄して終了"
@@ -608,6 +604,206 @@
   "native.files.openInFinder": {
     "en": "Show in Finder",
     "ja": "Finder で表示"
+  },
+  "native.settings.filesBar": {
+    "en": "Files Bar",
+    "ja": "ファイル画面のバー"
+  },
+  "native.help.native.settings.filesBar": {
+    "en": "Which groups of buttons the Files view shows next to the path. Keyboard shortcuts work either way.",
+    "ja": "ファイル画面のパスの横に出すボタンの塊を選びます。隠した塊も、キー操作は使えます。"
+  },
+  "native.settings.filesBar.navigation": {
+    "en": "Back, Forward and Up",
+    "ja": "戻る・進む・上へ"
+  },
+  "native.settings.filesBar.create": {
+    "en": "New",
+    "ja": "新規作成"
+  },
+  "native.settings.filesBar.edit": {
+    "en": "Rename, Duplicate and Move",
+    "ja": "名前を変更・複製・移動"
+  },
+  "native.settings.filesBar.archive": {
+    "en": "Compress and Extract",
+    "ja": "圧縮・解凍"
+  },
+  "native.settings.filesBar.trash": {
+    "en": "Move to Trash",
+    "ja": "ゴミ箱に入れる"
+  },
+  "native.settings.filesBar.view": {
+    "en": "Filter, Hidden Files and Finder",
+    "ja": "絞り込み・隠しファイル・Finder"
+  },
+  "native.files.quoted": {
+    "en": "“{name}”",
+    "ja": "「{name}」"
+  },
+  "native.files.itemCount": {
+    "en": "{count} items",
+    "ja": "{count} 個の項目"
+  },
+  "native.files.newFolder": {
+    "en": "New Folder",
+    "ja": "新しいフォルダ"
+  },
+  "native.files.newFile": {
+    "en": "New File",
+    "ja": "新しいファイル"
+  },
+  "native.files.create": {
+    "en": "Create",
+    "ja": "作成"
+  },
+  "native.files.new": {
+    "en": "New",
+    "ja": "新規作成"
+  },
+  "native.files.importFiles": {
+    "en": "Import Files…",
+    "ja": "ファイルを読み込む…"
+  },
+  "native.files.activity.compressing": {
+    "en": "Compressing {subject}…",
+    "ja": "{subject}を圧縮中…"
+  },
+  "native.files.activity.extracting": {
+    "en": "Extracting {subject}…",
+    "ja": "{subject}を解凍中…"
+  },
+  "native.files.activity.duplicating": {
+    "en": "Duplicating {subject}…",
+    "ja": "{subject}を複製中…"
+  },
+  "native.files.activity.trashing": {
+    "en": "Moving {subject} to the Trash…",
+    "ja": "{subject}をゴミ箱に入れています…"
+  },
+  "native.files.activity.created": {
+    "en": "Created {subject}",
+    "ja": "{subject}を作りました"
+  },
+  "native.files.activity.extracted": {
+    "en": "Extracted into {subject}",
+    "ja": "{subject}に解凍しました"
+  },
+  "native.files.activity.trashed": {
+    "en": "Moved {subject} to the Trash",
+    "ja": "{subject}をゴミ箱に入れました"
+  },
+  "native.files.activity.pathCopied": {
+    "en": "Path copied",
+    "ja": "パスをコピーしました"
+  },
+  "native.files.duplicateFailed": {
+    "en": "Could not duplicate",
+    "ja": "複製できませんでした"
+  },
+  "native.files.trashFailed": {
+    "en": "Could not move to the Trash",
+    "ja": "ゴミ箱に入れられませんでした"
+  },
+  "native.files.open": {
+    "en": "Open",
+    "ja": "開く"
+  },
+  "native.files.duplicate": {
+    "en": "Duplicate",
+    "ja": "複製"
+  },
+  "native.files.moveToTrash": {
+    "en": "Move to Trash",
+    "ja": "ゴミ箱に入れる"
+  },
+  "native.files.trashConfirm": {
+    "en": "Move {subject} to the Trash?",
+    "ja": "{subject}をゴミ箱に入れますか？"
+  },
+  "native.files.trashFolderNote": {
+    "en": "Everything inside the folder goes to the Trash too.",
+    "ja": "フォルダの中の項目もゴミ箱に入ります。"
+  },
+  "native.files.revealInFinder": {
+    "en": "Show in Finder",
+    "ja": "Finder で表示"
+  },
+  "native.files.copyPath": {
+    "en": "Copy Path",
+    "ja": "パスをコピー"
+  },
+  "native.files.showHidden": {
+    "en": "Show Hidden Files",
+    "ja": "隠しファイルを表示"
+  },
+  "native.files.refresh": {
+    "en": "Refresh",
+    "ja": "最新にする"
+  },
+  "native.files.addFavorite": {
+    "en": "Add to Favorites",
+    "ja": "よく使うフォルダに追加"
+  },
+  "native.files.removeFavorite": {
+    "en": "Remove from Favorites",
+    "ja": "よく使うフォルダから外す"
+  },
+  "native.files.favorites": {
+    "en": "Favorites",
+    "ja": "よく使うフォルダ"
+  },
+  "native.files.filter": {
+    "en": "Filter",
+    "ja": "絞り込み"
+  },
+  "native.files.noMatches": {
+    "en": "No Matching Items",
+    "ja": "一致する項目がありません"
+  },
+  "native.files.back": {
+    "en": "Back",
+    "ja": "戻る"
+  },
+  "native.files.forward": {
+    "en": "Forward",
+    "ja": "進む"
+  },
+  "native.files.backForward": {
+    "en": "Back/Forward",
+    "ja": "戻る／進む"
+  },
+  "native.files.select": {
+    "en": "Select",
+    "ja": "選択"
+  },
+  "native.files.selectAll": {
+    "en": "Select All",
+    "ja": "すべて選択"
+  },
+  "native.files.items": {
+    "en": "Items",
+    "ja": "項目"
+  },
+  "native.files.created": {
+    "en": "Created",
+    "ja": "作成日時"
+  },
+  "native.files.moveTitle": {
+    "en": "Move {subject} to…",
+    "ja": "{subject}の移動先"
+  },
+  "native.files.moveHere": {
+    "en": "Move Here",
+    "ja": "ここに移動"
+  },
+  "native.files.currentLocation": {
+    "en": "Already in this folder",
+    "ja": "今ある場所です"
+  },
+  "native.files.noFolders": {
+    "en": "No folders",
+    "ja": "フォルダはありません"
   },
   "native.files.servers": {
     "en": "Server folder",

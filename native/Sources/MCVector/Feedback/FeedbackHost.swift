@@ -86,12 +86,16 @@ extension View {
     }
 }
 
-/// A titled sheet with one labelled text field, Cancel and the confirm button.
+/// A titled sheet with one text field, Cancel and the confirm button. The
+/// title says what is being made or changed, and the field runs the full
+/// width under it, both on the same leading edge.
 private struct PromptSheet: View {
     let request: FeedbackCenter.PromptRequest
     let finish: (String?) -> Void
     @State private var value: String
+    @State private var selection: TextSelection?
     @State private var error: String?
+    @FocusState private var isFocused: Bool
 
     init(request: FeedbackCenter.PromptRequest, finish: @escaping (String?) -> Void) {
         self.request = request
@@ -100,35 +104,57 @@ private struct PromptSheet: View {
     }
 
     var body: some View {
-        Form {
-            Section {
-                TextField(request.label, text: $value, prompt: request.placeholder.map(Text.init))
-                    .onSubmit(submit)
-                    // The error is about the submitted value; editing starts over.
-                    .onChange(of: value) { error = nil }
-                if let error {
-                    Text(error).foregroundStyle(.red)
-                }
-            } header: {
-                Text(request.title).font(.headline)
-            } footer: {
-                if let description = request.description {
-                    Text(description).foregroundStyle(.secondary)
-                }
+        VStack(alignment: .leading, spacing: 12) {
+            Text(request.title)
+                .font(.headline)
+            if let description = request.description {
+                Text(description)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
             }
-        }
-        .formStyle(.grouped)
-        .frame(width: 420)
-        .fixedSize(horizontal: false, vertical: true)
-        .toolbar {
-            ToolbarItem(placement: .cancellationAction) {
+            TextField(request.label, text: $value, selection: $selection, prompt: request.placeholder.map(Text.init))
+                .textFieldStyle(.roundedBorder)
+                .labelsHidden()
+                .focused($isFocused)
+                .onSubmit(submit)
+                // The error is about the submitted value; editing starts over.
+                .onChange(of: value) { error = nil }
+            if let error {
+                Text(error)
+                    .font(.callout)
+                    .foregroundStyle(.red)
+            }
+            HStack {
+                Spacer()
                 Button(L10n.t("common.cancel")) { finish(nil) }
-            }
-            ToolbarItem(placement: .confirmationAction) {
+                    .keyboardShortcut(.cancelAction)
                 Button(request.confirmLabel, action: submit)
+                    .keyboardShortcut(.defaultAction)
                     .disabled(trimmed.isEmpty)
             }
+            .padding(.top, 4)
         }
+        .padding(20)
+        .frame(width: 400)
+        .onAppear {
+            isFocused = true
+            // The field selects everything when it takes focus; narrow it afterwards.
+            if request.selectsBaseName {
+                Task {
+                    try? await Task.sleep(for: .milliseconds(60))
+                    selectBaseName()
+                }
+            }
+        }
+    }
+
+    /// "server.properties" opens with "server" selected, like Finder's rename.
+    private func selectBaseName() {
+        let ext = (value as NSString).pathExtension
+        let end =
+            ext.isEmpty || value.hasPrefix(".") && !value.dropFirst().contains(".")
+            ? value.endIndex : value.index(value.endIndex, offsetBy: -(ext.count + 1))
+        selection = TextSelection(range: value.startIndex..<end)
     }
 
     private var trimmed: String { value.trimmingCharacters(in: .whitespacesAndNewlines) }

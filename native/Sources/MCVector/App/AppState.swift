@@ -25,6 +25,18 @@ final class AppState {
         return servers.first { $0.id == selectedServerID }
     }
 
+    // MARK: Files
+
+    /// Each server's Files state, shared by the Files view and the window toolbar.
+    @ObservationIgnored private var filesModels: [String: FilesModel] = [:]
+
+    func files(for serverID: String) -> FilesModel {
+        if let model = filesModels[serverID] { return model }
+        let model = FilesModel(serverID: serverID)
+        filesModels[serverID] = model
+        return model
+    }
+
     // MARK: Navigation (React uiStore)
 
     private(set) var route: AppRoute = .dashboard

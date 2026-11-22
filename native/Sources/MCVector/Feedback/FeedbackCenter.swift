@@ -33,6 +33,8 @@ final class FeedbackCenter {
         var defaultValue: String
         var placeholder: String?
         var confirmLabel: String
+        /// Selects the name without its extension when the sheet opens (rename).
+        var selectsBaseName = false
         /// Returns an error message to block submitting, or nil when acceptable.
         var validate: ((String) -> String?)?
         let resolve: (String?) -> Void
@@ -53,9 +55,9 @@ final class FeedbackCenter {
 
         var id: UUID {
             switch self {
-            case let .confirm(request): request.id
-            case let .prompt(request): request.id
-            case let .error(request): request.id
+            case .confirm(let request): request.id
+            case .prompt(let request): request.id
+            case .error(let request): request.id
             }
         }
     }
@@ -118,14 +120,16 @@ final class FeedbackCenter {
         isDanger: Bool = false
     ) async -> Bool {
         await withCheckedContinuation { continuation in
-            present(.confirm(ConfirmRequest(
-                title: title,
-                description: description,
-                confirmLabel: confirmLabel ?? L10n.t("common.confirm"),
-                cancelLabel: cancelLabel ?? L10n.t("common.cancel"),
-                isDanger: isDanger,
-                resolve: { continuation.resume(returning: $0) }
-            )))
+            present(
+                .confirm(
+                    ConfirmRequest(
+                        title: title,
+                        description: description,
+                        confirmLabel: confirmLabel ?? L10n.t("common.confirm"),
+                        cancelLabel: cancelLabel ?? L10n.t("common.cancel"),
+                        isDanger: isDanger,
+                        resolve: { continuation.resume(returning: $0) }
+                    )))
         }
     }
 
@@ -137,19 +141,23 @@ final class FeedbackCenter {
         defaultValue: String = "",
         placeholder: String? = nil,
         confirmLabel: String? = nil,
+        selectsBaseName: Bool = false,
         validate: ((String) -> String?)? = nil
     ) async -> String? {
         await withCheckedContinuation { continuation in
-            present(.prompt(PromptRequest(
-                title: title,
-                description: description,
-                label: label,
-                defaultValue: defaultValue,
-                placeholder: placeholder,
-                confirmLabel: confirmLabel ?? L10n.t("common.save"),
-                validate: validate,
-                resolve: { continuation.resume(returning: $0) }
-            )))
+            present(
+                .prompt(
+                    PromptRequest(
+                        title: title,
+                        description: description,
+                        label: label,
+                        defaultValue: defaultValue,
+                        placeholder: placeholder,
+                        confirmLabel: confirmLabel ?? L10n.t("common.save"),
+                        selectsBaseName: selectsBaseName,
+                        validate: validate,
+                        resolve: { continuation.resume(returning: $0) }
+                    )))
         }
     }
 
@@ -159,9 +167,9 @@ final class FeedbackCenter {
     }
 
     /// Called by the host view when the user answers or dismisses.
-    func finishConfirm(_ accepted: Bool) { take { if case let .confirm(r) = $0 { r.resolve(accepted) } } }
-    func finishPrompt(_ value: String?) { take { if case let .prompt(r) = $0 { r.resolve(value) } } }
-    func finishError() { take { if case let .error(r) = $0 { r.resolve() } } }
+    func finishConfirm(_ accepted: Bool) { take { if case .confirm(let request) = $0 { request.resolve(accepted) } } }
+    func finishPrompt(_ value: String?) { take { if case .prompt(let request) = $0 { request.resolve(value) } } }
+    func finishError() { take { if case .error(let request) = $0 { request.resolve() } } }
 
     private func present(_ newModal: Modal) {
         cancelCurrent()
@@ -172,9 +180,9 @@ final class FeedbackCenter {
         guard let current = modal else { return }
         modal = nil
         switch current {
-        case let .confirm(request): request.resolve(false)
-        case let .prompt(request): request.resolve(nil)
-        case let .error(request): request.resolve()
+        case .confirm(let request): request.resolve(false)
+        case .prompt(let request): request.resolve(nil)
+        case .error(let request): request.resolve()
         }
     }
 
