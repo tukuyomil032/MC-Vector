@@ -76,6 +76,10 @@ struct MCVectorApp: App {
                 .onAppear { appDelegate.attach(app: app, feedback: feedback, runtime: runtime) }
         }
         .defaultSize(width: 1200, height: 800)
+        // No state restoration: the app keeps its own route and server, and
+        // AppKit has crashed laying out the restored windows' toolbars
+        // (NSToolbarItemViewer minSize) before the app had loaded its servers.
+        .restorationBehavior(.disabled)
         .commands {
             ShellCommands(app: app)
             EditorCommands()
@@ -92,6 +96,7 @@ struct MCVectorApp: App {
         .defaultSize(width: 900, height: 680)
         .windowToolbarStyle(.unified)
         .windowResizability(.contentMinSize)
+        .restorationBehavior(.disabled)
 
         #if DEBUG
             // Develop › UI Playground (⌥⌘P): GlassKit's parts on their own.
@@ -100,6 +105,7 @@ struct MCVectorApp: App {
                     .environment(\.locale, Locale(identifier: L10n.language))
             }
             .defaultSize(width: 1180, height: 760)
+            .restorationBehavior(.disabled)
         #endif
     }
 }
