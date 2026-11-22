@@ -37,6 +37,7 @@ enum SettingsSearch {
                     "native.settings.section.appearance",
                     ["settings.language.label", "native.settings.backupsLayout", "native.settings.pluginsPaging"]
                 ),
+                ("native.settings.filesBar", FilesBarSettings.Group.allCases.map(\.titleKey)),
                 ("settings.update.title", ["native.settings.updateCheck", "settings.update.channelLabel"]),
                 ("settings.security.title", ["settings.security.label"]),
             ]
