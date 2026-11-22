@@ -11,16 +11,20 @@ public struct GlassSegmentedPicker<Value: Hashable>: View {
     @Binding private var selection: Value
     private let title: (Value) -> String
     private let symbol: ((Value) -> String)?
+    private let showsTitles: Bool
     @State private var frames: [Value: CGRect] = [:]
 
+    /// With `showsTitles` false (and a `symbol`), segments show only their
+    /// symbol; the title becomes the tooltip and the VoiceOver label.
     public init(
         _ options: [Value], selection: Binding<Value>, title: @escaping (Value) -> String,
-        symbol: ((Value) -> String)? = nil
+        symbol: ((Value) -> String)? = nil, showsTitles: Bool = true
     ) {
         self.options = options
         self._selection = selection
         self.title = title
         self.symbol = symbol
+        self.showsTitles = showsTitles || symbol == nil
     }
 
     public var body: some View {
@@ -55,15 +59,17 @@ public struct GlassSegmentedPicker<Value: Hashable>: View {
         } label: {
             HStack(spacing: 5) {
                 if let symbol { Image(systemName: symbol(option)) }
-                Text(title(option))
+                if showsTitles { Text(title(option)) }
             }
             .font(.callout.weight(chosen ? .semibold : .regular))
             .foregroundStyle(chosen ? .primary : .secondary)
-            .padding(.horizontal, 14)
+            .padding(.horizontal, showsTitles ? 14 : 10)
             .padding(.vertical, 6)
             .contentShape(Capsule())
         }
         .buttonStyle(.plain)
+        .help(showsTitles ? "" : title(option))
+        .accessibilityLabel(title(option))
         .accessibilityAddTraits(chosen ? .isSelected : [])
         .onGeometryChange(for: CGRect.self) {
             $0.frame(in: .named(Self.space))
