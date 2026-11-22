@@ -233,8 +233,11 @@ private struct UsersCard: View {
                 TextField(
                     L10n.t(list.isIP ? "users.placeholder.ipAddress" : "users.placeholder.playerName"), text: $text
                 )
-                .textFieldStyle(.roundedBorder)
+                .textFieldStyle(.plain)
                 .autocorrectionDisabled()
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .glassSurface(RoundedRectangle(cornerRadius: 10, style: .continuous), interactive: true)
                 .focused($focused)
                 .onSubmit(submit)
                 .onChange(of: text) { if fieldError != nil { withAnimation(Motion.snappy) { fieldError = nil } } }
@@ -244,6 +247,7 @@ private struct UsersCard: View {
                         if isPending { ProgressView().controlSize(.small) }
                     }
                 }
+                .glassButtonStyle(prominent: true)
                 .disabled(isPending || !model.hasLoaded)
             }
             .controlSize(.large)

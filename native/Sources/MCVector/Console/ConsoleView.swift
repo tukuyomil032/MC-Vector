@@ -148,15 +148,15 @@ struct ConsoleView: View {
             }
             .keyboardShortcut("f", modifiers: .command)
             .help(L10n.t("console.actions.find"))
+            .glassButtonStyle()
 
-            Picker(L10n.t("console.filter.ariaLabel"), selection: $levelFilter) {
-                Text(L10n.t("console.filter.all")).tag(LogLevel?.none)
-                ForEach(LogLevel.allInOrder, id: \.self) { level in
-                    Text(level.name).tag(LogLevel?.some(level))
-                }
-            }
-            .labelsHidden()
+            GlassChoiceButton(
+                symbol: "line.3.horizontal.decrease.circle", selection: $levelFilter,
+                options: [LogLevel?.none] + LogLevel.allInOrder.map { LogLevel?.some($0) },
+                title: { $0?.name ?? L10n.t("console.filter.all") }
+            )
             .fixedSize()
+            .accessibilityLabel(L10n.t("console.filter.ariaLabel"))
 
             Button {
                 saveLogs()
@@ -164,6 +164,7 @@ struct ConsoleView: View {
                 Label(L10n.t("console.actions.saveLogs"), systemImage: "square.and.arrow.down")
             }
             .help(L10n.t("console.actions.saveLogs"))
+            .glassButtonStyle()
         }
         .labelStyle(.titleAndIcon)
         .controlSize(.regular)
@@ -237,7 +238,10 @@ struct ConsoleView: View {
         let matches = matchIDs
         return HStack(spacing: 8) {
             TextField(L10n.t("console.search.label"), text: $query, prompt: Text(L10n.t("console.search.placeholder")))
-                .textFieldStyle(.roundedBorder)
+                .textFieldStyle(.plain)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+                .glassSurface(Capsule(), interactive: true)
                 .focused($searchFocused)
                 .onSubmit { step(1, in: matches) }
                 .onChange(of: query) { currentMatch = 0 }
@@ -467,9 +471,14 @@ private struct CommandLine: View {
                 return .handled
             }
             Button(L10n.t("console.actions.send")) { Task { await send() } }
+                .glassButtonStyle(prominent: true)
                 .disabled(text.trimmingCharacters(in: .whitespaces).isEmpty || isSending)
         }
         .disabled(!isOnline)
+        .padding(.leading, 14)
+        .padding(.trailing, 4)
+        .padding(.vertical, 4)
+        .glassSurface(Capsule(), interactive: true)
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
         .onAppear {

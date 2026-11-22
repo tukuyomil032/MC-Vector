@@ -62,19 +62,43 @@ struct SoftwarePicker: View {
     @Binding var selection: String
 
     var body: some View {
-        Picker(L10n.t("addServer.software.label"), selection: $selection) {
-            if let extra, !options.contains(where: { $0.name == extra }) {
-                Text(extra).tag(extra)
-            }
-            ForEach(SoftwareGroup.allInFormOrder, id: \.self) { group in
-                Section(L10n.t(group.labelKey)) {
-                    ForEach(options.filter { $0.group == group }, id: \.name) { option in
-                        Text(L10n.t("addServer.software.options.\(option.name.lowercased())"))
-                            .tag(option.name)
-                    }
-                }
-            }
+        FormChoiceRow(title: L10n.t("addServer.software.label")) {
+            GlassChoiceButton(
+                selection: $selection, options: names, title: title,
+                section: { name in options.first { $0.name == name }.map { L10n.t($0.group.labelKey) } }
+            )
         }
+    }
+
+    /// The detected extra first, then the form's options in group order.
+    private var names: [String] {
+        let grouped = SoftwareGroup.allInFormOrder.flatMap { group in
+            options.filter { $0.group == group }.map(\.name)
+        }
+        if let extra, !grouped.contains(extra) { return [extra] + grouped }
+        return grouped
+    }
+
+    private func title(_ name: String) -> String {
+        options.contains { $0.name == name } ? L10n.t("addServer.software.options.\(name.lowercased())") : name
+    }
+}
+
+/// A form row with the name on the left and a choice button on the right, both
+/// centered vertically (LabeledContent pins the name to the top beside taller
+/// controls).
+struct FormChoiceRow<Content: View>: View {
+    let title: String
+    @ViewBuilder var content: Content
+
+    var body: some View {
+        HStack {
+            Text(title)
+            Spacer(minLength: 12)
+            content.fixedSize()
+        }
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel(title)
     }
 }
 
@@ -212,23 +236,9 @@ struct VersionMenu: View {
     @Binding var selection: String
 
     var body: some View {
-        LabeledContent(title) {
-            Menu {
-                Picker(title, selection: $selection) {
-                    ForEach(versions, id: \.self) { version in
-                        Text(version).tag(version)
-                    }
-                }
-                .pickerStyle(.inline)
-                .labelsHidden()
-            } label: {
-                Text(selection.isEmpty ? "–" : selection)
-                    .monospacedDigit()
-                    .contentTransition(.numericText())
-            }
-            .menuStyle(.button)
-            .fixedSize()
-            .animation(Motion.value, value: selection)
+        FormChoiceRow(title: title) {
+            GlassChoiceButton(selection: $selection, options: versions, title: { $0.isEmpty ? "–" : $0 })
+                .rollingText(selection)
         }
     }
 }

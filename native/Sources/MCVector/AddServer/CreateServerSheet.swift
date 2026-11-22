@@ -90,11 +90,15 @@ private struct CreateServerForm: View {
             FormTitle(text: L10n.t("addServer.title"))
             if !model.templates.isEmpty {
                 Section {
-                    Picker(L10n.t("addServer.template.label"), selection: $model.templateID) {
-                        Text(L10n.t("addServer.template.none")).tag(String?.none)
-                        ForEach(model.templates, id: \.id) { template in
-                            Text(template.name).tag(String?.some(template.id))
-                        }
+                    FormChoiceRow(title: L10n.t("addServer.template.label")) {
+                        GlassChoiceButton(
+                            selection: $model.templateID,
+                            options: [String?.none] + model.templates.map { String?.some($0.id) },
+                            title: { id in
+                                id.flatMap { id in model.templates.first { $0.id == id }?.name }
+                                    ?? L10n.t("addServer.template.none")
+                            }
+                        )
                     }
                 }
             }

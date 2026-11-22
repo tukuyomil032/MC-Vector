@@ -54,11 +54,8 @@ struct PluginInspector: View {
             }
             .controlSize(.regular)
 
-            Picker(L10n.t("plugins.browser.detailTabs"), selection: $tab) {
-                ForEach(Tab.allCases) { tab in Text(L10n.t(tab.titleKey)).tag(tab) }
-            }
-            .pickerStyle(.segmented)
-            .labelsHidden()
+            GlassSegmentedPicker(Tab.allCases, selection: $tab, title: { L10n.t($0.titleKey) })
+                .accessibilityLabel(L10n.t("plugins.browser.detailTabs"))
 
             Group {
                 switch tab {

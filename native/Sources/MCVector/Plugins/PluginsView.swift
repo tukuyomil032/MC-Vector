@@ -166,28 +166,27 @@ struct PluginsView: View {
     private func topRow(showsCount: Bool) -> some View {
         @Bindable var model = model
         return HStack(spacing: 12) {
-            Picker(L10n.t("plugins.browser.viewSwitch"), selection: $model.tab) {
-                Text(L10n.t("plugins.browser.tabBrowse")).tag(PluginsTab.browse)
-                Text(L10n.t("plugins.browser.tabInstalled", ["count": model.installed.count]))
-                    .tag(PluginsTab.installed)
-            }
-            .pickerStyle(.segmented)
-            .labelsHidden()
+            GlassSegmentedPicker(
+                [PluginsTab.browse, .installed], selection: $model.tab,
+                title: { tab in
+                    tab == .browse
+                        ? L10n.t("plugins.browser.tabBrowse")
+                        : L10n.t("plugins.browser.tabInstalled", ["count": model.installed.count])
+                },
+                symbol: { $0 == .browse ? "magnifyingglass" : "checkmark.circle" }
+            )
             .fixedSize()
+            .accessibilityLabel(L10n.t("plugins.browser.viewSwitch"))
             if showsCount { resultCount.fixedSize() }
             Spacer(minLength: 0)
             if model.tab == .browse, model.support.sources.count > 1 {
-                Picker(
-                    L10n.t("plugins.browser.platformLabel"),
-                    selection: Binding(get: { model.source }, set: { model.changeSource($0) })
-                ) {
-                    ForEach(model.support.sources, id: \.self) { source in
-                        Text(L10n.t(source.titleKey)).tag(source)
-                    }
-                }
-                .pickerStyle(.segmented)
-                .labelsHidden()
+                GlassSegmentedPicker(
+                    model.support.sources,
+                    selection: Binding(get: { model.source }, set: { model.changeSource($0) }),
+                    title: { L10n.t($0.titleKey) }
+                )
                 .fixedSize()
+                .accessibilityLabel(L10n.t("plugins.browser.platformLabel"))
                 .transition(.opacity)
             }
         }
@@ -196,22 +195,9 @@ struct PluginsView: View {
     private func searchField(_ prompt: String, text: Binding<String>, onSubmit: @escaping () -> Void = {})
         -> some View
     {
-        HStack(spacing: 6) {
-            Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
-            TextField(prompt, text: text).textFieldStyle(.plain).onSubmit(onSubmit)
-            if !text.wrappedValue.isEmpty {
-                Button {
-                    text.wrappedValue = ""
-                    onSubmit()
-                } label: {
-                    Image(systemName: "xmark.circle.fill").foregroundStyle(.tertiary)
-                }
-                .buttonStyle(.plain)
-            }
-        }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 7)
-        .background(.quaternary, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+        GlassSearchField(
+            text: text, prompt: prompt, clearLabel: L10n.t("native.settings.clearSearch"), onSubmit: onSubmit
+        )
         .frame(minWidth: 180, maxWidth: 360)
     }
 
@@ -223,32 +209,24 @@ struct PluginsView: View {
         ) { model.search() }
         .onChange(of: model.query) { model.search(debounce: true) }
 
-        Menu {
-            Picker(L10n.t("native.plugins.category"), selection: categoryBinding) {
-                Text(L10n.t("native.plugins.allCategories")).tag(String?.none)
-                if !model.categories.isEmpty { Divider() }
-                ForEach(model.categories, id: \.id) { category in
-                    Text(category.name).tag(String?.some(category.id))
-                }
+        GlassChoiceButton(
+            symbol: "line.3.horizontal.decrease.circle", selection: categoryBinding,
+            options: [String?.none] + model.categories.map { String?.some($0.id) },
+            title: { id in
+                id.flatMap { id in model.categories.first { $0.id == id }?.name }
+                    ?? L10n.t("native.plugins.allCategories")
             }
-            .pickerStyle(.inline)
-        } label: {
-            Label(categoryTitle, systemImage: "line.3.horizontal.decrease.circle")
-        }
+        )
         .fixedSize()
+        .accessibilityLabel(L10n.t("native.plugins.category"))
 
-        Menu {
-            Picker(L10n.t("plugins.browser.sortLabel"), selection: sortBinding) {
-                ForEach(PluginSort.allCases, id: \.self) { sort in
-                    Text(L10n.t(sort.titleKey)).tag(sort)
-                }
-            }
-            .pickerStyle(.inline)
-        } label: {
-            Label(L10n.t(model.sort.titleKey), systemImage: "arrow.up.arrow.down")
-        }
+        GlassChoiceButton(
+            symbol: "arrow.up.arrow.down", selection: sortBinding, options: PluginSort.allCases,
+            title: { L10n.t($0.titleKey) }
+        )
         .fixedSize()
         .help(L10n.t("plugins.browser.sortHint"))
+        .accessibilityLabel(L10n.t("plugins.browser.sortLabel"))
 
         Spacer(minLength: 0)
     }
@@ -282,10 +260,6 @@ struct PluginsView: View {
             })
     }
 
-    private var categoryTitle: String {
-        model.categories.first { $0.id == model.category }?.name ?? L10n.t("native.plugins.allCategories")
-    }
-
     @ViewBuilder private var installedControls: some View {
         @Bindable var model = model
         searchField(L10n.t("native.plugins.searchInstalled"), text: $model.installedSearch)
@@ -298,6 +272,7 @@ struct PluginsView: View {
             Task { await model.reloadInstalled(checkUpdates: true) }
         }
         .labelStyle(.iconOnly)
+        .glassButtonStyle()
         .disabled(model.checkingUpdates || model.bulk != nil)
         Button {
             Task { await model.updateAll(feedback: feedback) }
@@ -306,7 +281,7 @@ struct PluginsView: View {
                 L10n.t("native.plugins.updateAll", ["count": model.updatable.count]),
                 systemImage: "arrow.triangle.2.circlepath")
         }
-        .buttonStyle(.borderedProminent)
+        .glassButtonStyle(prominent: true)
         .disabled(model.updatable.isEmpty || model.bulk != nil)
     }
 
@@ -480,20 +455,28 @@ private struct Pager: View {
     let go: (Int) -> Void
 
     var body: some View {
+        // One piece of glass, like the toolbars' groups.
         HStack(spacing: 10) {
             Button(L10n.t("plugins.browser.prev"), systemImage: "chevron.left") { go(page - 1) }
                 .disabled(page == 0)
-            Text(pageLabel).monospacedDigit().contentTransition(.numericText(value: Double(page)))
+            Text(pageLabel).rollingNumber(Double(page))
             Button(L10n.t("plugins.browser.next"), systemImage: "chevron.right") { go(page + 1) }
                 .disabled(!hasNext)
             Divider().frame(height: 16)
             TextField(L10n.t("plugins.browser.pageNumberAriaLabel"), text: $field)
-                .frame(width: 60)
+                .textFieldStyle(.plain)
+                .multilineTextAlignment(.center)
+                .frame(width: 44)
+                .padding(.vertical, 3)
+                .background(.quaternary.opacity(0.5), in: Capsule())
                 .onSubmit(jump)
-            Button(L10n.t("plugins.browser.go"), action: jump)
+            Button(L10n.t("plugins.browser.go"), systemImage: "arrow.turn.down.right", action: jump)
         }
+        .buttonStyle(.borderless)
         .labelStyle(.iconOnly)
-        .animation(Motion.value, value: page)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 8)
+        .glassSurface(Capsule())
     }
 
     private var pageLabel: String {

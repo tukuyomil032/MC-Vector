@@ -202,33 +202,25 @@ struct BackupsView: View {
 
     private var header: some View {
         HStack(spacing: 12) {
-            HStack(spacing: 6) {
-                Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
-                TextField(L10n.t("native.backups.search"), text: $model.search)
-                    .textFieldStyle(.plain)
-            }
-            .padding(.horizontal, 10)
-            .padding(.vertical, 7)
-            .background(.quaternary, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+            GlassSearchField(
+                text: $model.search, prompt: L10n.t("native.backups.search"),
+                clearLabel: L10n.t("native.settings.clearSearch")
+            )
             .frame(maxWidth: 280)
 
-            Menu {
-                Picker(L10n.t("native.backups.sortBy"), selection: sortBinding) {
-                    ForEach(BackupSort.allCases) { sort in
-                        Text(L10n.t(sort.titleKey)).tag(sort)
-                    }
-                }
-                .pickerStyle(.inline)
-                Divider()
-                Picker(L10n.t("native.backups.order"), selection: ascendingBinding) {
-                    Text(L10n.t("native.backups.ascending")).tag(true)
-                    Text(L10n.t("native.backups.descending")).tag(false)
-                }
-                .pickerStyle(.inline)
-            } label: {
-                Label(L10n.t(model.sort.titleKey), systemImage: "arrow.up.arrow.down")
-            }
+            GlassChoiceButton(
+                symbol: "arrow.up.arrow.down", selection: sortBinding, options: BackupSort.allCases,
+                title: { L10n.t($0.titleKey) }
+            )
             .fixedSize()
+            .accessibilityLabel(L10n.t("native.backups.sortBy"))
+
+            GlassChoiceButton(
+                selection: ascendingBinding, options: [true, false],
+                title: { L10n.t($0 ? "native.backups.ascending" : "native.backups.descending") }
+            )
+            .fixedSize()
+            .accessibilityLabel(L10n.t("native.backups.order"))
 
             Spacer()
 
@@ -238,9 +230,7 @@ struct BackupsView: View {
                     ["count": model.items.count])
             )
             .foregroundStyle(.secondary)
-            .monospacedDigit()
-            .contentTransition(.numericText(value: Double(model.items.count)))
-            .animation(Motion.value, value: model.items.count)
+            .rollingNumber(Double(model.items.count))
 
             Button {
                 showsCreate = true
@@ -252,7 +242,7 @@ struct BackupsView: View {
                     Label(Self.createTitle, systemImage: "plus")
                 }
             }
-            .buttonStyle(.borderedProminent)
+            .glassButtonStyle(prominent: true)
             .keyboardShortcut("n", modifiers: .command)
             .disabled(model.isBusy || model.load != .loaded)
         }
