@@ -15,6 +15,7 @@ let package = Package(
     products: [
         .executable(name: "MCVector", targets: ["MCVector"]),
         .library(name: "MCVectorEditorKit", targets: ["MCVectorEditorKit"]),
+        .library(name: "GlassKit", targets: ["GlassKit"]),
     ],
     // Approved packages only (requirements DEP-001, DEP-002). The Neon plugin pins
     // Neon by revision, so SwiftPM only accepts the plugin itself by revision too
@@ -32,6 +33,12 @@ let package = Package(
         .target(
             name: "MCVectorEditorKit",
             path: "Sources/MCVectorEditorKit",
+            swiftSettings: [.swiftLanguageMode(.v6)]
+        ),
+        // Liquid Glass controls (with a macOS 15 fallback) and the app's shared motion.
+        .target(
+            name: "GlassKit",
+            path: "Sources/GlassKit",
             swiftSettings: [.swiftLanguageMode(.v6)]
         ),
         // UniFFI-generated C header + hand-written module map for the Rust static library.
@@ -59,6 +66,7 @@ let package = Package(
             dependencies: [
                 "MCVectorCore",
                 "MCVectorEditorKit",
+                "GlassKit",
                 .product(name: "STTextView", package: "STTextView"),
                 .product(name: "STTextView-Plugin-Neon", package: "STTextView-Plugin-Neon"),
                 .product(name: "TextFormationPlugin", package: "STTextView-Plugin-TextFormation"),

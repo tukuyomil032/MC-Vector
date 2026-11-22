@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import GlassKit
 import SwiftUI
 
 /// One selectable option drawn as a small picture with its name under it

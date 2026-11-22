@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import GlassKit
 import SwiftUI
 
 /// A chunk map around one player: the chunks players see (view distance) and,

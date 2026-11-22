@@ -4,6 +4,7 @@
 
 #if DEBUG
     import AppKit
+    import GlassKit
     import MCVectorCore
     import SwiftUI
 
@@ -386,6 +387,8 @@
             case "FILES-selection":
                 FilesView.capturePreset = .init(selection: ["config", "server.properties"])
                 app.navigate(to: .files)
+            case let playground where playground.hasPrefix("PLAYGROUND-"):
+                await showPlayground(playground)
             case "FILES-plugins":
                 FilesView.capturePreset = .init(path: ["plugins"])
                 app.navigate(to: .files)
@@ -967,7 +970,7 @@
         /// Writes the line to stderr and, when `MCVECTOR_CAPTURE_SIGNAL` names a file,
         /// appends it there. capture.sh launches the app through `open`, which cannot
         /// redirect the app's output, so it watches that file instead.
-        private static func signal(_ line: String) {
+        static func signal(_ line: String) {
             let data = Data((line + "\n").utf8)
             FileHandle.standardError.write(data)
             guard let path = ProcessInfo.processInfo.environment["MCVECTOR_CAPTURE_SIGNAL"], !path.isEmpty else {

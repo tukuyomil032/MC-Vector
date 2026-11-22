@@ -31,6 +31,11 @@ struct RootView: View {
         .onChange(of: app.settingsRequest) { _, request in
             if request != nil { openWindow(id: SettingsWindow.windowID) }
         }
+        #if DEBUG
+            .onReceive(NotificationCenter.default.publisher(for: .openPlayground)) { _ in
+                openWindow(id: PlaygroundWindow.windowID)
+            }
+        #endif
         .onChange(of: app.isSearchFocused) { _, focus in
             if focus {
                 isSearchFieldFocused = true

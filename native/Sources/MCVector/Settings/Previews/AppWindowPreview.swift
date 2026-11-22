@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import GlassKit
 import SwiftUI
 
 /// MC-Vector's window in miniature on a desktop backdrop, drawn with the

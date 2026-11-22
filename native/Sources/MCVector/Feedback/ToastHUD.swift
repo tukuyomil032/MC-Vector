@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import GlassKit
 import SwiftUI
 
 /// The macOS-style transient message: one capsule near the top of the window with

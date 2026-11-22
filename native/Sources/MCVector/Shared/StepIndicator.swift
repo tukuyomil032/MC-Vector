@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import GlassKit
 import SwiftUI
 
 /// Numbered steps joined by a line, like the React Stepper: done steps show a

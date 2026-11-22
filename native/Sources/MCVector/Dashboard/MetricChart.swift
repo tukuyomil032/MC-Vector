@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import Charts
+import GlassKit
 import SwiftUI
 
 /// A live 60-second line chart. The x axis (seconds since startup) moves every

@@ -7,11 +7,16 @@ import SwiftUI
 /// percent changes, so each roll gets to finish instead of restarting every
 /// frame, and the bar eases between values. `fraction == nil` shows an
 /// indeterminate bar.
-struct RollingPercent: View {
+public struct RollingPercent: View {
     let label: String
     let fraction: Double?
 
-    var body: some View {
+    public init(label: String, fraction: Double?) {
+        self.label = label
+        self.fraction = fraction
+    }
+
+    public var body: some View {
         let percent = fraction.map { Int(($0 * 100).rounded(.down)).clamped(to: 0...100) }
         VStack(alignment: .leading, spacing: 6) {
             HStack {

@@ -92,12 +92,22 @@ struct MCVectorApp: App {
         .defaultSize(width: 900, height: 680)
         .windowToolbarStyle(.unified)
         .windowResizability(.contentMinSize)
+
+        #if DEBUG
+            // Develop › UI Playground (⌥⌘P): GlassKit's parts on their own.
+            Window("UI Playground", id: PlaygroundWindow.windowID) {
+                PlaygroundWindow()
+                    .environment(\.locale, Locale(identifier: L10n.language))
+            }
+            .defaultSize(width: 1180, height: 760)
+        #endif
     }
 }
 
 /// Menu commands that carry React's keyboard shortcuts (ui-parity-a D11).
 struct ShellCommands: Commands {
     let app: AppState
+    @Environment(\.openWindow) private var openWindow
 
     var body: some Commands {
         // One Settings window holds the app's and the servers' settings.
@@ -118,6 +128,12 @@ struct ShellCommands: Commands {
                 .keyboardShortcut(";", modifiers: .command)
                 .disabled(app.servers.isEmpty)
         }
+        #if DEBUG
+            CommandMenu(playgroundText("開発", "Develop")) {
+                Button("UI Playground") { openWindow(id: PlaygroundWindow.windowID) }
+                    .keyboardShortcut("p", modifiers: [.command, .option])
+            }
+        #endif
     }
 }
 
