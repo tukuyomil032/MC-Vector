@@ -14,7 +14,6 @@ struct DashboardView: View {
     @State private var size = CGSize(width: 1_000, height: 700)
     @State private var upperHeight: CGFloat = 300
     @State private var copied = false
-    @State private var appeared = false
 
     private var server: ServerProfile? { app.servers.first { $0.id == serverID } }
     private var status: String { runtime.status(of: serverID) }
@@ -40,8 +39,8 @@ struct DashboardView: View {
                     if size.width >= Self.wideWidth {
                         VStack(spacing: Self.spacing) {
                             EqualColumns(spacing: Self.spacing) {
-                                statusCard.staggeredAppear(index: 0, isVisible: appeared)
-                                infoCard.staggeredAppear(index: 1, isVisible: appeared)
+                                statusCard
+                                infoCard
                             }
                             .fixedSize(horizontal: false, vertical: true)
                             EqualColumns(spacing: Self.spacing) { kpiCards }
@@ -55,7 +54,11 @@ struct DashboardView: View {
                         }
                     }
                 }
-                .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { upperHeight = $0 }
+                .onGeometryChange(for: CGFloat.self) {
+                    $0.size.height
+                } action: {
+                    upperHeight = $0
+                }
 
                 if size.width >= Self.wideWidth {
                     EqualColumns(spacing: Self.spacing) { chartCards }
@@ -66,8 +69,11 @@ struct DashboardView: View {
             }
             .padding(Self.padding)
         }
-        .onGeometryChange(for: CGSize.self) { $0.size } action: { size = $0 }
-        .onAppear { appeared = true }
+        .onGeometryChange(for: CGSize.self) {
+            $0.size
+        } action: {
+            size = $0
+        }
         .task { await runtime.refreshMetrics(serverID) }
     }
 
@@ -129,9 +135,12 @@ struct DashboardView: View {
                         Text(allocatedMemory)
                     }
                     LabeledField(label: L10n.t("dashboard.stats.javaRuntime")) {
-                        Text(server?.javaPath.flatMap { $0.isEmpty ? nil : $0 } ?? L10n.t("serverSettings.javaSystemDefault"))
-                            .lineLimit(1)
-                            .truncationMode(.middle)
+                        Text(
+                            server?.javaPath.flatMap { $0.isEmpty ? nil : $0 }
+                                ?? L10n.t("serverSettings.javaSystemDefault")
+                        )
+                        .lineLimit(1)
+                        .truncationMode(.middle)
                     }
                 }
             }
@@ -175,7 +184,7 @@ struct DashboardView: View {
         DashboardCard(title: L10n.t("dashboard.stats.currentCpu"), symbol: "cpu") {
             AnimatedValue(value: latest.map { Double($0.cpu) }, format: { String(format: "%.1f", $0) }, unit: "%")
         }
-        .staggeredAppear(index: 2, isVisible: appeared)
+
         DashboardCard(title: L10n.t("dashboard.stats.currentMemory"), symbol: "memorychip") {
             AnimatedValue(
                 value: latest.map { Double($0.memoryBytes / 1_048_576) },
@@ -183,7 +192,7 @@ struct DashboardView: View {
                 unit: L10n.t("dashboard.units.megabytes")
             )
         }
-        .staggeredAppear(index: 3, isVisible: appeared)
+
         DashboardCard(
             title: L10n.t("dashboard.stats.currentTps"),
             symbol: "gauge.with.needle",
@@ -196,7 +205,6 @@ struct DashboardView: View {
                 tint: tps.map(TpsTone.color) ?? .primary
             )
         }
-        .staggeredAppear(index: 4, isVisible: appeared)
     }
 
     // MARK: Charts
@@ -219,7 +227,7 @@ struct DashboardView: View {
             axisLabel: { "\(Int($0))%" },
             valueLabel: { String(format: "%.1f%%", $0) }
         )
-        .staggeredAppear(index: 5, isVisible: appeared)
+
         MetricChart(
             title: L10n.t("dashboard.charts.memoryLast60s"),
             symbol: "memorychip",
@@ -232,7 +240,6 @@ struct DashboardView: View {
             valueLabel: { "\(Int($0)) \(megabytes)" },
             minimumTop: 64
         )
-        .staggeredAppear(index: 6, isVisible: appeared)
     }
 }
 
