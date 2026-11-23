@@ -50,7 +50,12 @@ fn jdk_archive(release: &str) -> Vec<u8> {
         header.set_entry_type(tar::EntryType::Regular);
         builder.append_data(&mut header, path, body).unwrap();
     };
-    add("jdk-21.0.5+11/bin/java", b"#!/bin/sh\n", 0o755);
+    // `java.exe` on Windows, where the runtime is only available under that name.
+    add(
+        &format!("jdk-21.0.5+11/bin/{}", super::probe::executable_name()),
+        b"#!/bin/sh\n",
+        0o755,
+    );
     add(
         "jdk-21.0.5+11/release",
         format!("IMPLEMENTOR=\"Eclipse Adoptium\"\nJAVA_VERSION=\"{release}\"\n").as_bytes(),
