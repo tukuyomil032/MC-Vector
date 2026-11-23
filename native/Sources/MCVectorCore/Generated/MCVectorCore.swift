@@ -519,6 +519,22 @@ fileprivate struct FfiConverterUInt32: FfiConverterPrimitive {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterInt32: FfiConverterPrimitive {
+    typealias FfiType = Int32
+    typealias SwiftType = Int32
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> Int32 {
+        return try lift(readInt(&buf))
+    }
+
+    public static func write(_ value: Int32, into buf: inout [UInt8]) {
+        writeInt(&buf, lower(value))
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterUInt64: FfiConverterPrimitive {
     typealias FfiType = UInt64
     typealias SwiftType = UInt64
@@ -3973,6 +3989,181 @@ public func FfiConverterTypeMetricSnapshot_lower(_ value: MetricSnapshot) -> Rus
 
 
 /**
+ * One NBT tag of a file opened in the Files view's tree.
+ */
+public struct NbtNode: Equatable, Hashable {
+    public var id: UInt32
+    /**
+     * None only for the root tag.
+     */
+    public var parent: UInt32?
+    /**
+     * The key in a compound, or `[index]` in a list; empty for the root.
+     */
+    public var name: String
+    /**
+     * byte, short, int, long, float, double, string, byte_array, int_array,
+     * long_array, list or compound.
+     */
+    public var kind: String
+    /**
+     * Display text for values and arrays; empty for compounds and lists.
+     */
+    public var value: String
+    public var childCount: UInt32
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(id: UInt32, 
+        /**
+         * None only for the root tag.
+         */parent: UInt32?, 
+        /**
+         * The key in a compound, or `[index]` in a list; empty for the root.
+         */name: String, 
+        /**
+         * byte, short, int, long, float, double, string, byte_array, int_array,
+         * long_array, list or compound.
+         */kind: String, 
+        /**
+         * Display text for values and arrays; empty for compounds and lists.
+         */value: String, childCount: UInt32) {
+        self.id = id
+        self.parent = parent
+        self.name = name
+        self.kind = kind
+        self.value = value
+        self.childCount = childCount
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension NbtNode: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeNbtNode: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> NbtNode {
+        return
+            try NbtNode(
+                id: FfiConverterUInt32.read(from: &buf), 
+                parent: FfiConverterOptionUInt32.read(from: &buf), 
+                name: FfiConverterString.read(from: &buf), 
+                kind: FfiConverterString.read(from: &buf), 
+                value: FfiConverterString.read(from: &buf), 
+                childCount: FfiConverterUInt32.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: NbtNode, into buf: inout [UInt8]) {
+        FfiConverterUInt32.write(value.id, into: &buf)
+        FfiConverterOptionUInt32.write(value.parent, into: &buf)
+        FfiConverterString.write(value.name, into: &buf)
+        FfiConverterString.write(value.kind, into: &buf)
+        FfiConverterString.write(value.value, into: &buf)
+        FfiConverterUInt32.write(value.childCount, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeNbtNode_lift(_ buf: RustBuffer) throws -> NbtNode {
+    return try FfiConverterTypeNbtNode.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeNbtNode_lower(_ value: NbtNode) -> RustBuffer {
+    return FfiConverterTypeNbtNode.lower(value)
+}
+
+
+public struct NbtTree: Equatable, Hashable {
+    /**
+     * Each node follows its parent; compound children are sorted by name.
+     */
+    public var nodes: [NbtNode]
+    /**
+     * True when the file had more tags than the view lists.
+     */
+    public var truncated: Bool
+    /**
+     * gzip, zlib or none.
+     */
+    public var compression: String
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(
+        /**
+         * Each node follows its parent; compound children are sorted by name.
+         */nodes: [NbtNode], 
+        /**
+         * True when the file had more tags than the view lists.
+         */truncated: Bool, 
+        /**
+         * gzip, zlib or none.
+         */compression: String) {
+        self.nodes = nodes
+        self.truncated = truncated
+        self.compression = compression
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension NbtTree: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeNbtTree: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> NbtTree {
+        return
+            try NbtTree(
+                nodes: FfiConverterSequenceTypeNbtNode.read(from: &buf), 
+                truncated: FfiConverterBool.read(from: &buf), 
+                compression: FfiConverterString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: NbtTree, into buf: inout [UInt8]) {
+        FfiConverterSequenceTypeNbtNode.write(value.nodes, into: &buf)
+        FfiConverterBool.write(value.truncated, into: &buf)
+        FfiConverterString.write(value.compression, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeNbtTree_lift(_ buf: RustBuffer) throws -> NbtTree {
+    return try FfiConverterTypeNbtTree.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeNbtTree_lower(_ value: NbtTree) -> RustBuffer {
+    return FfiConverterTypeNbtTree.lower(value)
+}
+
+
+/**
  * What the add-server form sends.
  */
 public struct NewServerInput: Equatable, Hashable {
@@ -7092,6 +7283,89 @@ public func FfiConverterTypeTpsPoint_lower(_ value: TpsPoint) -> RustBuffer {
 
 
 /**
+ * A world folder's level.dat, summarised for the Files view.
+ */
+public struct WorldInfo: Equatable, Hashable {
+    public var levelName: String?
+    public var seed: Int64?
+    public var versionName: String?
+    public var dataVersion: Int32?
+    /**
+     * Milliseconds since the Unix epoch.
+     */
+    public var lastPlayed: Int64?
+    public var gameType: Int32?
+    public var hardcore: Bool?
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(levelName: String?, seed: Int64?, versionName: String?, dataVersion: Int32?, 
+        /**
+         * Milliseconds since the Unix epoch.
+         */lastPlayed: Int64?, gameType: Int32?, hardcore: Bool?) {
+        self.levelName = levelName
+        self.seed = seed
+        self.versionName = versionName
+        self.dataVersion = dataVersion
+        self.lastPlayed = lastPlayed
+        self.gameType = gameType
+        self.hardcore = hardcore
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension WorldInfo: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeWorldInfo: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> WorldInfo {
+        return
+            try WorldInfo(
+                levelName: FfiConverterOptionString.read(from: &buf), 
+                seed: FfiConverterOptionInt64.read(from: &buf), 
+                versionName: FfiConverterOptionString.read(from: &buf), 
+                dataVersion: FfiConverterOptionInt32.read(from: &buf), 
+                lastPlayed: FfiConverterOptionInt64.read(from: &buf), 
+                gameType: FfiConverterOptionInt32.read(from: &buf), 
+                hardcore: FfiConverterOptionBool.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: WorldInfo, into buf: inout [UInt8]) {
+        FfiConverterOptionString.write(value.levelName, into: &buf)
+        FfiConverterOptionInt64.write(value.seed, into: &buf)
+        FfiConverterOptionString.write(value.versionName, into: &buf)
+        FfiConverterOptionInt32.write(value.dataVersion, into: &buf)
+        FfiConverterOptionInt64.write(value.lastPlayed, into: &buf)
+        FfiConverterOptionInt32.write(value.gameType, into: &buf)
+        FfiConverterOptionBool.write(value.hardcore, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeWorldInfo_lift(_ buf: RustBuffer) throws -> WorldInfo {
+    return try FfiConverterTypeWorldInfo.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeWorldInfo_lower(_ value: WorldInfo) -> RustBuffer {
+    return FfiConverterTypeWorldInfo.lower(value)
+}
+
+
+/**
  * The backup schedule selected in the server's general settings.
  */
 
@@ -9512,6 +9786,30 @@ fileprivate struct FfiConverterOptionUInt32: FfiConverterRustBuffer {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterOptionInt32: FfiConverterRustBuffer {
+    typealias SwiftType = Int32?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterInt32.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterInt32.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterOptionUInt64: FfiConverterRustBuffer {
     typealias SwiftType = UInt64?
 
@@ -9872,6 +10170,30 @@ fileprivate struct FfiConverterOptionTypeServerJarSoftwareChange: FfiConverterRu
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterOptionTypeWorldInfo: FfiConverterRustBuffer {
+    typealias SwiftType = WorldInfo?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterTypeWorldInfo.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterTypeWorldInfo.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterSequenceString: FfiConverterRustBuffer {
     typealias SwiftType = [String]
 
@@ -10089,6 +10411,31 @@ fileprivate struct FfiConverterSequenceTypeJavaRuntimeRecord: FfiConverterRustBu
         seq.reserveCapacity(Int(len))
         for _ in 0 ..< len {
             seq.append(try FfiConverterTypeJavaRuntimeRecord.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypeNbtNode: FfiConverterRustBuffer {
+    typealias SwiftType = [NbtNode]
+
+    public static func write(_ value: [NbtNode], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeNbtNode.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [NbtNode] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [NbtNode]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeNbtNode.read(from: &buf))
         }
         return seq
     }
@@ -10647,6 +10994,23 @@ public func configLocale()throws  -> String?  {
 })
 }
 /**
+ * Chunks stored in a region (.mca) file.
+ */
+public func countRegionChunks(serverId: String, relative: String)async throws  -> UInt32  {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_mcvector_ffi_fn_func_count_region_chunks(FfiConverterString.lower(serverId),FfiConverterString.lower(relative)
+                )
+            },
+            pollFunc: ffi_mcvector_ffi_rust_future_poll_u32,
+            completeFunc: ffi_mcvector_ffi_rust_future_complete_u32,
+            freeFunc: ffi_mcvector_ffi_rust_future_free_u32,
+            liftFunc: FfiConverterUInt32.lift,
+            errorHandler: FfiConverterTypeFfiError_lift
+        )
+}
+/**
  * Creates a folder or an empty file named `name` in `parent`; never replaces
  * an existing entry.
  */
@@ -11014,6 +11378,23 @@ public func mutatePlayerList(serverId: String, list: PlayerListKind, action: Pla
         )
 }
 /**
+ * Reads an NBT file (level.dat, playerdata, structures) as a flat tag tree.
+ */
+public func readNbtTree(serverId: String, relative: String)async throws  -> NbtTree  {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_mcvector_ffi_fn_func_read_nbt_tree(FfiConverterString.lower(serverId),FfiConverterString.lower(relative)
+                )
+            },
+            pollFunc: ffi_mcvector_ffi_rust_future_poll_rust_buffer,
+            completeFunc: ffi_mcvector_ffi_rust_future_complete_rust_buffer,
+            freeFunc: ffi_mcvector_ffi_rust_future_free_rust_buffer,
+            liftFunc: FfiConverterTypeNbtTree_lift,
+            errorHandler: FfiConverterTypeFfiError_lift
+        )
+}
+/**
  * Reads a text file for the editor (at most 16 MiB of UTF-8).
  */
 public func readTextDocument(serverId: String, relative: String)async throws  -> TextDocumentInfo  {
@@ -11027,6 +11408,23 @@ public func readTextDocument(serverId: String, relative: String)async throws  ->
             completeFunc: ffi_mcvector_ffi_rust_future_complete_rust_buffer,
             freeFunc: ffi_mcvector_ffi_rust_future_free_rust_buffer,
             liftFunc: FfiConverterTypeTextDocumentInfo_lift,
+            errorHandler: FfiConverterTypeFfiError_lift
+        )
+}
+/**
+ * The world in a folder (from its level.dat), or None when it has none.
+ */
+public func readWorldInfo(serverId: String, relative: String)async throws  -> WorldInfo?  {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_mcvector_ffi_fn_func_read_world_info(FfiConverterString.lower(serverId),FfiConverterString.lower(relative)
+                )
+            },
+            pollFunc: ffi_mcvector_ffi_rust_future_poll_rust_buffer,
+            completeFunc: ffi_mcvector_ffi_rust_future_complete_rust_buffer,
+            freeFunc: ffi_mcvector_ffi_rust_future_free_rust_buffer,
+            liftFunc: FfiConverterOptionTypeWorldInfo.lift,
             errorHandler: FfiConverterTypeFfiError_lift
         )
 }
@@ -11901,6 +12299,9 @@ private let initializationResult: InitializationResult = {
     if (uniffi_mcvector_ffi_checksum_func_config_locale() != 3848) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_mcvector_ffi_checksum_func_count_region_chunks() != 23118) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_mcvector_ffi_checksum_func_create_file_entry() != 9895) {
         return InitializationResult.apiChecksumMismatch
     }
@@ -11970,7 +12371,13 @@ private let initializationResult: InitializationResult = {
     if (uniffi_mcvector_ffi_checksum_func_mutate_player_list() != 17415) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_mcvector_ffi_checksum_func_read_nbt_tree() != 15584) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_mcvector_ffi_checksum_func_read_text_document() != 44919) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mcvector_ffi_checksum_func_read_world_info() != 21811) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_mcvector_ffi_checksum_func_rename_file_entry() != 680) {

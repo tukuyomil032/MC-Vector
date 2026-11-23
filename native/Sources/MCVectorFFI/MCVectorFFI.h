@@ -580,6 +580,11 @@ RustBuffer uniffi_mcvector_ffi_fn_func_config_locale(RustCallStatus *_Nonnull ou
     
 );
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_COUNT_REGION_CHUNKS
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_COUNT_REGION_CHUNKS
+uint64_t uniffi_mcvector_ffi_fn_func_count_region_chunks(RustBuffer server_id, RustBuffer relative
+);
+#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_CREATE_FILE_ENTRY
 #define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_CREATE_FILE_ENTRY
 uint64_t uniffi_mcvector_ffi_fn_func_create_file_entry(RustBuffer server_id, RustBuffer parent, RustBuffer name, int8_t is_directory
@@ -697,9 +702,19 @@ uint64_t uniffi_mcvector_ffi_fn_func_move_file_entries(RustBuffer server_id, Rus
 uint64_t uniffi_mcvector_ffi_fn_func_mutate_player_list(RustBuffer server_id, RustBuffer list, RustBuffer action, RustBuffer value
 );
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_READ_NBT_TREE
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_READ_NBT_TREE
+uint64_t uniffi_mcvector_ffi_fn_func_read_nbt_tree(RustBuffer server_id, RustBuffer relative
+);
+#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_READ_TEXT_DOCUMENT
 #define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_READ_TEXT_DOCUMENT
 uint64_t uniffi_mcvector_ffi_fn_func_read_text_document(RustBuffer server_id, RustBuffer relative
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_READ_WORLD_INFO
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_READ_WORLD_INFO
+uint64_t uniffi_mcvector_ffi_fn_func_read_world_info(RustBuffer server_id, RustBuffer relative
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_FN_FUNC_RENAME_FILE_ENTRY
@@ -1298,6 +1313,12 @@ uint16_t uniffi_mcvector_ffi_checksum_func_config_locale(void
     
 );
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_COUNT_REGION_CHUNKS
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_COUNT_REGION_CHUNKS
+uint16_t uniffi_mcvector_ffi_checksum_func_count_region_chunks(void
+    
+);
+#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_CREATE_FILE_ENTRY
 #define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_CREATE_FILE_ENTRY
 uint16_t uniffi_mcvector_ffi_checksum_func_create_file_entry(void
@@ -1436,9 +1457,21 @@ uint16_t uniffi_mcvector_ffi_checksum_func_mutate_player_list(void
     
 );
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_READ_NBT_TREE
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_READ_NBT_TREE
+uint16_t uniffi_mcvector_ffi_checksum_func_read_nbt_tree(void
+    
+);
+#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_READ_TEXT_DOCUMENT
 #define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_READ_TEXT_DOCUMENT
 uint16_t uniffi_mcvector_ffi_checksum_func_read_text_document(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_READ_WORLD_INFO
+#define UNIFFI_FFIDEF_UNIFFI_MCVECTOR_FFI_CHECKSUM_FUNC_READ_WORLD_INFO
+uint16_t uniffi_mcvector_ffi_checksum_func_read_world_info(void
     
 );
 #endif

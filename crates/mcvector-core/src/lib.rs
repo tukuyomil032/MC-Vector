@@ -18,6 +18,7 @@ pub mod lifecycle;
 pub mod managed_files;
 pub mod managed_path;
 pub mod metric_history;
+pub mod nbt_view;
 pub mod operations;
 pub mod paths;
 pub mod players;

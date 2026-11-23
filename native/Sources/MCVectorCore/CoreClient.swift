@@ -249,6 +249,21 @@ public enum CoreClient {
         }
     }
 
+    /// An NBT file (level.dat, playerdata, structures) as a flat tag tree.
+    public static func readNbtTree(serverID: String, relative: String) async throws(CoreError) -> NbtTree {
+        try await call { try await MCVectorCore.readNbtTree(serverId: serverID, relative: relative) }
+    }
+
+    /// The world in a folder, from its level.dat; nil when it has none.
+    public static func readWorldInfo(serverID: String, relative: String) async throws(CoreError) -> WorldInfo? {
+        try await call { try await MCVectorCore.readWorldInfo(serverId: serverID, relative: relative) }
+    }
+
+    /// Chunks stored in a region (.mca) file.
+    public static func countRegionChunks(serverID: String, relative: String) async throws(CoreError) -> UInt32 {
+        try await call { try await MCVectorCore.countRegionChunks(serverId: serverID, relative: relative) }
+    }
+
     public static func readTextDocument(serverID: String, relative: String) async throws(CoreError) -> TextDocumentInfo
     {
         try await call { try await MCVectorCore.readTextDocument(serverId: serverID, relative: relative) }

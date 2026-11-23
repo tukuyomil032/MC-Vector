@@ -37,6 +37,7 @@ use mcvector_core::managed_path::{
     resolve_managed_request, validate_server_id, ManagedPathRequest, ManagedRoot,
 };
 use mcvector_core::metric_history::MetricHistorySnapshot;
+use mcvector_core::nbt_view::{self, NbtErrorKind};
 use mcvector_core::operations::OperationKind;
 use mcvector_core::operations::ServerOperationManager;
 use mcvector_core::paths;
@@ -2922,6 +2923,115 @@ pub async fn import_file_entries(
         )
         .map_err(|error| files_error(error, &data_dir))?;
         Ok(imported.len() as u32)
+    })
+    .await
+}
+
+/// One NBT tag of a file opened in the Files view's tree.
+#[derive(Debug, Clone, PartialEq, uniffi::Record)]
+pub struct NbtNode {
+    pub id: u32,
+    /// None only for the root tag.
+    pub parent: Option<u32>,
+    /// The key in a compound, or `[index]` in a list; empty for the root.
+    pub name: String,
+    /// byte, short, int, long, float, double, string, byte_array, int_array,
+    /// long_array, list or compound.
+    pub kind: String,
+    /// Display text for values and arrays; empty for compounds and lists.
+    pub value: String,
+    pub child_count: u32,
+}
+
+#[derive(Debug, Clone, PartialEq, uniffi::Record)]
+pub struct NbtTree {
+    /// Each node follows its parent; compound children are sorted by name.
+    pub nodes: Vec<NbtNode>,
+    /// True when the file had more tags than the view lists.
+    pub truncated: bool,
+    /// gzip, zlib or none.
+    pub compression: String,
+}
+
+/// A world folder's level.dat, summarised for the Files view.
+#[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
+pub struct WorldInfo {
+    pub level_name: Option<String>,
+    pub seed: Option<i64>,
+    pub version_name: Option<String>,
+    pub data_version: Option<i32>,
+    /// Milliseconds since the Unix epoch.
+    pub last_played: Option<i64>,
+    pub game_type: Option<i32>,
+    pub hardcore: Option<bool>,
+}
+
+fn nbt_error(error: nbt_view::NbtError, data_dir: &std::path::Path) -> FfiError {
+    let code = match error.kind {
+        NbtErrorKind::TooLarge => CoreErrorCode::FilesTooLarge,
+        NbtErrorKind::Invalid | NbtErrorKind::Io => CoreErrorCode::ServerOperationFailed,
+    };
+    core_error(code, redact(&error.message, data_dir))
+}
+
+/// Reads an NBT file (level.dat, playerdata, structures) as a flat tag tree.
+#[uniffi::export(async_runtime = "tokio")]
+pub async fn read_nbt_tree(server_id: String, relative: String) -> Result<NbtTree, FfiError> {
+    let (data_dir, _, _) = session_handles()?;
+    blocking(move || {
+        let path = server_path(&data_dir, &server_id, &relative, false)?;
+        let tree = nbt_view::read_nbt_tree(&path).map_err(|error| nbt_error(error, &data_dir))?;
+        Ok(NbtTree {
+            nodes: tree
+                .nodes
+                .into_iter()
+                .map(|node| NbtNode {
+                    id: node.id,
+                    parent: node.parent,
+                    name: node.name,
+                    kind: node.kind.to_owned(),
+                    value: node.value,
+                    child_count: node.child_count,
+                })
+                .collect(),
+            truncated: tree.truncated,
+            compression: tree.compression.to_owned(),
+        })
+    })
+    .await
+}
+
+/// The world in a folder (from its level.dat), or None when it has none.
+#[uniffi::export(async_runtime = "tokio")]
+pub async fn read_world_info(
+    server_id: String,
+    relative: String,
+) -> Result<Option<WorldInfo>, FfiError> {
+    let (data_dir, _, _) = session_handles()?;
+    blocking(move || {
+        let folder = server_path(&data_dir, &server_id, &relative, false)?;
+        let info =
+            nbt_view::read_world_info(&folder).map_err(|error| nbt_error(error, &data_dir))?;
+        Ok(info.map(|info| WorldInfo {
+            level_name: info.level_name,
+            seed: info.seed,
+            version_name: info.version_name,
+            data_version: info.data_version,
+            last_played: info.last_played,
+            game_type: info.game_type,
+            hardcore: info.hardcore,
+        }))
+    })
+    .await
+}
+
+/// Chunks stored in a region (.mca) file.
+#[uniffi::export(async_runtime = "tokio")]
+pub async fn count_region_chunks(server_id: String, relative: String) -> Result<u32, FfiError> {
+    let (data_dir, _, _) = session_handles()?;
+    blocking(move || {
+        let path = server_path(&data_dir, &server_id, &relative, false)?;
+        nbt_view::count_region_chunks(&path).map_err(|error| nbt_error(error, &data_dir))
     })
     .await
 }

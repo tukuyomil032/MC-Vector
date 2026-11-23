@@ -30,6 +30,8 @@ zip = "9"
 # `java` extracts Temurin .tar.gz archives (same versions as src-tauri).
 tar = "0.4"
 flate2 = "1"
+# `nbt_view` reads level.dat, playerdata and structure files (read-only) for the Files view.
+fastnbt = "2.6"
 # `server_creation` stamps createdDate like the Tauri edition did.
 chrono = { version = "0.4", features = ["clock"] }
 
