@@ -55,6 +55,19 @@ struct FilesContextMenu: View {
         let single = names.count == 1 ? names.first : nil
         if let single {
             Button(L10n.t("native.files.open"), systemImage: "arrow.up.forward.app") { model.open(single) }
+            if model.items.first(where: { $0.name == single })?.isDirectory == false {
+                openWithMenu(single)
+            }
+        }
+        Button(L10n.t("native.files.quickLook"), systemImage: "eye") {
+            model.selection = names
+            FilesQuickLook.shared.toggle(model)
+        }
+        if let single {
+            Button(L10n.t("native.files.getInfo"), systemImage: "info.circle") {
+                model.selection = [single]
+                model.infoTarget = single
+            }
             Divider()
             Button(L10n.t("files.contextMenu.rename"), systemImage: "pencil") {
                 Task { await model.rename(single) }
@@ -94,6 +107,32 @@ struct FilesContextMenu: View {
         Divider()
         Button(L10n.t("native.files.moveToTrash"), systemImage: "trash", role: .destructive) {
             Task { await model.trash(names) }
+        }
+    }
+
+    /// "Open With": the default app, the other apps by name, then Other….
+    private func openWithMenu(_ name: String) -> some View {
+        let apps = model.openWithApps(for: name)
+        return Menu {
+            ForEach(apps.filter(\.isDefault)) { app in appButton(app, name: name) }
+            if apps.contains(where: \.isDefault) { Divider() }
+            ForEach(apps.filter { !$0.isDefault }) { app in appButton(app, name: name) }
+            if !apps.isEmpty { Divider() }
+            Button(L10n.t("native.files.openWithOther")) { model.openWithOtherApp(name) }
+        } label: {
+            Label(L10n.t("native.files.openWith"), systemImage: "arrow.up.right.square")
+        }
+    }
+
+    private func appButton(_ app: OpenWithApp, name: String) -> some View {
+        Button {
+            model.open(name, with: app.url)
+        } label: {
+            Label {
+                Text(app.isDefault ? L10n.t("native.files.openWithDefault", ["app": app.name]) : app.name)
+            } icon: {
+                Image(nsImage: app.icon)
+            }
         }
     }
 }

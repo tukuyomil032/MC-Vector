@@ -3,6 +3,7 @@
 #if DEBUG
     import Foundation
     import MCVectorCore
+    import Quartz
 
     extension CaptureState {
         @MainActor
@@ -142,11 +143,49 @@
                 "the current folder should come from its live rows")
         }
 
+        /// Text facts (BOM, line endings, lines), the Open With list and the
+        /// Quick Look panel, on the fixture's files.
+        @MainActor
+        static func verifyPreviewAndInfo() async {
+            let model = FilesModel(serverID: "server-1")
+            await model.reload()
+            func facts(_ name: String) async -> TextFacts? {
+                guard let row = model.items.first(where: { $0.name == name }) else { return nil }
+                return await TextFacts.load(serverID: model.serverID, relative: model.relative(name), row: row)
+            }
+            let plain = await facts("server.properties")
+            check(
+                "info: plain text", plain == TextFacts(lines: 2, hasBOM: false, lineEnding: .lf, mixed: false),
+                "got \(String(describing: plain))")
+            let bom = await facts("bom-crlf.properties")
+            check(
+                "info: BOM and CRLF", bom?.hasBOM == true && bom?.lineEnding == .crlf, "got \(String(describing: bom))")
+            check("info: no text facts for a jar", await facts("server.jar") == nil)
+
+            let apps = model.openWithApps(for: "server.properties")
+            check("open with: apps listed", !apps.isEmpty, "no apps")
+            check("open with: default first", apps.first?.isDefault ?? false, "\(apps.map(\.name))")
+
+            model.selection = ["server.properties"]
+            FilesQuickLook.shared.toggle(model)
+            try? await Task.sleep(for: .milliseconds(600))
+            let shown = FilesQuickLook.shared.itemCount
+            check("quick look: opens", FilesQuickLook.isOpen)
+            check("quick look: shows the selection", shown == 1, "\(shown) items")
+            check(
+                "quick look: panel reads it", QLPreviewPanel.shared()?.currentPreviewItem != nil,
+                "the panel has no current item")
+            FilesQuickLook.shared.toggle(model)
+            try? await Task.sleep(for: .milliseconds(400))
+            check("quick look: closes", !FilesQuickLook.isOpen)
+        }
+
         @MainActor
         static func verifyFiles(app: AppState) async {
             verifyFileIcons()
             verifyViewModes()
             await verifyColumns()
+            await verifyPreviewAndInfo()
             // Real file operations through the FFI, logged for capture.sh.
             let server = "server-1"
             func step(_ label: String, expectsError: Bool = false, _ work: () async throws -> Void) async {

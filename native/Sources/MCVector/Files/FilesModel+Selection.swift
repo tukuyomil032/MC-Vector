@@ -38,6 +38,12 @@ extension FilesModel {
         selectionAnchor = order[target]
     }
 
+    /// ⌘I: shows the selected entry's info, or hides it when it is showing.
+    func showInfo() {
+        guard selection.count == 1, let name = selection.first else { return }
+        infoTarget = infoTarget == name ? nil : name
+    }
+
     /// The single selected row, or the first visible one when none is selected
     /// (what the gallery and the column preview show).
     var focusedRow: FileRow? {

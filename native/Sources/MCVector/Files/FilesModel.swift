@@ -71,6 +71,8 @@ final class FilesModel {
     var moveRequest: MoveRequest?
     /// The action in progress or just finished, shown as a popover.
     var activity: FileActivity?
+    /// The entry whose ⌘I info popover is open.
+    var infoTarget: String?
     var isBusy: Bool { activity?.state == .running }
 
     private var sizeTask: Task<Void, Never>?
@@ -133,6 +135,7 @@ final class FilesModel {
         columnListings[currentPath] = columnRows(items)
         columnListings[newPath.joined(separator: "/")] = nil
         selection = []
+        infoTarget = nil
         filter = ""
         let mode = viewMode(for: newPath)
         path = newPath

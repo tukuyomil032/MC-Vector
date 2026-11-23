@@ -125,6 +125,8 @@ struct FilesShortcuts: View {
             shortcut("c", [.command, .option]) { model.copyPaths(model.selection) }
             shortcut(".", [.command, .shift]) { model.showsHidden.toggle() }
             shortcut("r", .command) { Task { await model.reload() } }
+            shortcut("y", .command) { FilesQuickLook.shared.toggle(model) }
+            shortcut("i", .command) { model.showInfo() }
             ForEach(FilesViewMode.allCases) { mode in
                 shortcut(KeyEquivalent(mode.shortcut), .command) { model.viewMode = mode }
             }

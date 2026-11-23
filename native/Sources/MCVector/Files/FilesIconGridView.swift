@@ -60,6 +60,7 @@ struct FilesIconGridView: View {
             return .handled
         }
         .onDeleteCommand { Task { await model.trash(model.selection) } }
+        .filesQuickLook(model)
         .dropDestination(for: URL.self) { urls, _ in
             let files = urls.filter(\.isFileURL)
             guard !files.isEmpty else { return false }
@@ -140,6 +141,7 @@ struct FilesIconGridView: View {
         .popover(isPresented: model.isShowingActivity(on: row.name), arrowEdge: .bottom) {
             if let activity = model.activity { FileActivityBubble(activity: activity) }
         }
+        .fileInfoPopover(model, row: row, edge: .bottom)
         .accessibilityElement(children: .combine)
         .accessibilityAddTraits(selected ? [.isSelected, .isButton] : .isButton)
     }

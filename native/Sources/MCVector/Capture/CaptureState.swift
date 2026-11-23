@@ -242,6 +242,16 @@
                 model.navigate(to: ["plugins", "Essentials"])
                 try? await Task.sleep(for: .milliseconds(500))
                 model.selection = ["config.yml"]
+            case "FILES-info", "FILES-quicklook":
+                FilesView.capturePreset = .init(selection: ["server.properties"], viewMode: .list)
+                app.navigate(to: .files)
+                try? await Task.sleep(for: .milliseconds(900))
+                let model = app.files(for: "server-1")
+                if id == "FILES-info" {
+                    model.infoTarget = "server.properties"
+                } else {
+                    FilesQuickLook.shared.toggle(model)
+                }
             case "FILES-gallery":
                 FilesView.capturePreset = .init(selection: ["server.properties"], viewMode: .gallery)
                 app.navigate(to: .files)

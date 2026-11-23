@@ -9,8 +9,6 @@ struct FilesDetailPane: View {
     let model: FilesModel
     let row: FileRow?
 
-    private var locale: Locale { Locale(identifier: L10n.language) }
-
     var body: some View {
         Group {
             if let row {
@@ -25,16 +23,7 @@ struct FilesDetailPane: View {
                             .multilineTextAlignment(.center)
                             .lineLimit(3)
                             .textSelection(.enabled)
-                        Grid(alignment: .leading, horizontalSpacing: 10, verticalSpacing: 6) {
-                            fact("native.files.kind", L10n.t("native.files.group.\(FileKindGroup(row).rawValue)"))
-                            fact("native.files.size", sizeText(row))
-                            if let count = row.childCount {
-                                fact("native.files.items", count.formatted(.number.locale(locale)))
-                            }
-                            if let created = row.created { fact("native.files.created", dateText(created)) }
-                            fact("native.files.modified", dateText(row.modified))
-                        }
-                        .font(.callout)
+                        FileFacts(model: model, row: row)
                     }
                     .padding(.horizontal, 16)
                     .padding(.bottom, 16)
@@ -49,25 +38,47 @@ struct FilesDetailPane: View {
         .frame(minWidth: 220, idealWidth: 260, maxWidth: 320)
         .animation(Motion.standard, value: row?.name)
     }
+}
 
-    private func fact(_ key: String, _ value: String) -> some View {
-        GridRow {
-            Text(L10n.t(key))
-                .foregroundStyle(.secondary)
-                .gridColumnAlignment(.trailing)
-            Text(value)
-                .monospacedDigit()
-                .textSelection(.enabled)
+extension View {
+    /// The ⌘I popover for this entry, on a layer of its own so it never
+    /// competes with the entry's action popover.
+    /// `isEnabled` is false for entries outside the current folder (earlier
+    /// columns), whose names may repeat the current folder's.
+    func fileInfoPopover(_ model: FilesModel, row: FileRow, edge: Edge = .trailing, isEnabled: Bool = true)
+        -> some View
+    {
+        background {
+            Color.clear.popover(
+                isPresented: Binding(
+                    get: { isEnabled && model.infoTarget == row.name },
+                    set: { if !$0, model.infoTarget == row.name { model.infoTarget = nil } }),
+                arrowEdge: edge
+            ) {
+                FileInfoPopover(model: model, row: row)
+            }
         }
     }
+}
 
-    private func sizeText(_ row: FileRow) -> String {
-        guard row.isDirectory else { return FilesListView.bytes(row.size) }
-        guard let size = model.folderSizes[model.relative(row.name)] else { return "…" }
-        return FilesListView.bytes(size.bytes) + (size.complete ? "" : "+")
-    }
+/// The ⌘I popover: the entry's icon and name over its facts.
+struct FileInfoPopover: View {
+    let model: FilesModel
+    let row: FileRow
 
-    private func dateText(_ date: Date) -> String {
-        date.formatted(.dateTime.year().month(.twoDigits).day(.twoDigits).hour().minute().locale(locale))
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 10) {
+                FileIconView(name: row.name, isDirectory: row.isDirectory, size: 32)
+                Text(row.name)
+                    .font(.headline)
+                    .lineLimit(2)
+                    .textSelection(.enabled)
+            }
+            Divider()
+            FileFacts(model: model, row: row)
+        }
+        .padding(14)
+        .frame(width: 320, alignment: .leading)
     }
 }

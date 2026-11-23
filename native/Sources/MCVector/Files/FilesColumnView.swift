@@ -50,6 +50,7 @@ struct FilesColumnView: View {
         .onKeyPress(.leftArrow) { goLeft() }
         .onKeyPress(.rightArrow) { goRight() }
         .onDeleteCommand { Task { await model.trash(model.selection) } }
+        .filesQuickLook(model)
         .onChange(of: model.showsHidden) { model.columnListings = [:] }
         .dropDestination(for: URL.self) { urls, _ in
             let files = urls.filter(\.isFileURL)
@@ -134,6 +135,7 @@ struct FilesColumnView: View {
         .popover(isPresented: model.isShowingActivity(on: isCurrent ? row.name : ""), arrowEdge: .trailing) {
             if let activity = model.activity { FileActivityBubble(activity: activity) }
         }
+        .fileInfoPopover(model, row: row, isEnabled: isCurrent)
     }
 
     /// A folder opens to the right; a file is selected in its own column.

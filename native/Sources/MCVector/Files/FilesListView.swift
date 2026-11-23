@@ -98,6 +98,7 @@ struct FilesListView: View {
             return .handled
         }
         .onDeleteCommand { Task { await model.trash(model.selection) } }
+        .filesQuickLook(model)
         // Finder drops import into the current folder.
         .dropDestination(for: URL.self) { urls, _ in
             let files = urls.filter(\.isFileURL)
@@ -161,6 +162,7 @@ private struct FileNameCell: View {
         .popover(isPresented: model.isShowingActivity(on: row.name), arrowEdge: .trailing) {
             if let activity = model.activity { FileActivityBubble(activity: activity) }
         }
+        .fileInfoPopover(model, row: row)
     }
 }
 
