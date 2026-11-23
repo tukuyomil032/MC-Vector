@@ -55,6 +55,13 @@ enum FileKind {
         binaryExtensions.contains((name as NSString).pathExtension.lowercased())
     }
 
+    /// Files holding one NBT compound (gzip, zlib or plain), shown as a tag tree.
+    static let nbtExtensions: Set<String> = ["dat", "dat_old", "nbt", "schem", "schematic", "litematic"]
+
+    static func isNbt(_ name: String) -> Bool {
+        nbtExtensions.contains((name as NSString).pathExtension.lowercased())
+    }
+
     /// Archives the Files view can extract.
     static func isZip(_ name: String) -> Bool {
         (name as NSString).pathExtension.lowercased() == "zip"

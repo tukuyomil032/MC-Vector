@@ -22,7 +22,12 @@ struct FilesView: View {
     var body: some View {
         @Bindable var model = model
         ZStack {
-            if let openedFile = model.openedFile {
+            if let openedFile = model.openedFile, openedFile.isNbt {
+                NbtTreeView(serverID: serverID, file: openedFile) {
+                    withAnimation(Motion.standard) { model.openedFile = nil }
+                }
+                .transition(.motionFade)
+            } else if let openedFile = model.openedFile {
                 FileEditorView(
                     serverID: serverID, file: openedFile, software: server?.software, version: server?.version
                 ) {

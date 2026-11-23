@@ -327,4 +327,7 @@ struct OpenedFile: Equatable {
     let relative: String
     let name: String
     let size: UInt64
+
+    /// NBT files open in the read-only tag tree; everything else in the editor.
+    var isNbt: Bool { FileKind.isNbt(name) }
 }

@@ -56,7 +56,23 @@ prepare_fixture() {
       printf 'newbies:\n  kit: tools\n' > "$tree/plugins/Essentials/config.yml"
       printf '[12:00:00 INFO]: Starting minecraft server\n' > "$tree/logs/latest.log"
       printf '\357\273\277motd=BOM and CRLF\r\nserver-port=25565\r\n' > "$tree/bom-crlf.properties"
-      printf 'region\n' > "$tree/world/region/r.0.0.mca"
+      # level.dat: gzip NBT with the fields the Files view summarises
+      # (LevelName "E2E World", LastPlayed 1700000000000, creative, seed 12345, 1.21.10).
+      printf '\012\000\000\012\000\004Data' > "$tree/world/level.nbt"
+      printf '\010\000\011LevelName\000\011E2E World' >> "$tree/world/level.nbt"
+      printf '\004\000\012LastPlayed\000\000\001\213\317\345\150\000' >> "$tree/world/level.nbt"
+      printf '\003\000\010GameType\000\000\000\001\001\000\010hardcore\000' >> "$tree/world/level.nbt"
+      printf '\012\000\020WorldGenSettings\004\000\004seed\000\000\000\000\000\000\060\071\000' >> "$tree/world/level.nbt"
+      printf '\012\000\007Version\010\000\004Name\000\0071.21.10\003\000\002Id\000\000\021\314\000' >> "$tree/world/level.nbt"
+      printf '\003\000\013DataVersion\000\000\021\314\000\000' >> "$tree/world/level.nbt"
+      gzip -n -c "$tree/world/level.nbt" > "$tree/world/level.dat" && rm "$tree/world/level.nbt"
+      # r.0.0.mca: an 8 KiB region whose location table lists two chunks.
+      {
+        printf '\000\000\002\001'
+        head -c 36 /dev/zero
+        printf '\000\000\003\001'
+        head -c 8148 /dev/zero
+      } > "$tree/world/region/r.0.0.mca"
     done
     # Editor files (FILES-editor-*, VERIFY-editor) for the first server only.
     local editor="$dir/servers/server-1/editor"

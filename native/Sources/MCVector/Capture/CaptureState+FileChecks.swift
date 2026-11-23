@@ -180,8 +180,40 @@
             check("quick look: closes", !FilesQuickLook.isOpen)
         }
 
+        /// level.dat as a tree (search and tag paths), the world summary and a
+        /// region file's chunk count, on the fixture's world.
+        @MainActor
+        static func verifyNbt() async {
+            let tree = NbtTreeModel(serverID: "server-1", relativePath: "world/level.dat")
+            await tree.load()
+            check("nbt: level.dat reads", tree.phase == .ready, "\(tree.phase)")
+            let names = tree.rows.map(\.node.name)
+            check("nbt: opens two levels", names.contains("Data") && names.contains("LevelName"), "\(names)")
+            tree.query = "seed"
+            let seed = tree.rows.first { $0.node.name == "seed" }
+            check("nbt: search finds seed", seed?.node.value == "12345", "\(tree.rows.map(\.node.name))")
+            check(
+                "nbt: tag path", seed.map { tree.path(of: $0.id) } == "Data.WorldGenSettings.seed",
+                seed.map { tree.path(of: $0.id) } ?? "no seed row")
+
+            let world = try? await CoreClient.readWorldInfo(serverID: "server-1", relative: "world")
+            check("world: name", world?.levelName == "E2E World", "\(String(describing: world))")
+            check("world: seed and mode", world?.seed == 12345 && world?.gameType == 1)
+            check("world: version", world?.versionName == "1.21.10")
+            do throws(CoreError) {
+                let none = try await CoreClient.readWorldInfo(serverID: "server-1", relative: "plugins")
+                check("world: plain folder is not a world", none == nil, "\(String(describing: none))")
+            } catch {
+                check("world: plain folder is not a world", false, error.uiText)
+            }
+            let chunks = try? await CoreClient.countRegionChunks(
+                serverID: "server-1", relative: "world/region/r.0.0.mca")
+            check("region: chunk count", chunks == 2, "\(String(describing: chunks))")
+        }
+
         @MainActor
         static func verifyFiles(app: AppState) async {
+            await verifyNbt()
             verifyFileIcons()
             verifyViewModes()
             await verifyColumns()

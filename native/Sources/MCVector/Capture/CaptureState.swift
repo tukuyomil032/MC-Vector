@@ -242,6 +242,15 @@
                 model.navigate(to: ["plugins", "Essentials"])
                 try? await Task.sleep(for: .milliseconds(500))
                 model.selection = ["config.yml"]
+            case "FILES-nbt", "FILES-nbt-search":
+                FilesView.capturePreset = .init(path: ["world"], viewMode: .list)
+                NbtTreeView.captureQuery = id == "FILES-nbt-search" ? "seed" : nil
+                app.navigate(to: .files)
+                try? await Task.sleep(for: .milliseconds(900))
+                app.files(for: "server-1").open("level.dat")
+            case "FILES-world-info":
+                FilesView.capturePreset = .init(selection: ["world"], viewMode: .gallery)
+                app.navigate(to: .files)
             case "FILES-info", "FILES-quicklook":
                 FilesView.capturePreset = .init(selection: ["server.properties"], viewMode: .list)
                 app.navigate(to: .files)

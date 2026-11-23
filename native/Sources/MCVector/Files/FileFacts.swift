@@ -12,6 +12,7 @@ struct FileFacts: View {
     let model: FilesModel
     let row: FileRow
     @State private var text: TextFacts?
+    @State private var minecraft: MinecraftFacts?
     @State private var copied = false
 
     private var locale: Locale { Locale(identifier: L10n.language) }
@@ -33,6 +34,7 @@ struct FileFacts: View {
                     L10n.t(text.hasBOM ? "native.files.encoding.utf8bom" : "native.files.encoding.utf8"))
                 fact("native.files.lineEndings", L10n.t(text.lineEndingKey))
             }
+            minecraftFacts
             GridRow {
                 Text(L10n.t("native.files.where"))
                     .foregroundStyle(.secondary)
@@ -42,8 +44,36 @@ struct FileFacts: View {
         }
         .font(.callout)
         .animation(Motion.standard, value: text)
+        .animation(Motion.standard, value: minecraft)
         .task(id: "\(relativePath)@\(row.modified.timeIntervalSince1970)") {
             text = await TextFacts.load(serverID: model.serverID, relative: relativePath, row: row)
+            minecraft = await MinecraftFacts.load(serverID: model.serverID, relative: relativePath, row: row)
+        }
+    }
+
+    /// A world folder's level.dat, a region file's chunks or an NBT file's tags.
+    @ViewBuilder
+    private var minecraftFacts: some View {
+        switch minecraft {
+        case .world(let world):
+            if let name = world.levelName { fact("native.world.name", name) }
+            if let seed = world.seed { fact("native.world.seed", String(seed)) }
+            if let version = world.versionName { fact("native.world.version", version) }
+            if let mode = world.gameType.flatMap({ NbtKind.gameMode(Int($0)) }) {
+                fact("native.world.gameMode", mode)
+            }
+            if let hardcore = world.hardcore {
+                fact("native.world.hardcore", L10n.t(hardcore ? "native.nbt.yes" : "native.nbt.no"))
+            }
+            if let lastPlayed = world.lastPlayed, lastPlayed > 0 {
+                fact("native.world.lastPlayed", dateText(Date(timeIntervalSince1970: TimeInterval(lastPlayed) / 1000)))
+            }
+        case .regionChunks(let count):
+            fact("native.files.chunks", count.formatted(.number.locale(locale)))
+        case .nbtTags(let count):
+            fact("native.files.nbtTags", count.formatted(.number.locale(locale)))
+        case nil:
+            EmptyView()
         }
     }
 
@@ -108,7 +138,8 @@ struct TextFacts: Equatable {
 
     @MainActor
     static func load(serverID: String, relative: String, row: FileRow) async -> TextFacts? {
-        guard !row.isDirectory, !FileKind.isBinary(row.name), row.size <= EditorDocument.maxEditableBytes,
+        guard !row.isDirectory, !FileKind.isBinary(row.name), !FileKind.isNbt(row.name),
+            row.size <= EditorDocument.maxEditableBytes,
             let document = try? await CoreClient.readTextDocument(serverID: serverID, relative: relative)
         else { return nil }
         let text = document.text
