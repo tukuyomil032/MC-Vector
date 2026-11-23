@@ -154,12 +154,10 @@ const icons: [string, string][] = [
   ['mcv-folder.svg', folderIcon(PLAIN)],
   // The plain file fills the square like Material's file icons.
   ['mcv-file.svg', svg(`<path fill="${PLAIN}" d="${transformPath(MDI.file, 16 / 24, 0, 0)}"/>`)],
-  ...MINECRAFT_FOLDERS.map(
-    ([name, color, light, glyph]): [string, string] => [
-      `mcv-folder-${name}.svg`,
-      folderIcon(color, light, glyph),
-    ],
-  ),
+  ...MINECRAFT_FOLDERS.map(([name, color, light, glyph]): [string, string] => [
+    `mcv-folder-${name}.svg`,
+    folderIcon(color, light, glyph),
+  ]),
 ];
 
 let changed = 0;
