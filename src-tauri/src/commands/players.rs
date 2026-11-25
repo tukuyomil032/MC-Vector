@@ -6,7 +6,8 @@ use std::{fs::File, io::Read};
 
 use reqwest::redirect::Policy;
 use reqwest::Url;
-use serde::{Deserialize, Serialize};
+use serde::de::{IgnoredAny, SeqAccess, Visitor};
+use serde::{Deserialize, Deserializer, Serialize};
 use tauri::{AppHandle, Manager, State};
 
 use super::file_utils::{
@@ -19,6 +20,54 @@ const MOJANG_PROFILE_URL: &str = "https://api.mojang.com/users/profiles/minecraf
 const MOJANG_TIMEOUT: Duration = Duration::from_secs(5);
 const MAX_MOJANG_RESPONSE_BYTES: usize = 16 * 1024;
 const MAX_PLAYER_LIST_BYTES: u64 = 4 * 1024 * 1024;
+const MAX_PLAYER_LIST_ENTRIES: usize = 100_000;
+const PLAYER_LIST_ENTRY_LIMIT_ERROR: &str = "player list exceeds the 100,000 entry limit";
+
+struct BoundedPlayerEntries(Vec<PlayerEntry>);
+
+impl<'de> Deserialize<'de> for BoundedPlayerEntries {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        struct PlayerEntriesVisitor;
+
+        impl<'de> Visitor<'de> for PlayerEntriesVisitor {
+            type Value = BoundedPlayerEntries;
+
+            fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                formatter.write_str("a player list with at most 100,000 entries")
+            }
+
+            fn visit_seq<A>(self, mut sequence: A) -> Result<Self::Value, A::Error>
+            where
+                A: SeqAccess<'de>,
+            {
+                if sequence
+                    .size_hint()
+                    .is_some_and(|size| size > MAX_PLAYER_LIST_ENTRIES)
+                {
+                    return Err(serde::de::Error::custom(PLAYER_LIST_ENTRY_LIMIT_ERROR));
+                }
+
+                let mut entries = Vec::new();
+                while entries.len() < MAX_PLAYER_LIST_ENTRIES {
+                    match sequence.next_element()? {
+                        Some(entry) => entries.push(entry),
+                        None => return Ok(BoundedPlayerEntries(entries)),
+                    }
+                }
+
+                if sequence.next_element::<IgnoredAny>()?.is_some() {
+                    return Err(serde::de::Error::custom(PLAYER_LIST_ENTRY_LIMIT_ERROR));
+                }
+                Ok(BoundedPlayerEntries(entries))
+            }
+        }
+
+        deserializer.deserialize_seq(PlayerEntriesVisitor)
+    }
+}
 
 #[derive(Clone, Copy, Debug, Deserialize, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "kebab-case")]
@@ -292,8 +341,16 @@ fn read_player_file(path: &Path) -> Result<Vec<PlayerEntry>, String> {
     if content.len() as u64 > MAX_PLAYER_LIST_BYTES {
         return Err("Player list exceeds the 4 MiB size limit".into());
     }
-    serde_json::from_slice(&content)
-        .map_err(|error| format!("Player list JSON is malformed: {error}"))
+    serde_json::from_slice::<BoundedPlayerEntries>(&content)
+        .map(|entries| entries.0)
+        .map_err(|error| {
+            let message = error.to_string();
+            if message.contains(PLAYER_LIST_ENTRY_LIMIT_ERROR) {
+                "Player list exceeds the 100,000 entry limit".to_string()
+            } else {
+                format!("Player list JSON is malformed: {error}")
+            }
+        })
 }
 
 fn read_snapshot(app_data_dir: &Path, server_id: &str) -> Result<PlayerListSnapshot, String> {
@@ -444,8 +501,14 @@ fn mutate_player_file(
     };
 
     if changed {
+        if entries.len() > MAX_PLAYER_LIST_ENTRIES {
+            return Err("Player list exceeds the 100,000 entry limit".into());
+        }
         let content = serde_json::to_string_pretty(&entries)
             .map_err(|error| format!("Failed to encode player list: {error}"))?;
+        if content.len() as u64 > MAX_PLAYER_LIST_BYTES {
+            return Err("Player list exceeds the 4 MiB size limit".into());
+        }
         atomic_write_managed_text_file(&path, &content)?;
     }
 
@@ -661,6 +724,143 @@ mod tests {
             std::fs::metadata(path).unwrap().len(),
             super::MAX_PLAYER_LIST_BYTES + 1
         );
+    }
+
+    #[test]
+    fn player_list_over_entry_limit_rejects_add_without_modifying_file() {
+        let directory = TestDirectory::new();
+        initialize_server(&directory, "server-1");
+        let path = directory.path().join("servers/server-1/whitelist.json");
+        let mut original = String::with_capacity((super::MAX_PLAYER_LIST_ENTRIES + 1) * 12);
+        original.push('[');
+        for index in 0..=super::MAX_PLAYER_LIST_ENTRIES {
+            if index > 0 {
+                original.push(',');
+            }
+            original.push_str(r#"{"name":"A"}"#);
+        }
+        original.push(']');
+        let original = original.into_bytes();
+        std::fs::write(&path, &original).unwrap();
+
+        let error = super::mutate_player_file(
+            directory.path(),
+            "server-1",
+            &mutation(PlayerListType::Whitelist, PlayerListAction::Add, "Alex"),
+            Some(super::PlayerIdentity {
+                name: "Alex".into(),
+                uuid: None,
+            }),
+            "Alex".into(),
+        )
+        .unwrap_err();
+
+        assert!(error.contains("100,000 entry limit"));
+        assert_eq!(std::fs::read(path).unwrap(), original);
+    }
+
+    #[test]
+    fn player_list_at_entry_limit_is_accepted() {
+        let directory = TestDirectory::new();
+        initialize_server(&directory, "server-1");
+        let path = directory.path().join("servers/server-1/whitelist.json");
+        let mut original = String::with_capacity(super::MAX_PLAYER_LIST_ENTRIES * 12);
+        original.push('[');
+        for index in 0..super::MAX_PLAYER_LIST_ENTRIES {
+            if index > 0 {
+                original.push(',');
+            }
+            original.push_str(r#"{"name":"A"}"#);
+        }
+        original.push(']');
+        std::fs::write(&path, &original).unwrap();
+
+        let entries = super::read_player_file(&path).unwrap();
+
+        assert_eq!(entries.len(), super::MAX_PLAYER_LIST_ENTRIES);
+        assert!(entries.iter().all(|entry| entry.name == "A"));
+    }
+
+    #[test]
+    fn adding_to_player_list_at_entry_limit_is_rejected_without_modifying_file() {
+        let directory = TestDirectory::new();
+        initialize_server(&directory, "server-1");
+        let path = directory.path().join("servers/server-1/whitelist.json");
+        let mut original = String::with_capacity(super::MAX_PLAYER_LIST_ENTRIES * 12);
+        original.push('[');
+        for index in 0..super::MAX_PLAYER_LIST_ENTRIES {
+            if index > 0 {
+                original.push(',');
+            }
+            original.push_str(r#"{"name":"A"}"#);
+        }
+        original.push(']');
+        let original = original.into_bytes();
+        std::fs::write(&path, &original).unwrap();
+
+        let error = super::mutate_player_file(
+            directory.path(),
+            "server-1",
+            &mutation(PlayerListType::Whitelist, PlayerListAction::Add, "Alex"),
+            Some(super::PlayerIdentity {
+                name: "Alex".into(),
+                uuid: None,
+            }),
+            "Alex".into(),
+        )
+        .unwrap_err();
+
+        assert!(error.contains("100,000 entry limit"));
+        assert_eq!(std::fs::read(path).unwrap(), original);
+    }
+
+    #[test]
+    fn player_list_mutation_that_exceeds_byte_limit_preserves_original_file() {
+        let directory = TestDirectory::new();
+        initialize_server(&directory, "server-1");
+        let path = directory.path().join("servers/server-1/whitelist.json");
+        let name = "A".repeat(super::MAX_PLAYER_LIST_BYTES as usize - 13);
+        let original = format!(r#"[{{"name":"{name}"}}]"#).into_bytes();
+        assert_eq!(original.len() as u64, super::MAX_PLAYER_LIST_BYTES);
+        std::fs::write(&path, &original).unwrap();
+
+        let error = super::mutate_player_file(
+            directory.path(),
+            "server-1",
+            &mutation(PlayerListType::Whitelist, PlayerListAction::Add, "Alex"),
+            Some(super::PlayerIdentity {
+                name: "Alex".into(),
+                uuid: None,
+            }),
+            "Alex".into(),
+        )
+        .unwrap_err();
+
+        assert!(error.contains("4 MiB size limit"));
+        assert_eq!(std::fs::read(path).unwrap(), original);
+    }
+
+    #[test]
+    fn player_list_below_entry_limit_keeps_vanilla_field_compatibility() {
+        let directory = TestDirectory::new();
+        initialize_server(&directory, "server-1");
+        let path = directory.path().join("servers/server-1/whitelist.json");
+        std::fs::write(
+            &path,
+            r#"[{"name":"Alex","uuid":"0123456789abcdef0123456789abcdef","futureField":true},{"name":"Steve"}]"#,
+        )
+        .unwrap();
+
+        let entries = super::read_player_file(&path).unwrap();
+
+        assert_eq!(entries.len(), 2);
+        assert_eq!(entries[0].name, "Alex");
+        assert_eq!(
+            entries[0].uuid.as_deref(),
+            Some("0123456789abcdef0123456789abcdef")
+        );
+        assert_eq!(entries[0].level, None);
+        assert_eq!(entries[1].name, "Steve");
     }
 
     #[cfg(unix)]
