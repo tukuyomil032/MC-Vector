@@ -534,11 +534,83 @@ fn recovery_rejects_traversal_in_a_tampered_journal_before_touching_files() {
         .unwrap()
         .path();
     let journal_path = work.join("journal.json");
-    let mut journal: Value = serde_json::from_slice(&fs::read(&journal_path).unwrap()).unwrap();
-    journal["entries"][0]["target"] = serde_json::json!("../outside.jar");
-    fs::write(journal_path, serde_json::to_vec(&journal).unwrap()).unwrap();
+    let journal = fs::read_to_string(&journal_path).unwrap();
+    let expected_target = r#""target":"new.jar""#;
+    assert_eq!(journal.matches(expected_target).count(), 1);
+    let tampered = journal.replacen(expected_target, r#""target":"../outside.jar""#, 1);
+    assert_ne!(tampered, journal);
+    fs::write(journal_path, tampered).unwrap();
     assert!(transaction::recover_directory(&temp.path).is_err());
     assert_eq!(fs::read(temp.path.join("new.jar")).unwrap(), b"new-0");
+}
+
+#[test]
+fn recovery_rejects_oversized_journal_before_changing_files() {
+    let temp = Temp::new();
+    fs::write(temp.path.join("old.jar"), b"old").unwrap();
+    fs::write(temp.path.join("untouched.jar"), b"untouched").unwrap();
+    transaction::simulate_interrupted_commit(
+        &temp.path,
+        &[artifact("new.jar", Some("old.jar"), false)],
+        1,
+    )
+    .unwrap();
+    let work = fs::read_dir(&temp.path)
+        .unwrap()
+        .filter_map(Result::ok)
+        .find(|entry| {
+            entry
+                .file_name()
+                .to_string_lossy()
+                .starts_with(".mc-vector-install-")
+        })
+        .unwrap()
+        .path();
+    let journal_path = work.join("journal.json");
+    fs::write(&journal_path, vec![b' '; 1024 * 1024 + 1]).unwrap();
+
+    let error = transaction::recover_directory(&temp.path).unwrap_err();
+
+    assert!(error.contains("1 MiB limit"));
+    assert!(!temp.path.join("old.jar").exists());
+    assert_eq!(fs::read(temp.path.join("new.jar")).unwrap(), b"new-0");
+    assert_eq!(
+        fs::read(temp.path.join("untouched.jar")).unwrap(),
+        b"untouched"
+    );
+    assert!(journal_path.exists());
+}
+
+#[test]
+fn recovery_rejects_more_than_128_entries_with_bounded_deserialization() {
+    let temp = Temp::new();
+    let work = temp
+        .path
+        .join(format!(".mc-vector-install-{}", Uuid::new_v4()));
+    fs::create_dir(&work).unwrap();
+    fs::write(temp.path.join("plugin-0.jar"), b"plugin-0-before-recovery").unwrap();
+    fs::write(temp.path.join("untouched.jar"), b"untouched").unwrap();
+    let entries = (0..1024)
+        .map(|index| format!(r#"{{"target":"plugin-{index}.jar","original":null}}"#))
+        .collect::<Vec<_>>()
+        .join(",");
+    let journal = format!(r#"{{"version":1,"phase":"committing","entries":[{entries}]}}"#);
+    assert!(journal.len() < 1024 * 1024);
+    let journal_path = work.join("journal.json");
+    fs::write(&journal_path, journal).unwrap();
+
+    let error = transaction::recover_directory(&temp.path).unwrap_err();
+
+    assert!(error.contains("128-entry limit"));
+    assert_eq!(
+        fs::read(temp.path.join("untouched.jar")).unwrap(),
+        b"untouched"
+    );
+    assert_eq!(
+        fs::read(temp.path.join("plugin-0.jar")).unwrap(),
+        b"plugin-0-before-recovery"
+    );
+    assert!(journal_path.exists());
 }
 
 #[cfg(unix)]
