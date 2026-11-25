@@ -3485,12 +3485,21 @@ mod tests {
 
         let rebuilt = rebuild_backup_catalog(&backup_dir, "server-1").expect("rebuild catalog");
         assert_eq!(rebuilt.len(), 1);
-        let catalog: BackupCatalogFile = serde_json::from_str(
-            &fs::read_to_string(backup_catalog_path(&backup_dir)).expect("read rebuilt catalog"),
-        )
-        .expect("parse rebuilt catalog");
-        assert_eq!(catalog.server_id, "server-1");
-        assert_eq!(catalog.records[0].archive_path, "survivable.zip");
+        assert_eq!(rebuilt[0].server_id, "server-1");
+        assert_eq!(rebuilt[0].archive_path, "survivable.zip");
+        assert_eq!(rebuilt[0].kind, "full");
+        assert_eq!(rebuilt[0].origin, "manual");
+        let expected_catalog = BackupCatalogFile {
+            format_version: 1,
+            server_id: "server-1".into(),
+            records: rebuilt,
+        };
+        let expected_bytes =
+            serde_json::to_vec_pretty(&expected_catalog).expect("serialize expected catalog");
+        assert_eq!(
+            fs::read(backup_catalog_path(&backup_dir)).expect("read rebuilt catalog"),
+            expected_bytes
+        );
 
         fs::remove_dir_all(root).expect("remove test directory");
     }
