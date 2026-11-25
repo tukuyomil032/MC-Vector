@@ -2,15 +2,19 @@ use super::{
     basename, file_sha256, io, is_link, regular_entry, regular_file, trusted_child, Artifact,
     LINKED_ENTRY,
 };
-use serde::{Deserialize, Serialize};
+use serde::de::{self, SeqAccess, Visitor};
+use serde::{Deserialize, Deserializer, Serialize};
 use std::collections::HashSet;
+use std::fmt;
 use std::fs::{self, File, OpenOptions};
-use std::io::Write;
+use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 use uuid::Uuid;
 
 const PREFIX: &str = ".mc-vector-install-";
 const JOURNAL: &str = "journal.json";
+const MAX_JOURNAL_BYTES: usize = 1024 * 1024;
+const MAX_JOURNAL_ENTRIES: usize = 128;
 
 #[derive(Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
@@ -25,7 +29,49 @@ struct Entry {
 struct Journal {
     version: u32,
     phase: Phase,
+    #[serde(deserialize_with = "deserialize_entries")]
     entries: Vec<Entry>,
+}
+
+fn deserialize_entries<'de, D>(deserializer: D) -> Result<Vec<Entry>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    struct EntriesVisitor;
+
+    impl<'de> Visitor<'de> for EntriesVisitor {
+        type Value = Vec<Entry>;
+
+        fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+            write!(
+                formatter,
+                "a sequence of at most {MAX_JOURNAL_ENTRIES} plugin transaction entries"
+            )
+        }
+
+        fn visit_seq<A>(self, mut sequence: A) -> Result<Self::Value, A::Error>
+        where
+            A: SeqAccess<'de>,
+        {
+            let mut entries = Vec::with_capacity(MAX_JOURNAL_ENTRIES);
+            while entries.len() < MAX_JOURNAL_ENTRIES {
+                match sequence.next_element()? {
+                    Some(entry) => entries.push(entry),
+                    None => return Ok(entries),
+                }
+            }
+
+            if sequence.next_element::<de::IgnoredAny>()?.is_some() {
+                return Err(de::Error::custom(format!(
+                    "plugin transaction journal exceeds the {MAX_JOURNAL_ENTRIES}-entry limit"
+                )));
+            }
+
+            Ok(entries)
+        }
+    }
+
+    deserializer.deserialize_seq(EntriesVisitor)
 }
 #[derive(Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "lowercase")]
@@ -347,9 +393,18 @@ pub(super) fn recover_directory(root: &Path) -> Result<(), String> {
             fs::remove_dir(work).map_err(io)?;
             continue;
         }
-        let journal: Journal = serde_json::from_slice(&fs::read(path).map_err(io)?)
+        let mut bytes = Vec::with_capacity(MAX_JOURNAL_BYTES + 1);
+        File::open(path)
+            .map_err(io)?
+            .take(MAX_JOURNAL_BYTES as u64 + 1)
+            .read_to_end(&mut bytes)
+            .map_err(io)?;
+        if bytes.len() > MAX_JOURNAL_BYTES {
+            return Err("Invalid transaction journal: exceeds the 1 MiB limit".into());
+        }
+        let journal: Journal = serde_json::from_slice(&bytes)
             .map_err(|error| format!("Invalid transaction journal: {error}"))?;
-        if journal.version != 1 || journal.entries.len() > 128 {
+        if journal.version != 1 {
             return Err("Unsupported plugin transaction journal".into());
         }
         let mut targets = HashSet::new();
