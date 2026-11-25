@@ -1,5 +1,6 @@
 use std::collections::{HashMap, HashSet};
 use std::fs;
+use std::io::Read;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 
@@ -13,6 +14,8 @@ use tauri::{AppHandle, Manager, State};
 
 const MIGRATION_ID: &str = "server-registry-v1";
 const DATABASE_FILE: &str = "server-registry.sqlite3";
+const MAX_LEGACY_REGISTRY_FILE_BYTES: u64 = 16 * 1024 * 1024;
+const MAX_LEGACY_REGISTRY_ENTRIES: usize = 10_000;
 
 pub type JsonNumber = serde_json::Number;
 
@@ -447,7 +450,7 @@ fn read_legacy_sources(
         None => Vec::new(),
     };
 
-    let embedded_templates = match servers_value.as_ref() {
+    let embedded_templates: Option<Vec<ServerTemplate>> = match servers_value.as_ref() {
         Some(value) if value.is_object() => deserialize_legacy_list(
             value,
             &["serverTemplates", "templates"],
@@ -461,15 +464,24 @@ fn read_legacy_sources(
         )?,
         None => None,
     };
-    let mut templates: Vec<ServerTemplate> = embedded_templates.unwrap_or_default();
-    let mut known_template_ids: HashSet<String> = templates
-        .iter()
-        .map(|template| template.id.clone())
-        .collect();
-    for template in read_separate_templates(app_data_dir)? {
+    let mut templates: Vec<ServerTemplate> = Vec::new();
+    let mut known_template_ids = HashSet::new();
+    for template in embedded_templates.unwrap_or_default() {
         if known_template_ids.insert(template.id.clone()) {
             templates.push(template);
         }
+    }
+    for template in read_separate_templates(app_data_dir)? {
+        if known_template_ids.contains(&template.id) {
+            continue;
+        }
+        if templates.len() >= MAX_LEGACY_REGISTRY_ENTRIES {
+            return Err(format!(
+                "Could not import server templates: merged list exceeds the 10,000 entry limit"
+            ));
+        }
+        known_template_ids.insert(template.id.clone());
+        templates.push(template);
     }
     Ok((servers, templates))
 }
@@ -495,19 +507,46 @@ fn read_separate_templates(app_data_dir: &Path) -> Result<Vec<ServerTemplate>, S
 }
 
 fn read_json_if_present(path: &Path) -> Result<Option<Value>, String> {
-    match fs::read_to_string(path) {
-        Ok(contents) => serde_json::from_str(&contents).map(Some).map_err(|error| {
+    let mut file = match fs::File::open(path) {
+        Ok(file) => file,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(None),
+        Err(error) => {
+            return Err(format!(
+                "Could not read legacy registry file {}: {error}",
+                path.display()
+            ));
+        }
+    };
+
+    let mut bytes = Vec::new();
+    file.by_ref()
+        .take(MAX_LEGACY_REGISTRY_FILE_BYTES + 1)
+        .read_to_end(&mut bytes)
+        .map_err(|error| {
+            format!(
+                "Could not read legacy registry file {}: {error}",
+                path.display()
+            )
+        })?;
+    if bytes.len() as u64 > MAX_LEGACY_REGISTRY_FILE_BYTES {
+        return Err(format!(
+            "Legacy registry file {} exceeds the 16 MiB size limit. The source was left unchanged; reduce the file size or restore a valid backup before restarting.",
+            path.display(),
+        ));
+    }
+    let contents = String::from_utf8(bytes).map_err(|error| {
+        format!(
+            "Could not read legacy registry file {}: {error}",
+            path.display()
+        )
+    })?;
+
+    serde_json::from_str(&contents).map(Some).map_err(|error| {
             format!(
                 "Could not parse legacy registry JSON at {}: {error}. The source was left unchanged; repair the JSON or restore a valid backup before restarting.",
                 path.display(),
             )
-        }),
-        Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(None),
-        Err(error) => Err(format!(
-            "Could not read legacy registry file {}: {error}",
-            path.display()
-        )),
-    }
+        })
 }
 
 fn deserialize_legacy_list<T: DeserializeOwned>(
@@ -518,6 +557,14 @@ fn deserialize_legacy_list<T: DeserializeOwned>(
     let Some(list_value) = find_legacy_list(value, keys) else {
         return Ok(None);
     };
+    if list_value
+        .as_array()
+        .is_some_and(|items| items.len() > MAX_LEGACY_REGISTRY_ENTRIES)
+    {
+        return Err(format!(
+            "Could not import {label}: list exceeds the 10,000 entry limit"
+        ));
+    }
     serde_json::from_value(list_value.clone())
         .map(Some)
         .map_err(|error| format!("Could not import {label}: {error}"))
@@ -774,6 +821,54 @@ mod tests {
             auto_backup_weekday: Some(JsonNumber::from(0)),
             extra: HashMap::new(),
         }
+    }
+
+    fn json_record_array(count: usize, mut make_record: impl FnMut(usize) -> String) -> String {
+        let mut array = String::from("[");
+        for index in 0..count {
+            if index > 0 {
+                array.push(',');
+            }
+            array.push_str(&make_record(index));
+        }
+        array.push(']');
+        array
+    }
+
+    fn legacy_server_json_record(index: usize) -> String {
+        format!(
+            r#"{{"id":"server-{index}","name":"Server","version":"1.21","software":"Paper","port":25565,"memory":2048,"path":"/servers/server-{index}"}}"#
+        )
+    }
+
+    fn legacy_template_json_record(index: usize) -> String {
+        format!(
+            r#"{{"id":"template-{index}","name":"Template","version":"1.21","software":"Paper","port":25565,"memory":2048}}"#
+        )
+    }
+
+    fn assert_import_rejected(directory: &TempDirectory, expected_message: &str) {
+        let error = match ServerRegistry::open(directory.path()) {
+            Ok(_) => panic!("legacy registry input must be rejected"),
+            Err(error) => error,
+        };
+        assert!(
+            error.contains(expected_message),
+            "unexpected error: {error}"
+        );
+
+        let connection = Connection::open(directory.path().join(DATABASE_FILE)).unwrap();
+        let (server_count, template_count, migration_count): (i64, i64, i64) = connection
+            .query_row(
+                "SELECT
+                    (SELECT COUNT(*) FROM server_registry_entries),
+                    (SELECT COUNT(*) FROM server_template_entries),
+                    (SELECT COUNT(*) FROM registry_migrations WHERE migration_id = ?1)",
+                [MIGRATION_ID],
+                |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+            )
+            .unwrap();
+        assert_eq!((server_count, template_count, migration_count), (0, 0, 0));
     }
 
     #[test]
@@ -1101,6 +1196,115 @@ mod tests {
     }
 
     #[test]
+    fn oversized_legacy_registry_file_is_preserved_and_does_not_mark_migration() {
+        let directory = TempDirectory::new();
+        let path = directory.path().join("servers.json");
+        let original = vec![b' '; (super::MAX_LEGACY_REGISTRY_FILE_BYTES + 1) as usize];
+        fs::write(&path, &original).unwrap();
+
+        assert_import_rejected(&directory, "16 MiB size limit");
+
+        assert_eq!(fs::read(&path).unwrap(), original);
+    }
+
+    #[test]
+    fn legacy_server_array_over_entry_limit_is_preserved_and_not_migrated() {
+        let directory = TempDirectory::new();
+        let path = directory.path().join("servers.json");
+        let servers = json_record_array(
+            super::MAX_LEGACY_REGISTRY_ENTRIES + 1,
+            legacy_server_json_record,
+        );
+        let original = format!(r#"{{"servers":{servers}}}"#);
+        fs::write(&path, &original).unwrap();
+
+        assert_import_rejected(&directory, "10,000 entry limit");
+
+        assert_eq!(fs::read_to_string(path).unwrap(), original);
+    }
+
+    #[test]
+    fn legacy_template_array_over_entry_limit_is_preserved_and_not_migrated() {
+        let directory = TempDirectory::new();
+        let path = directory.path().join("templates.json");
+        let templates = json_record_array(
+            super::MAX_LEGACY_REGISTRY_ENTRIES + 1,
+            legacy_template_json_record,
+        );
+        let original = format!(r#"{{"templates":{templates}}}"#);
+        fs::write(&path, &original).unwrap();
+
+        assert_import_rejected(&directory, "10,000 entry limit");
+
+        assert_eq!(fs::read_to_string(path).unwrap(), original);
+    }
+
+    #[test]
+    fn merged_legacy_templates_over_entry_limit_are_not_migrated() {
+        let directory = TempDirectory::new();
+        let embedded_templates = json_record_array(6_000, legacy_template_json_record);
+        let separate_templates = json_record_array(5_000, |index| {
+            format!(
+                r#"{{"id":"separate-template-{index}","name":"Template","version":"1.21","software":"Paper","port":25565,"memory":2048}}"#
+            )
+        });
+        let servers_path = directory.path().join("servers.json");
+        let templates_path = directory.path().join("templates.json");
+        let original_servers =
+            format!(r#"{{"servers":[],"serverTemplates":{embedded_templates}}}"#);
+        let original_templates = format!(r#"{{"templates":{separate_templates}}}"#);
+        fs::write(&servers_path, &original_servers).unwrap();
+        fs::write(&templates_path, &original_templates).unwrap();
+
+        assert_import_rejected(&directory, "merged list exceeds the 10,000 entry limit");
+
+        assert_eq!(fs::read_to_string(servers_path).unwrap(), original_servers);
+        assert_eq!(
+            fs::read_to_string(templates_path).unwrap(),
+            original_templates
+        );
+    }
+
+    #[test]
+    fn deduplicates_embedded_templates_before_enforcing_merged_entry_limit() {
+        let directory = TempDirectory::new();
+        let embedded_templates =
+            json_record_array(super::MAX_LEGACY_REGISTRY_ENTRIES, |index| match index {
+                0 => {
+                    serde_json::to_string(&sample_template("template-0", "First embedded template"))
+                        .unwrap()
+                }
+                9_999 => serde_json::to_string(&sample_template(
+                    "template-0",
+                    "Later embedded duplicate",
+                ))
+                .unwrap(),
+                _ => legacy_template_json_record(index),
+            });
+        let separate_templates = serde_json::to_string(&vec![sample_template(
+            "separate-template",
+            "Separate template",
+        )])
+        .unwrap();
+        fs::write(
+            directory.path().join("servers.json"),
+            format!(r#"{{"servers":[],"serverTemplates":{embedded_templates}}}"#),
+        )
+        .unwrap();
+        fs::write(directory.path().join("templates.json"), separate_templates).unwrap();
+
+        let registry = ServerRegistry::open(directory.path()).unwrap();
+        let templates = registry.get_server_templates().unwrap();
+        assert_eq!(templates.len(), super::MAX_LEGACY_REGISTRY_ENTRIES);
+        assert_eq!(templates[0].name, "First embedded template");
+        assert_eq!(
+            templates.last().unwrap().id,
+            "separate-template",
+            "the separate unique template should complete the 10,000-entry aggregate"
+        );
+    }
+
+    #[test]
     fn duplicate_legacy_server_ids_fail_migration_without_marking_it_complete() {
         let directory = TempDirectory::new();
         fs::write(
@@ -1141,7 +1345,7 @@ mod tests {
     }
 
     #[test]
-    fn duplicate_legacy_template_ids_fail_migration_transactionally() {
+    fn duplicate_legacy_template_ids_keep_first_template_during_migration() {
         let directory = TempDirectory::new();
         fs::write(
             directory.path().join("servers.json"),
@@ -1155,19 +1359,19 @@ mod tests {
             .unwrap(),
         )
         .unwrap();
+        fs::write(
+            directory.path().join("templates.json"),
+            serde_json::to_string(&serde_json::json!({
+                "templates": [sample_template("duplicate", "Separate")]
+            }))
+            .unwrap(),
+        )
+        .unwrap();
 
-        assert!(ServerRegistry::open(directory.path()).is_err());
-        let connection = Connection::open(directory.path().join(DATABASE_FILE)).unwrap();
-        let registry_counts: (i64, i64) = connection
-            .query_row(
-                "SELECT
-                    (SELECT COUNT(*) FROM server_registry_entries),
-                    (SELECT COUNT(*) FROM server_template_entries)",
-                [],
-                |row| Ok((row.get(0)?, row.get(1)?)),
-            )
-            .unwrap();
-        assert_eq!(registry_counts, (0, 0));
+        let registry = ServerRegistry::open(directory.path()).unwrap();
+        let templates = registry.get_server_templates().unwrap();
+        assert_eq!(templates.len(), 1);
+        assert_eq!(templates[0].name, "First");
     }
 
     #[test]
